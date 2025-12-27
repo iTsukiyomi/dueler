@@ -958,45 +958,7 @@ class DuelPokemon():
             self.held_item.recover(self.held_item)
             msg += self.held_item.eat_berry()
             self.held_item.last_used = None
-        
-        # Held Items
-        if self.held_item == "white-herb":
-            changed = False
-            if self.attack_stage < 0:
-                self.attack_stage = 0
-                changed = True
-            if self.defense_stage < 0:
-                self.defense_stage = 0
-                changed = True
-            if self.spatk_stage < 0:
-                self.spatk_stage = 0
-                changed = True
-            if self.spdef_stage < 0:
-                self.spdef_stage = 0
-                changed = True
-            if self.speed_stage < 0:
-                self.speed_stage = 0
-                changed = True
-            if self.accuracy_stage < 0:
-                self.accuracy_stage = 0
-                changed = True
-            if self.evasion_stage < 0:
-                self.evasion_stage = 0
-                changed = True
-            if changed:
-                msg += f"{self.name}'s white herb reset all negative stat stage changes.\n"
-                self.held_item.use()
-        if self.held_item == "toxic-orb":
-            msg += self.nv.apply_status("b-poison", battle, attacker=self, source="its toxic orb")
-        if self.held_item == "flame-orb":
-            msg += self.nv.apply_status("burn", battle, attacker=self, source="its flame orb")
-        if self.held_item == "leftovers":
-            msg += self.heal(self.starting_hp // 16, source="its leftovers")
-        if self.held_item == "black-sludge":
-            if ElementType.POISON in self.type_ids:
-                msg += self.heal(self.starting_hp // 16, source="its black sludge")
-            else:
-                msg += self.damage(self.starting_hp // 8, battle, source="its black sludge")
+
         
         # Abilities
         if self.ability() == Ability.SPEED_BOOST and not self.swapped_in:
@@ -1535,8 +1497,7 @@ class DuelPokemon():
                     msg += attacker.append_speed(-1, attacker=self, source=f"touching {self.name}'s gooey body")
                 if self.ability() == Ability.TANGLING_HAIR:
                     msg += attacker.append_speed(-1, attacker=self, source=f"touching {self.name}'s tangled hair")
-                if self.held_item == "rocky-helmet" and self.owner.has_alive_pokemon():
-                    msg += attacker.damage(attacker.starting_hp // 6, battle, source=f"{self.name}'s rocky helmet")
+
             # Pickpocket is not included in the protective pads protection
             if (
                 self.ability() == Ability.PICKPOCKET
