@@ -2,6 +2,8 @@ import discord
 import json
 from pathlib import Path
 from .buttons import BattlePromptView, PreviewPromptView
+from PIL import Image, ImageDraw, ImageFont
+import os
 
 
 async def find(ctx, db, filter):
@@ -38,10 +40,6 @@ async def find_one(ctx, db, filter):
     if results:
         return results[0]
     return None
-
-
-from PIL import Image, ImageDraw, ImageFont
-import os
 
 
 async def generate_team_preview(battle):
@@ -232,8 +230,7 @@ async def generate_team_preview(battle):
     # Create embed with the team image
     embed = discord.Embed(
         title=f"Battle Team Preview",
-        description=f"{battle.trainer1.name} vs {battle.trainer2.name}\nSelect your lead Pokémon!",
-        color=discord.Color.blue()
+        description=f"{battle.trainer1.name} vs {battle.trainer2.name}\nSelect your lead Pokémon!"
     )
 
     # Attach the image to the embed
@@ -451,9 +448,7 @@ async def generate_main_battle_message(battle):
     # Create embed with the battle image
     e = discord.Embed(
         title=f"Battle between {battle.trainer1.name} and {battle.trainer2.name}",
-        color=discord.Color.blue(),
-        description=desc,
-    )
+        description=desc)
     e.set_footer(text="Who Wins!?")
     e.set_image(url="attachment://battle_msg.png")
 
@@ -480,7 +475,7 @@ async def generate_text_battle_message(battle):
     """
     page = ""
     pages = []
-    base_embed = discord.Embed(color=discord.Color.blue())  # Fixed color
+    base_embed = discord.Embed()  # Fixed color
     raw = battle.msg.strip().split("\n")
 
     for part in raw:

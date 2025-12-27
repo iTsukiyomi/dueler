@@ -6,7 +6,7 @@ from .enums import Ability, DamageClass
 from .misc import ExpiringEffect, Weather, Terrain
 
 
-class Battle:
+class Battle():
     """
     Represents a battle between two trainers and their pokemon.
     
@@ -339,26 +339,13 @@ class Battle:
                 return T2FIRST
         
         #Priority brackets & abilities
-        # Priority brackets & abilities
         if check_move:
-            # Handle Move objects
-            if hasattr(self.trainer1.selected_action, 'get_priority'):
-                prio1 = self.trainer1.selected_action.get_priority(self.trainer1.current_pokemon,
-                                                                   self.trainer2.current_pokemon, self)
-            else:
-                prio1 = getattr(self.trainer1.selected_action, 'priority', 0)
-
-            if hasattr(self.trainer2.selected_action, 'get_priority'):
-                prio2 = self.trainer2.selected_action.get_priority(self.trainer2.current_pokemon,
-                                                                   self.trainer1.current_pokemon, self)
-            else:
-                prio2 = getattr(self.trainer2.selected_action, 'priority', 0)
-
+            prio1 = self.trainer1.selected_action.get_priority(self.trainer1.current_pokemon, self.trainer2.current_pokemon, self)
+            prio2 = self.trainer2.selected_action.get_priority(self.trainer2.current_pokemon, self.trainer1.current_pokemon, self)
             if prio1 > prio2:
                 return T1FIRST
             if prio2 > prio1:
                 return T2FIRST
-
             t1_quick = False
             t2_quick = False
             # Quick draw/claw

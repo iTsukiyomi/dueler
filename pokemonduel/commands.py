@@ -267,9 +267,7 @@ class PokemonDuel(commands.Cog):
             self.log.exception(msg)
             self.bot.dispatch('flamecogs_game_error', battle, exc)
             await battle.channel.send(
-                'A fatal error has occurred, shutting down.\n'
-                'Please have the bot owner copy the error from console '
-                'and post it in the support channel of <https://discord.gg/bYqCjvu>.'
+                f'error lmaoo.\n{exc}'
             )
             return None
         else:

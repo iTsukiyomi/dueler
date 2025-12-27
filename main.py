@@ -4,6 +4,7 @@ import discord
 from discord.ext import commands
 import logging
 from dotenv import load_dotenv
+import traceback
 
 load_dotenv()
 
@@ -26,19 +27,22 @@ class Flame(commands.Bot):
             command_prefix=commands.when_mentioned_or(';'),
             intents=intents,
             description='test',
-            case_insensitive=True
+            case_insensitive=True,
+            owner_id=839182501091344444
         )
 
     async def setup_hook(self):
         print('starting...')
         try:
             await self.load_extension('pokemonduel')
+            await self.load_extension('admin')
             print('loaded pokeduel')
+            print('loaded admin')
         except Exception as e:
             print(e)
 
     async def on_ready(self):
-        print(f'{self.user} logged in ')
+        print(f'{self.user} logged in frfr ')
 
     async def on_command_error(self, ctx, error):
         if isinstance(error, commands.CommandNotFound):
@@ -51,7 +55,9 @@ class Flame(commands.Bot):
             await ctx.send("no perms bro")
         else:
             logging.error(f"unexpected error in {ctx.command}: {error}")
-            await ctx.send("bruh")
+            await ctx.send(f"bruh {error}")
+
+
 
 async def main():
     bot = Flame()
