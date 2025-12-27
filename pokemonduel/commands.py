@@ -333,7 +333,7 @@ class PokemonDuel(commands.Cog):
         preview_view.stop()
         winner = await self.wrapped_run(battle)
     
-    @pokemonduel.group()
+    @commands.group("party")
     async def party(self, ctx):
         """Manage your party of pokemon."""
         pass
@@ -376,16 +376,17 @@ class PokemonDuel(commands.Cog):
         pass
     
     @party.command(name="list", aliases=["view"])
-    async def party_list(self, ctx):
+    async def party_list(self, ctx, user: discord.Member = None):
         """View the pokemon currently in your party."""
-        party = await self.config.member(ctx.author).party()
+        member = user or ctx.author
+        party = await self.config.member(member).party()
         if len(party) == 0:
             await ctx.send(f"You haven't setup your party yet!\nSet one with `{ctx.prefix}pokemonduel party set`.")
             return
         embed = discord.Embed(
-            title=f"{ctx.author.display_name}'s Party"
+            title=f"{member.display_name}'s Party"
         )
-        embed.set_thumbnail(url=ctx.author.display_avatar.url)
+        embed.set_thumbnail(url=member.display_avatar.url)
         await self.gen_party_embed(ctx, party, embed)
         await ctx.send(embed=embed)
  
