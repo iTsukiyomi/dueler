@@ -311,7 +311,7 @@ class PokemonDuel(commands.Cog):
             try:
                 channel = await initial_message.create_thread(
                     name='PokemonDuel',
-                    reason='Automated thread for PokemonDuel.',
+                    reason='Automated thread for PokemonDuels.',
                 )
             except discord.HTTPException:
                 pass

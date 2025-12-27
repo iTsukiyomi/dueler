@@ -18,12 +18,19 @@ class Admin(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name="refresh")
+    @commands.command()
+    async def ping(self, ctx):
+        await ctx.send(f"pong {round(self.bot.latency * 1000)}ms")
+
+    @commands.command(name="refresh", aliases=['reload'])
     @commands.is_owner()
     async def refresh(self, ctx):
         try:
             diff = git(["diff", "--stat"])
             if not diff:
+                diff = "change something first bruh"
+            status = git(["status", "--porcelain"])
+            if not status:
                 diff = "change something first bruh"
             await self.bot.reload_extension('pokemonduel')
             msg = (

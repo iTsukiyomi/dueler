@@ -1,1 +1,8 @@
 .env
+*.log
+bot.log
+
+__pycache__/
+*.pyc
+*.pyo
+
