@@ -377,7 +377,7 @@ class PokemonDuel(commands.Cog):
     
     @party.command(name="list", aliases=["view"])
     async def party_list(self, ctx, user: discord.Member = None):
-        """View the pokemon currently in your party."""
+        """View the pokeemon currently in your party."""
         member = user or ctx.author
         party = await self.config.member(member).party()
         if len(party) == 0:
