@@ -749,7 +749,7 @@ class DuelPokemon():
         self.defiv = self.starting_defiv
         self.spatkiv = self.starting_spatkiv
         self.spdefiv = self.starting_spdefiv
-        self.speediv = self.starting_speediv
+        self.speedev = self.starting_speedev
         self.hpev = self.starting_hpev
         self.atkev = self.starting_atkev
         self.defev = self.starting_defev
@@ -1694,6 +1694,37 @@ class DuelPokemon():
         """Returns the raw attack of this poke, taking into account IVs EVs and natures and forms."""
         return self.calculate_raw_stat(self.speed, self.speediv, self.speedev, self.nature_stat_deltas["Speed"])
     
+    def get_paradox_boosted_stat(self):
+        stats = [
+            ("attack", self.get_raw_attack()),
+            ("defense", self.get_raw_defense()),
+            ("spatk", self.get_raw_spatk()),
+            ("spdef", self.get_raw_spdef()),
+            ("speed", self.get_raw_speed())
+        ]
+        return max(stats, key=lambda x: x[1])[0]
+
+    def is_paradox_active(self, battle):
+        if self.ability() == Ability.PROTOSYNTHESIS:
+            if battle.weather.get() in ("sun", "h-sun"):
+                return True
+            if self.booster_energy:
+                return True
+            if self.held_item == "booster-energy":
+                self.held_item.use()
+                self.booster_energy = True
+                return True
+        elif self.ability() == Ability.QUARK_DRIVE:
+            if battle.terrain.item == "electric":
+                return True
+            if self.booster_energy:
+                return True
+            if self.held_item == "booster-energy":
+                self.held_item.use()
+                self.booster_energy = True
+                return True
+        return False
+
     def get_attack(self, battle, *, critical=False, ignore_stages=False):
         """Helper method to call calculate_stat for attack."""
         attack = self.get_raw_attack()
@@ -1724,16 +1755,8 @@ class DuelPokemon():
         for poke in (battle.trainer1.current_pokemon, battle.trainer2.current_pokemon):
             if poke is not None and poke is not self and poke.ability() == Ability.TABLETS_OF_RUIN:
                 attack *= .75
-        if all(self.get_raw_attack() >= x for x in (self.get_raw_defense(), self.get_raw_spatk(), self.get_raw_spdef(), self.get_raw_speed())):
-            if (
-                (self.ability() == Ability.PROTOSYNTHESIS and (battle.weather.get() in ("sun", "h-sun") or self.booster_energy))
-                or (self.ability() == Ability.QUARK_DRIVE and (battle.terrain.item == "electric" or self.booster_energy))
-            ):
-                attack *= 1.3
-            elif self.ability() in (Ability.PROTOSYNTHESIS, Ability.QUARK_DRIVE) and self.held_item == "booster-energy":
-                self.held_item.use()
-                self.booster_energy = True
-                attack *= 1.3
+        if self.is_paradox_active(battle) and self.get_paradox_boosted_stat() == "attack":
+            attack *= 1.3
         attack *= self.held_item.get_stat_multiplier("attack")
         return attack
     
@@ -1756,19 +1779,8 @@ class DuelPokemon():
         for poke in (battle.trainer1.current_pokemon, battle.trainer2.current_pokemon):
             if poke is not None and poke is not self and poke.ability() == Ability.SWORD_OF_RUIN:
                 defense *= .75
-        if (
-            self.get_raw_defense() > self.get_raw_attack()
-            and all(self.get_raw_defense() >= x for x in (self.get_raw_spatk(), self.get_raw_spdef(), self.get_raw_speed()))
-        ):
-            if (
-                (self.ability() == Ability.PROTOSYNTHESIS and (battle.weather.get() in ("sun", "h-sun") or self.booster_energy))
-                or (self.ability() == Ability.QUARK_DRIVE and (battle.terrain.item == "electric" or self.booster_energy))
-            ):
-                defense *= 1.3
-            elif self.ability() in (Ability.PROTOSYNTHESIS, Ability.QUARK_DRIVE) and self.held_item == "booster-energy":
-                self.held_item.use()
-                self.booster_energy = True
-                defense *= 1.3
+        if self.is_paradox_active(battle) and self.get_paradox_boosted_stat() == "defense":
+            defense *= 1.3
         defense *= self.held_item.get_stat_multiplier("defense")
         return defense
     
@@ -1792,19 +1804,8 @@ class DuelPokemon():
         for poke in (battle.trainer1.current_pokemon, battle.trainer2.current_pokemon):
             if poke is not None and poke is not self and poke.ability() == Ability.VESSEL_OF_RUIN:
                 spatk *= .75
-        if (
-            all(self.get_raw_spatk() >= x for x in (self.get_raw_spdef(), self.get_raw_speed()))
-            and all(self.get_raw_spatk() > x for x in (self.get_raw_attack(), self.get_raw_defense()))
-        ):
-            if (
-                (self.ability() == Ability.PROTOSYNTHESIS and (battle.weather.get() in ("sun", "h-sun") or self.booster_energy))
-                or (self.ability() == Ability.QUARK_DRIVE and (battle.terrain.item == "electric" or self.booster_energy))
-            ):
-                spatk *= 1.3
-            elif self.ability() in (Ability.PROTOSYNTHESIS, Ability.QUARK_DRIVE) and self.held_item == "booster-energy":
-                self.held_item.use()
-                self.booster_energy = True
-                spatk *= 1.3
+        if self.is_paradox_active(battle) and self.get_paradox_boosted_stat() == "spatk":
+            spatk *= 1.3
         spatk *= self.held_item.get_stat_multiplier("spatk")
         return spatk
     
@@ -1829,19 +1830,8 @@ class DuelPokemon():
         for poke in (battle.trainer1.current_pokemon, battle.trainer2.current_pokemon):
             if poke is not None and poke is not self and poke.ability() == Ability.BEADS_OF_RUIN:
                 spdef *= .75
-        if (
-            self.get_raw_spdef() >= self.get_raw_speed()
-            and all(self.get_raw_spdef() > x for x in (self.get_raw_attack(), self.get_raw_defense(), self.get_raw_spatk()))
-        ):
-            if (
-                (self.ability() == Ability.PROTOSYNTHESIS and (battle.weather.get() in ("sun", "h-sun") or self.booster_energy))
-                or (self.ability() == Ability.QUARK_DRIVE and (battle.terrain.item == "electric" or self.booster_energy))
-            ):
-                spdef *= 1.3
-            elif self.ability() in (Ability.PROTOSYNTHESIS, Ability.QUARK_DRIVE) and self.held_item == "booster-energy":
-                self.held_item.use()
-                self.booster_energy = True
-                spdef *= 1.3
+        if self.is_paradox_active(battle) and self.get_paradox_boosted_stat() == "spdef":
+            spdef *= 1.3
         spdef *= self.held_item.get_stat_multiplier("spdef")
         return spdef
     
@@ -1873,16 +1863,8 @@ class DuelPokemon():
             speed *= 2
         if self.held_item == "choice-scarf":
             speed *= 1.5
-        if all(self.get_raw_speed() > x for x in (self.get_raw_attack(), self.get_raw_defense(), self.get_raw_spatk(), self.get_raw_spdef())):
-            if (
-                (self.ability() == Ability.PROTOSYNTHESIS and (battle.weather.get() in ("sun", "h-sun") or self.booster_energy))
-                or (self.ability() == Ability.QUARK_DRIVE and (battle.terrain.item == "electric" or self.booster_energy))
-            ):
-                speed *= 1.5
-            elif self.ability() in (Ability.PROTOSYNTHESIS, Ability.QUARK_DRIVE) and self.held_item == "booster-energy":
-                self.held_item.use()
-                self.booster_energy = True
-                speed *= 1.5
+        if self.is_paradox_active(battle) and self.get_paradox_boosted_stat() == "speed":
+            speed *= 1.5
         speed *= self.held_item.get_stat_multiplier("speed")
         speed *= self.held_item.get_speed_multiplier()
         return speed
@@ -2097,7 +2079,7 @@ class DuelPokemon():
         self.defiv = otherpoke.defiv
         self.spatkiv = otherpoke.spatkiv
         self.spdefiv = otherpoke.spdefiv
-        self.speediv = otherpoke.speediv
+        self.speedev = otherpoke.speedev
         self.hpev = otherpoke.hpev
         self.atkev = otherpoke.atkev
         self.defev = otherpoke.defev

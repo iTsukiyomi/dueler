@@ -11,3 +11,4 @@ pokemonduel/__pycache__/
 *.pyo
 
 .idea/
+*.xml
