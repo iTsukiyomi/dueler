@@ -6,6 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="4abe4dbe-b869-4e5e-86be-d6e68b5d3b46" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/data/PokemonDuel/member_744831273406824449.json" beforeDir="false" afterPath="$PROJECT_DIR$/data/PokemonDuel/member_744831273406824449.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pokemonduel/battle.py" beforeDir="false" afterPath="$PROJECT_DIR$/pokemonduel/battle.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -72,7 +73,7 @@
       <option name="presentableId" value="Default" />
       <updated>1766926086836</updated>
       <workItem from="1766926086841" duration="536000" />
-      <workItem from="1766927360943" duration="1464000" />
+      <workItem from="1766927360943" duration="1910000" />
     </task>
     <servers />
   </component>

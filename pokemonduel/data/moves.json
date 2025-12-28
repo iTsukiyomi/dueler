@@ -14280,6 +14280,23 @@
     "min_hits": null
   },
   {
+    "id": 876,
+    "identifier": "hydro-steam",
+    "generation_id": 9,
+    "type_id": 11,
+    "power": 80,
+    "pp": 15,
+    "accuracy": 100,
+    "priority": 0,
+    "target_id": 10,
+    "damage_class_id": 3,
+    "effect_id": 1,
+    "effect_chance": null,
+    "crit_rate": 0,
+    "max_hits": null,
+    "min_hits": null
+  },
+  {
     "id": 877,
     "identifier": "ruination",
     "generation_id": 9,
