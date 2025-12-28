@@ -5,14 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="4abe4dbe-b869-4e5e-86be-d6e68b5d3b46" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/flame.iml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/PokemonDuel/member_653594236792471553.json" beforeDir="false" afterPath="$PROJECT_DIR$/data/PokemonDuel/member_653594236792471553.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pokemonduel/battle.py" beforeDir="false" afterPath="$PROJECT_DIR$/pokemonduel/battle.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/PokemonDuel/member_744831273406824449.json" beforeDir="false" afterPath="$PROJECT_DIR$/data/PokemonDuel/member_744831273406824449.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -39,6 +32,9 @@
   &quot;associatedIndex&quot;: 2
 }</component>
   <component name="ProjectId" id="37TTThStTjQZMSV97EVEobzkwdF" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="1" id="Add" />
+  </component>
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
@@ -76,7 +72,7 @@
       <option name="presentableId" value="Default" />
       <updated>1766926086836</updated>
       <workItem from="1766926086841" duration="536000" />
-      <workItem from="1766927360943" duration="1036000" />
+      <workItem from="1766927360943" duration="1464000" />
     </task>
     <servers />
   </component>
