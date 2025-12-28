@@ -275,7 +275,7 @@ class PokemonDuel(commands.Cog):
                 del self.games[int(battle.ctx.message.id)]
             return winner
 
-    @commands.group(aliases=["pokeduel"], invoke_without_command=True)
+    @commands.group(aliases=["pokeduel","duel"], invoke_without_command=True)
     @commands.bot_has_permissions(attach_files=True, embed_links=True)
     async def pokemonduel(self, ctx, opponent: discord.Member):
         """Battle in a Pokemon Duel with another member of your server."""
