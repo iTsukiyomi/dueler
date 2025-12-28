@@ -10,7 +10,7 @@ class Battle():
     """
     Represents a battle between two trainers and their pokemon.
     
-    This object holds all necessary information for a battle & runs the battle.
+    This object holds all necessary information for a battle and runs the battle.
     """
     def __init__(self, ctx, channel, trainer1, trainer2, *, inverse_battle=False):
         self.ctx = ctx
