@@ -5,6 +5,8 @@ from discord.ext import commands
 import logging
 from dotenv import load_dotenv
 import traceback
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
 
 load_dotenv()
 
@@ -58,8 +60,19 @@ class Flame(commands.Bot):
             await ctx.send(f"bruh {error}")
 
 
+class DummyHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"OK")
+
+def start_dummy_server():
+    port = int(os.environ.get("PORT", 10000))
+    server = HTTPServer(("0.0.0.0", port), DummyHandler)
+    server.serve_forever()
 
 async def main():
+    threading.Thread(target=start_dummy_server, daemon=True).start()
     bot = Flame()
     token = os.getenv("DISCORD_TOKEN")
     await bot.start(token)
