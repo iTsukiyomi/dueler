@@ -1,4 +1,5 @@
 import asyncio
+import aiohttp
 import os
 import discord
 from discord.ext import commands
@@ -71,9 +72,26 @@ def start_dummy_server():
     server = HTTPServer(("0.0.0.0", port), DummyHandler)
     server.serve_forever()
 
+async def keep_alive():
+    url = "https://dueler-wv0o.onrender.com"
+    if not url:
+        logging.warning("RENDER_URL not set, keep_alive disabled")
+        return
+
+    async with aiohttp.ClientSession() as session:
+        while True:
+            try:
+                async with session.get(url, timeout=10) as resp:
+                    logging.info(f"Keep-alive ping: {resp.status}")
+            except Exception as e:
+                logging.error(f"Keep-alive failed: {e}")
+
+            await asyncio.sleep(300)  
+
 async def main():
     threading.Thread(target=start_dummy_server, daemon=True).start()
     bot = Flame()
+    asyncio.create_task(keep_alive())
     token = os.getenv("DISCORD_TOKEN")
     await bot.start(token)
 
