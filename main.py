@@ -57,7 +57,7 @@ class Flame(commands.Bot):
             await ctx.send("no perms bro")
         else:
             logging.error(f"unexpected error in {ctx.command}: {error}")
-            await ctx.send(f"bruh {error}")
+            await ctx.send(f"bruhh {error}")
 
 # ignore this stuff its for render to host the bot
 
