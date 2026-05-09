@@ -35,6 +35,7 @@ class Flame(commands.Bot):
             case_insensitive=True,
             owner_id={853283237630967839, 839182501091344444}
         )
+        # a
 
     async def setup_hook(self):
         print('starting...')
