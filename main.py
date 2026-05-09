@@ -33,8 +33,9 @@ class Flame(commands.Bot):
             intents=intents,
             description='test',
             case_insensitive=True,
-            owner_id={853283237630967839, 839182501091344444}
+            owner_ids={853283237630967839, 839182501091344444}
         )
+        # a
 
     async def setup_hook(self):
         print('starting...')
