@@ -39,8 +39,7 @@ class Flame(commands.Bot):
         try:
             await self.load_extension('pokemonduel')
             await self.load_extension('admin')
-            print('loaded pokeduel')
-            print('loaded admin')
+            print('loaded pokeduel\nloaded admin')
         except Exception as e:
             print(e)
 
