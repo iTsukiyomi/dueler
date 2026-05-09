@@ -2164,27 +2164,32 @@ class Move():
                         hits = hit
                         break
             
-            damage = 2 * attacker.level
-            damage /= 5
-            damage += 2
-            damage = damage * power * (a / d)
-            damage /= 50
-            damage += 2
-            
-            # Critical hit damage
+            # --- Showdown-accurate damage formula ---
+            # Step 1: Base damage with integer flooring at each step
+            # floor(floor(floor(2*L/5+2) * Bp * A/D) / 50 + 2)
+            damage = int(int(int(2 * attacker.level / 5) + 2) * power * a / d)
+            damage = int(damage / 50) + 2
+
+            # Step 2: Critical hit (1.5x, floored)
             if critical:
                 msg += "A critical hit!\n"
-                damage *= 1.5
+                damage = int(damage * 3 / 2)
+
+            # Step 3: Weather type boosts (before random, matches Showdown ordering)
+            # Harsh sun/rain (h-sun/h-rain) give the same boost as normal sun/rain
+            weather = battle.weather.get()
+            if current_type == ElementType.WATER and weather in ("rain", "h-rain"):
+                damage = int(damage * 3 / 2)
+            elif current_type == ElementType.FIRE and weather in ("rain", "h-rain"):
+                damage = int(damage / 2)
+            elif current_type == ElementType.FIRE and weather in ("sun", "h-sun"):
+                damage = int(damage * 3 / 2)
+            elif current_type == ElementType.WATER and weather in ("sun", "h-sun"):
+                damage = int(damage / 2)
+
+            # Step 4: Random damage roll (Showdown integer method: 85-100, floor)
+            damage = damage * random.randint(85, 100) // 100
             
-            # Type buffing weather
-            if current_type == ElementType.WATER and battle.weather.get() in ("rain", "h-rain"):
-                damage *= 1.5
-            elif current_type == ElementType.FIRE and battle.weather.get() in ("rain", "h-rain"):
-                damage *= 0.5
-            elif current_type == ElementType.FIRE and battle.weather.get() == "sun":
-                damage *= 1.5
-            elif current_type == ElementType.WATER and battle.weather.get() == "sun":
-                damage *= 0.5
         
             # Same type attack bonus - extra damage for using a move that is the same type as your poke's type.
             if current_type in attacker.type_ids:
