@@ -7,514 +7,461 @@ class MovePower:
 
     def get_power(self, attacker, defender, battle):
         """Get the power of this move."""
-        if self.damage_class == DamageClass.STATUS:
-            return 0
-
-        power = self.power
-        if power is None:
-            power = 0
-
-        if self.effect == 70:
-            power = attacker.hp * 10 // attacker.starting_hp
-            if power == 0:
-                power = 1
-
-        if self.effect == 74:
-            power = attacker.hp * 10 // attacker.starting_hp
-            if power == 0:
-                power = 1
-
-        if self.effect == 75:
-            power = (attacker.starting_hp - attacker.hp) * 10 // attacker.starting_hp
-            if power == 0:
-                power = 1
-
-        if self.effect == 76:
-            power = (attacker.starting_hp - attacker.hp) * 10 // attacker.starting_hp
-            if power == 0:
-                power = 1
-
-        if self.effect == 79:
-            power = attacker.hp * 10 // attacker.starting_hp
-            if power == 0:
-                power = 1
-
-        if self.effect == 221:
-            if defender.nv.current in ("paralysis", "freeze", "sleep") or defender.confusion.active():
-                power = 120
-            elif defender.nv.current == "poison":
-                power = 80
-            else:
-                power = 50
-
-        if self.effect == 225:
-            if attacker.ability() == Ability.RECKLESS:
-                power = 90
-            else:
-                power = 70
-
-        if self.effect == 102:
-            power = 120
-            if attacker.ability() == Ability.RECKLESS:
-                power = 90
-
-        if self.effect == 148:
-            power = 80
-            if attacker.ability() == Ability.RECKLESS:
-                power = 60
-
-        if self.effect == 242:
-            power = 120
-            if attacker.ability() == Ability.RECKLESS:
-                power = 90
-
-        if self.effect == 3:
-            if defender.nv.current == "paralysis":
-                power = 100
-            elif defender.nv.current == "sleep" or defender.confusion.active():
-                power = 80
-            elif defender.nv.current == "freeze":
-                power = 50
-            else:
-                power = 20
-
-        if self.effect == 318:
-            power = 70 + (attacker.attack_stage - defender.defense_stage) * 10
-            if power < 20:
-                power = 20
-            if power > 150:
-                power = 150
-
-        if self.effect == 319:
-            power = 70 + (attacker.spatk_stage - defender.spdef_stage) * 10
-            if power < 20:
-                power = 20
-            if power > 150:
-                power = 150
-
-        if self.effect == 89:
-            power = 40 + (attacker.attack_stage * 10)
-
-        if self.effect == 90:
-            power = 40 + (attacker.spatk_stage * 10)
-
-        if self.effect == 336:
-            power = 40 + (defender.attack_stage * 10)
-
-        if self.effect == 337:
-            power = 40 + (defender.spatk_stage * 10)
-
-        if self.effect == 174:
-            power = 50 + (attacker.positive_stat_count() * 30)
-
-        if self.effect == 173:
-            power = 50 + (attacker.attack_stage * 30)
-
-        if self.effect == 268:
-            power = 40 + (attacker.attack_stage * 30)
-
-        if self.effect == 267:
-            power = 40 + (attacker.spatk_stage * 30)
-
-        if self.effect == 189:
-            if attacker.attack_stage >= defender.defense_stage:
-                power = 150
-            else:
-                power = 50
-
-        if self.effect == 190:
-            if attacker.spatk_stage >= defender.spdef_stage:
-                power = 150
-            else:
-                power = 50
-
-        if self.effect == 191:
-            power = 20 * (attacker.attack_stage + 6)
-            if power > 200:
-                power = 200
-
-        if self.effect == 246:
-            power = 20 * (attacker.spatk_stage + 6)
-            if power > 200:
-                power = 200
-
-        if self.effect == 217:
-            power = 20 * (defender.attack_stage + 6)
-            if power > 200:
-                power = 200
-
-        if self.effect == 218:
-            power = 20 * (defender.spatk_stage + 6)
-            if power > 200:
-                power = 200
-
-        if self.effect == 38:
-            if attacker.nv.current == "sleep":
-                power = 200
-            else:
-                power = 50
-
-        if self.effect == 271:
-            if attacker.nv.current == "sleep":
-                power = 200
-            else:
-                power = 50
-
-        if self.effect == 39:
-            if attacker.nv.current in ("paralysis", "freeze", "sleep") or attacker.confusion.active():
-                power = 100
-            elif attacker.nv.current == "poison":
-                power = 65
-            else:
-                power = 40
-
-        if self.effect == 67:
-            if attacker.nv.burn():
-                power = 130
-            else:
-                power = 40
-
-        if self.effect == 68:
-            if attacker.nv.burn():
-                power = 130
-            else:
-                power = 40
-
-        if self.effect == 59:
-            if attacker.nv.poison():
-                power = 130
-            else:
-                power = 40
-
-        if self.effect == 61:
-            if attacker.nv.paralysis():
-                power = 130
-            else:
-                power = 40
-
-        if self.effect == 118:
-            if attacker.hp <= attacker.starting_hp // 3:
-                power = 200
-            elif attacker.hp <= attacker.starting_hp // 2:
-                power = 150
-            else:
-                power = 100
-
-        if self.effect == 216:
-            if defender.hp >= defender.starting_hp // 2:
-                power = 40
-            elif defender.hp >= defender.starting_hp // 4:
-                power = 80
-            else:
-                power = 120
-
-        if self.effect == 261:
-            if defender.hp < defender.starting_hp:
-                power = 50 + (50 * (defender.starting_hp - defender.hp) // defender.starting_hp)
-            else:
-                power = 50
-
-        if self.effect == 87:
-            if attacker.hp <= attacker.starting_hp // 3:
-                power = 200
-            else:
-                power = 50
-
-        if self.effect == 264:
-            power = 50 + (50 * (attacker.starting_hp - attacker.hp) // attacker.starting_hp)
-
-        if self.effect == 266:
-            power = 50 + (50 * (attacker.starting_hp - attacker.hp) // attacker.starting_hp)
-
-        if self.effect == 45:
-            power = 100 + (50 * (defender.starting_hp - defender.hp) // defender.starting_hp)
-
-        if self.effect == 322:
-            power = 60 * (2 ** (attacker.attack_stage))
-
-        if self.effect == 323:
-            power = 60 * (2 ** (attacker.spatk_stage))
-
-        if self.effect == 324:
-            power = 60 * (2 ** (attacker.speed_stage))
-
-        if self.effect == 331:
-            power = 60 * (2 ** (attacker.defense_stage))
-
-        if self.effect == 332:
-            power = 60 * (2 ** (attacker.spdef_stage))
-
-        if self.effect == 326:
-            power = 20 + (20 * attacker.attack_stage)
-            if power < 1:
-                power = 1
-
-        if self.effect == 327:
-            power = 20 + (20 * attacker.spatk_stage)
-            if power < 1:
-                power = 1
-
-        if self.effect == 328:
-            power = 20 + (20 * attacker.speed_stage)
-            if power < 1:
-                power = 1
-
-        if self.effect == 362:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 363:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 364:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 365:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 366:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 371:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 372:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 373:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 374:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 375:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 376:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 377:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 378:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 379:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 380:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 381:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 382:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 383:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 384:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 385:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 386:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 387:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 388:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 389:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 390:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 391:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 392:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 393:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 394:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 395:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 396:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 397:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 398:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 399:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 400:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 401:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 402:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 403:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 404:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 405:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 406:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 407:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 408:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 409:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 410:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 411:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 412:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 413:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 414:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 415:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 416:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 417:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 418:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 419:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 420:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 421:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 422:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 423:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 424:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 425:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 426:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 427:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 428:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 429:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 430:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 431:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 432:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 433:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 434:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 435:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 436:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 437:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 438:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 439:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 440:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 441:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 442:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 443:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 444:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 445:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 446:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 447:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 448:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 449:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.effect == 450:
-            power = 60 + (60 * attacker.positive_stat_count())
-
-        if self.id == 573 and attacker.ability() == Ability.ORDINARY:
+        current_type = self.get_type(attacker, defender, battle)
+        # Inflicts damage equal to the user's level.
+        if self.effect == 88:
             power = attacker.level
+        # Inflicts damage between 50% and 150% of the user's level.
+        elif self.effect == 89:
+            power = random.randint(int(attacker.level * 0.5), int(attacker.level * 1.5))
+        # Inflicts more damage to heavier targets, with a maximum of 120 power.
+        elif self.effect == 197:
+            def_weight = defender.weight(attacker=attacker, move=self)
+            if def_weight <= 100:
+                power = 20
+            elif def_weight <= 250:
+                power = 40
+            elif def_weight <= 500:
+                power = 60
+            elif def_weight <= 1000:
+                power = 80
+            elif def_weight <= 2000:
+                power = 100
+            else:
+                power = 120
+        # Power is higher when the user weighs more than the target, up to a maximum of 120.
+        elif self.effect == 292:
+            weight_delta = attacker.weight() / defender.weight(attacker=attacker, move=self)
+            if weight_delta <= 2:
+                power = 40
+            elif weight_delta <= 3:
+                power = 60
+            elif weight_delta <= 4:
+                power = 80
+            elif weight_delta <= 5:
+                power = 100
+            else:
+                power = 120
+        # Power increases with happiness, up to a maximum of 102.
+        elif self.effect == 122:
+            power = int(attacker.happiness / 2.5)
+            if power > 102:
+                power = 102
+            elif power < 1:
+                power = 1
+        # Power increases as happiness **decreases**, up to a maximum of 102.
+        elif self.effect == 124:
+            power = int((255 - attacker.happiness) / 2.5)
+            if power > 102:
+                power = 102
+            elif power < 1:
+                power = 1
+        # Power raises when the user has lower Speed, up to a maximum of 150.
+        elif self.effect == 220:
+            power = min(150, int(1 + 25 * defender.get_speed(battle) / attacker.get_speed(battle)))
+        # Inflicts more damage when the user has more HP remaining, with a maximum of 150 power.
+        elif self.effect == 191:
+            power = int(150 * (attacker.hp / attacker.starting_hp))
+        # Power is 100 times the amount of energy Stockpiled.
+        elif self.effect == 162:
+            power = 100 * attacker.stockpile
+        # Inflicts more damage when the user has less HP remaining, with a maximum of 200 power.
+        elif self.effect == 100:
+            hp_percent = 64 * (attacker.hp / attacker.starting_hp)
+            if hp_percent <= 1:
+                power = 200
+            elif hp_percent <= 5:
+                power = 150
+            elif hp_percent <= 12:
+                power = 100
+            elif hp_percent <= 21:
+                power = 80
+            elif hp_percent <= 42:
+                power = 40
+            else:
+                power = 20
+        # Power increases when this move has less PP, up to a maximum of 200.
+        elif self.effect == 236:
+            if self.pp == 0:
+                power = 200
+            elif self.pp == 1:
+                power = 80
+            elif self.pp == 2:
+                power = 60
+            elif self.pp == 3:
+                power = 50
+            else:
+                power = 40
+        # Power increases against targets with more HP remaining, up to a maximum of 120|100 power.
+        elif self.effect == 238:
+            power = max(1, int(120 * (defender.hp / defender.starting_hp)))
+        elif self.effect == 495:
+            power = max(1, int(100 * (defender.hp / defender.starting_hp)))
+        # Power increases against targets with more raised stats, up to a maximum of 200.
+        elif self.effect == 246:
+            delta = 0
+            delta += max(0, defender.attack_stage)
+            delta += max(0, defender.defense_stage)
+            delta += max(0, defender.spatk_stage)
+            delta += max(0, defender.spdef_stage)
+            delta += max(0, defender.speed_stage)
+            power = min(200, 60 + (delta * 20))
+        # Power is higher when the user has greater Speed than the target, up to a maximum of 150.
+        elif self.effect == 294:
+            delta = attacker.get_speed(battle) // defender.get_speed(battle)
+            if delta <= 0:
+                power = 40
+            elif delta <= 1:
+                power = 60
+            elif delta <= 2:
+                power = 80
+            elif delta <= 3:
+                power = 120
+            else:
+                power = 150
+        # Power is higher the more the user's stats have been raised.
+        elif self.effect == 306:
+            delta = 1
+            delta += max(0, attacker.attack_stage)
+            delta += max(0, attacker.defense_stage)
+            delta += max(0, attacker.spatk_stage)
+            delta += max(0, attacker.spdef_stage)
+            delta += max(0, attacker.speed_stage)
+            delta += max(0, attacker.accuracy_stage)
+            delta += max(0, attacker.evasion_stage)
+            power = 20 * delta
+        # Power doubles every turn this move is used in succession after the first, maxing out after five turns.
+        elif self.effect == 120:
+            power = (2 ** attacker.fury_cutter) * 10
+            attacker.fury_cutter = min(4, attacker.fury_cutter + 1)
+        # Power doubles every turn this move is used in succession after the first, resetting after five turns.
+        elif self.effect == 118:
+            power = (2 ** attacker.locked_move.turn) * self.power
+        # Power varies randomly from 10 to 150.
+        elif self.effect == 127:
+            percentile = random.randint(0, 100)
+            if percentile <= 5:
+                power = 10
+            elif percentile <= 15:
+                power = 30
+            elif percentile <= 35:
+                power = 50
+            elif percentile <= 65:
+                power = 70
+            elif percentile <= 85:
+                power = 90
+            elif percentile <= 95:
+                power = 110
+            else:
+                power = 150
+        # Power is based on the user's held item
+        elif self.effect == 234:
+            power = attacker.held_item.power
+        # Power increases by 100% for each consecutive use by any friendly Pokémon, to a maximum of 200.
+        elif self.effect == 303:
+            power = attacker.echoed_voice_power
+        # Power is dependent on the user's held berry.
+        elif self.effect == 223:
+            if attacker.held_item.get() in (
+                "enigma berry", "rowap berry", "maranga berry", "jaboca berry", "belue berry", "kee berry",
+                "salac berry", "watmel berry", "lansat berry", "custap berry", "liechi berry", "apicot berry",
+                "ganlon berry", "petaya berry", "starf berry", "micle berry", "durin berry"
+            ):
+                power = 100
+            elif attacker.held_item.get() in (
+                "cornn berry", "spelon berry", "nomel berry", "wepear berry", "kelpsy berry", "bluk berry",
+                "grepa berry", "rabuta berry", "pinap berry", "hondew berry", "pomeg berry", "qualot berry",
+                "tamato berry", "magost berry", "pamtre berry", "nanab berry"
+            ):
+                power = 90
+            else:
+                power = 80
+        elif self.effect == 361 and attacker._name == "Greninja-ash":
+            power = 20
+        # Power is based on the user's base attack. Only applies when not explicitly overridden.
+        elif self.effect == 155 and self.power is None:
+            power = (attacker.get_raw_attack() // 10) + 5
+        # No special changes to power, return its raw value.
+        else:
+            power = self.power
+        
+        if power is None:
+            return None
+        
+        #NOTE: this needs to be first as it only applies to raw power
+        if attacker.ability() == Ability.TECHNICIAN and power <= 60:
+            power *= 1.5
+        if attacker.ability() == Ability.TOUGH_CLAWS and self.makes_contact(attacker):
+            power *= 1.3
+        if attacker.ability() == Ability.RIVALRY and "-x" not in (attacker.gender, defender.gender):
+            if attacker.gender == defender.gender:
+                power *= 1.25
+            else:
+                power *= .75
+        if attacker.ability() == Ability.IRON_FIST and self.is_punching():
+            power *= 1.2
+        if attacker.ability() == Ability.STRONG_JAW and self.is_biting():
+            power *= 1.5
+        if attacker.ability() == Ability.MEGA_LAUNCHER and self.is_aura_or_pulse():
+            power *= 1.5
+        if attacker.ability() == Ability.SHARPNESS and self.is_slicing():
+            power *= 1.5
+        if attacker.ability() == Ability.RECKLESS and self.effect in (46, 49, 199, 254, 263, 270):
+            power *= 1.2
+        if attacker.ability() == Ability.TOXIC_BOOST and self.damage_class == DamageClass.PHYSICAL and attacker.nv.poison():
+            power *= 1.5
+        if attacker.ability() == Ability.FLARE_BOOST and self.damage_class == DamageClass.SPECIAL and attacker.nv.burn():
+            power *= 1.5
+        if attacker.ability() == Ability.ANALYTIC and defender.has_moved:
+            power *= 1.3
+        if attacker.ability() == Ability.BATTERY and self.damage_class == DamageClass.SPECIAL:
+            power *= 1.3
+        if attacker.ability() == Ability.SHEER_FORCE and self.effect_chance is not None: # Not *perfect* but good enough
+            power *= 1.3
+        if attacker.ability() == Ability.STAKEOUT and defender.swapped_in:
+            power *= 2
+        if attacker.ability() == Ability.SUPREME_OVERLORD:
+            fainted = sum(poke.hp == 0 for poke in attacker.owner.party)
+            if fainted:
+                power *= (10 + fainted) / 10
+        
+        # Type buffing abilities - Some use naive type because the type is changed.
+        if attacker.ability() == Ability.AERILATE and self.type == ElementType.NORMAL:
+            power *= 1.2
+        if attacker.ability() == Ability.PIXILATE and self.type == ElementType.NORMAL:
+            power *= 1.2
+        if attacker.ability() == Ability.GALVANIZE and self.type == ElementType.NORMAL:
+            power *= 1.2
+        if attacker.ability() == Ability.REFRIGERATE and self.type == ElementType.NORMAL:
+            power *= 1.2
+        if attacker.ability() == Ability.DRAGONS_MAW and current_type == ElementType.DRAGON:
+            power *= 1.5
+        if attacker.ability() == Ability.TRANSISTOR and current_type == ElementType.ELECTRIC:
+            power *= 1.5
+        if attacker.ability() == Ability.WATER_BUBBLE and current_type == ElementType.WATER:
+            power *= 2
+        if defender.ability(attacker=attacker, move=self) == Ability.WATER_BUBBLE and current_type == ElementType.FIRE:
+            power *= .5
+        if attacker.ability() == Ability.OVERGROW and current_type == ElementType.GRASS and attacker.hp <= attacker.starting_hp // 3:
+            power *= 1.5
+        if attacker.ability() == Ability.BLAZE and current_type == ElementType.FIRE and attacker.hp <= attacker.starting_hp // 3:
+            power *= 1.5
+        if attacker.ability() == Ability.TORRENT and current_type == ElementType.WATER and attacker.hp <= attacker.starting_hp // 3:
+            power *= 1.5
+        if attacker.ability() == Ability.SWARM and current_type == ElementType.BUG and attacker.hp <= attacker.starting_hp // 3:
+            power *= 1.5
+        if attacker.ability() == Ability.NORMALIZE and current_type == ElementType.NORMAL:
+            power *= 1.2
+        if attacker.ability() == Ability.SAND_FORCE and current_type in (ElementType.ROCK, ElementType.GROUND, ElementType.STEEL) and battle.weather.get() == "sandstorm":
+            power *= 1.3
+        if attacker.ability() in (Ability.STEELWORKER, Ability.STEELY_SPIRIT) and current_type == ElementType.STEEL:
+            power *= 1.5
+        if attacker.ability() == Ability.ROCKY_PAYLOAD and current_type == ElementType.ROCK:
+            power *= 1.5
+        
+        # Type buffing items
+        if attacker.held_item == "black-glasses" and current_type == ElementType.DARK:
+            power *= 1.2
+        if attacker.held_item == "black-belt" and current_type == ElementType.FIGHTING:
+            power *= 1.2
+        if attacker.held_item == "hard-stone" and current_type == ElementType.ROCK:
+            power *= 1.2
+        if attacker.held_item == "magnet" and current_type == ElementType.ELECTRIC:
+            power *= 1.2
+        if attacker.held_item == "mystic-water" and current_type == ElementType.WATER:
+            power *= 1.2
+        if attacker.held_item == "never-melt-ice" and current_type == ElementType.ICE:
+            power *= 1.2
+        if attacker.held_item == "dragon-fang" and current_type == ElementType.DRAGON:
+            power *= 1.2
+        if attacker.held_item == "poison-barb" and current_type == ElementType.POISON:
+            power *= 1.2
+        if attacker.held_item == "charcoal" and current_type == ElementType.FIRE:
+            power *= 1.2
+        if attacker.held_item == "silk-scarf" and current_type == ElementType.NORMAL:
+            power *= 1.2
+        if attacker.held_item == "metal-coat" and current_type == ElementType.STEEL:
+            power *= 1.2
+        if attacker.held_item == "sharp-beak" and current_type == ElementType.FLYING:
+            power *= 1.2
+        if attacker.held_item == "draco-plate" and current_type == ElementType.DRAGON:
+            power *= 1.2
+        if attacker.held_item == "dread-plate" and current_type == ElementType.DARK:
+            power *= 1.2
+        if attacker.held_item == "earth-plate" and current_type == ElementType.GROUND:
+            power *= 1.2
+        if attacker.held_item == "fist-plate" and current_type == ElementType.FIGHTING:
+            power *= 1.2
+        if attacker.held_item == "flame-plate" and current_type == ElementType.FIRE:
+            power *= 1.2
+        if attacker.held_item == "icicle-plate" and current_type == ElementType.ICE:
+            power *= 1.2
+        if attacker.held_item == "insect-plate" and current_type == ElementType.BUG:
+            power *= 1.2
+        if attacker.held_item == "iron-plate" and current_type == ElementType.STEEL:
+            power *= 1.2
+        if attacker.held_item == "meadow-plate" and current_type == ElementType.GRASS:
+            power *= 1.2
+        if attacker.held_item == "mind-plate" and current_type == ElementType.PSYCHIC:
+            power *= 1.2
+        if attacker.held_item == "pixie-plate" and current_type == ElementType.FAIRY:
+            power *= 1.2
+        if attacker.held_item == "sky-plate" and current_type == ElementType.FLYING:
+            power *= 1.2
+        if attacker.held_item == "splash-plate" and current_type == ElementType.WATER:
+            power *= 1.2
+        if attacker.held_item == "spooky-plate" and current_type == ElementType.GHOST:
+            power *= 1.2
+        if attacker.held_item == "stone-plate" and current_type == ElementType.ROCK:
+            power *= 1.2
+        if attacker.held_item == "toxic-plate" and current_type == ElementType.POISON:
+            power *= 1.2
+        if attacker.held_item == "zap-plate" and current_type == ElementType.ELECTRIC:
+            power *= 1.2
+        if attacker.held_item == "adamant-orb" and current_type in (ElementType.DRAGON, ElementType.STEEL) and attacker._name == "Dialga":
+            power *= 1.2
+        if attacker.held_item == "griseous-orb" and current_type in (ElementType.DRAGON, ElementType.GHOST) and attacker._name == "Giratina":
+            power *= 1.2
+        if attacker.held_item == "soul-dew" and current_type in (ElementType.DRAGON, ElementType.PSYCHIC) and attacker._name in ("Latios", "Latias"):
+            power *= 1.2
+        if attacker.held_item == "lustrous-orb" and current_type in (ElementType.DRAGON, ElementType.WATER) and attacker._name == "Palkia":
+            power *= 1.2
+        
+        # Damage class buffing items
+        if attacker.held_item == "wise-glasses" and self.damage_class == DamageClass.SPECIAL:
+            power *= 1.1
+        if attacker.held_item == "muscle-band" and self.damage_class == DamageClass.PHYSICAL:
+            power *= 1.1
 
-        return power
+        # If there be weather, this move has doubled power and the weather's type.
+        if self.effect == 204 and battle.weather.get() in ("hail", "sandstorm", "rain", "h-rain", "sun", "h-sun"):
+            power *= 2
+        # During hail, rain-dance, or sandstorm, power is halved.
+        if self.effect == 152 and battle.weather.get() in ("rain", "hail"):
+            power *= 0.5
+        # Power doubles if user is burned, paralyzed, or poisoned.
+        if self.effect == 170 and (attacker.nv.burn() or attacker.nv.poison() or attacker.nv.paralysis()):
+            power *= 2
+        # If the target is paralyzed, power is doubled and cures the paralysis.
+        if self.effect == 172 and defender.nv.paralysis():
+            power *= 2
+            defender.nv.reset()
+        # If the target is poisoned, this move has double power.
+        if self.effect in (284, 461) and defender.nv.poison():
+            power *= 2
+        # If the target is sleeping, this move has double power, and the target wakes up.
+        if self.effect == 218 and defender.nv.sleep():
+            power *= 2
+            defender.nv.reset()
+        # Has double power against Pokémon that have less than half their max HP remaining.
+        if self.effect == 222 and defender.hp < defender.starting_hp // 2:
+            power *= 2
+        # Power is doubled if the target has already moved this turn.
+        if self.effect == 231 and defender.has_moved:
+            power *= 2
+        # Has double power if the target has a major status ailment.
+        if self.effect == 311 and defender.nv.current:
+            power *= 2
+        # If the user has used defense-curl since entering the field, this move has double power.
+        if self.effect == 118 and attacker.defense_curl:
+            power *= 2
+        # Has double power if the user's last move failed.
+        if self.effect == 409 and attacker.last_move_failed:
+            power *= 2
+        # Has double power if the target is in the first turn of dive.
+        if self.effect in (258, 262) and defender.dive:
+            power *= 2
+        # Has double power if the target is in the first turn of dig.
+        if self.effect in (127, 148) and defender.dig:
+            power *= 2
+        # Has double power if the target is in the first turn of bounce or fly.
+        if self.effect in (147, 150) and defender.fly:
+            power *= 2
+        # Has double power if the user takes damage before attacking this turn.
+        if self.effect == 186 and attacker.last_move_damage is not None:
+            power *= 2
+        # Has double power if the user has no held item.
+        if self.effect == 318 and not attacker.held_item.has_item():
+            power *= 2
+        # Has double power if a friendly Pokémon fainted last turn.
+        if self.effect == 320 and attacker.owner.retaliate.active():
+            power *= 2
+        # Has double power against, and can hit, Pokémon attempting to switch out.
+        if self.effect == 129 and (isinstance(defender.owner.selected_action, int) or defender.owner.selected_action.effect in (128, 154, 229, 347, 493)):
+            power *= 2
+        # Power is doubled if the target has already received damage this turn.
+        if self.effect == 232 and defender.dmg_this_turn:
+            power *= 2
+        # Power is doubled if the target is minimized.
+        if self.effect == 151 and defender.minimized:
+            power *= 2
+        # With Fusion Bolt, power is doubled.
+        if self.effect == 336 and battle.last_move_effect == 337:
+            power *= 2
+        # With Fusion Flare, power is doubled.
+        if self.effect == 337 and battle.last_move_effect == 336:
+            power *= 2
+        # Me first increases the power of the used move by 50%.
+        if attacker.owner.selected_action is not None and not isinstance(attacker.owner.selected_action, int) and attacker.owner.selected_action.effect == 242:
+            power *= 1.5
+        # Has 1.5x power during gravity.
+        if self.effect == 435 and battle.gravity.active():
+            power *= 1.5
+        # If the user attacks before the target, or if the target switched in this turn, its base power doubles.
+        if self.effect == 436 and (not defender.has_moved or defender.swapped_in):
+            power *= 2
+        # If the terrain is psychic and the user is grounded, this move gets 1.5x power.
+        if self.effect == 440 and battle.terrain.item == "psychic" and attacker.grounded(battle):
+            power *= 1.5
+        # Power is doubled if terrain is present.
+        if self.effect == 441 and battle.terrain.item and attacker.grounded(battle):
+            power *= 2
+        # Power is boosted by 50% if used on a Pokémon that is holding an item that can be knocked off.
+        if self.effect == 189 and defender.held_item.has_item() and defender.held_item.can_remove():
+            power *= 1.5
+        # If the target is under the effect of electric terrain, this move has double power.
+        if self.effect == 443 and battle.terrain.item == "electric" and defender.grounded(battle, attacker=attacker, move=self):
+            power *= 2
+        # Deals 1.5x damage if the user is under the effect of misty terrain.
+        if self.effect == 444 and battle.terrain.item == "misty" and attacker.grounded(battle):
+            power *= 1.5
+        # Power is doubled if any of the user's stats were lowered this turn.
+        if self.effect == 450 and attacker.stat_decreased:
+            power *= 2
+        # Power is doubled if the defender has a non volatile status effect.
+        if self.effect == 465 and defender.nv.current:
+            power *= 2
+        # Deals 4/3x damage if supereffective.
+        if self.effect == 482 and defender.effectiveness(current_type, battle, attacker=attacker, move=self) > 1:
+            power *= 4/3
+        # Power is multiplied by (1 + number of fainted party members)x, capping at 101x (100 faints).
+        if self.effect == 490:
+            power *= 1 + min(attacker.owner.num_fainted, 100)
+        # Power is multiplied by (1 + number of times hit)x, capping at 7x (6 hits).
+        if self.effect == 491:
+            power *= 1 + min(attacker.num_hits, 6)
+        # Has a 30% chance to double power
+        if self.effect == 498 and random.random() <= 0.3:
+            power *= 2
+
+        # Terrains
+        if battle.terrain.item == "psychic" and attacker.grounded(battle) and current_type == ElementType.PSYCHIC:
+            power *= 1.3
+        if battle.terrain.item == "grassy" and attacker.grounded(battle) and current_type == ElementType.GRASS:
+            power *= 1.3
+        if battle.terrain.item == "grassy" and defender.grounded(battle, attacker=attacker, move=self) and self.id in (89, 222, 523):
+            power *= 0.5
+        if battle.terrain.item == "electric" and attacker.grounded(battle) and current_type == ElementType.ELECTRIC:
+            power *= 1.3
+        if battle.terrain.item == "misty" and defender.grounded(battle, attacker=attacker, move=self) and current_type == ElementType.DRAGON:
+            power *= 0.5
+            
+        # Power buffing statuses
+        if attacker.charge.active() and current_type == ElementType.ELECTRIC:
+            power *= 2
+        if (attacker.owner.mud_sport.active() or defender.owner.mud_sport.active()) and current_type == ElementType.ELECTRIC:
+            power //= 3
+        if (attacker.owner.water_sport.active() or defender.owner.water_sport.active()) and current_type == ElementType.FIRE:
+            power //= 3
+
+        return int(power)

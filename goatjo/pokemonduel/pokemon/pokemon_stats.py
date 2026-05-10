@@ -7,11 +7,11 @@ class DuelPokemonStats:
     def calculate_raw_stat(self, base, iv, ev, nature):
         """
         Helper function to calculate a raw stat using the base, IV, EV, level, and nature.
-
+        
         https://bulbapedia.bulbagarden.net/wiki/Stat#Determination_of_stats "In Generation III onward"
         """
         return round((((2 * base + iv + (ev / 4)) * self.level) / 100) + 5) * nature
-
+    
     @staticmethod
     def calculate_stat(stat, stat_stage, *, crop=False):
         """Calculates a stat based on that stat's stage changes."""
@@ -35,7 +35,7 @@ class DuelPokemonStats:
             6: 4,
         }
         return stage_multiplier[stat_stage] * stat
-
+    
     def get_raw_attack(self, *, check_power_trick=True, check_power_shift=True):
         """Returns the raw attack of this poke, taking into account IVs EVs and natures and forms."""
         if self.power_trick and check_power_trick:
@@ -46,7 +46,7 @@ class DuelPokemonStats:
         if self.attack_split is not None:
             stat = (stat + self.attack_split) // 2
         return stat
-
+    
     def get_raw_defense(self, *, check_power_trick=True, check_power_shift=True):
         """Returns the raw attack of this poke, taking into account IVs EVs and natures and forms."""
         if self.power_trick and check_power_trick:
@@ -57,7 +57,7 @@ class DuelPokemonStats:
         if self.defense_split is not None:
             stat = (stat + self.defense_split) // 2
         return stat
-
+    
     def get_raw_spatk(self, *, check_power_shift=True):
         """Returns the raw attack of this poke, taking into account IVs EVs and natures and forms."""
         if self.power_shift and check_power_shift:
@@ -66,7 +66,7 @@ class DuelPokemonStats:
         if self.spatk_split is not None:
             stat = (stat + self.spatk_split) // 2
         return stat
-
+    
     def get_raw_spdef(self, *, check_power_shift=True):
         """Returns the raw attack of this poke, taking into account IVs EVs and natures and forms."""
         if self.power_shift and check_power_shift:
@@ -75,11 +75,11 @@ class DuelPokemonStats:
         if self.spdef_split is not None:
             stat = (stat + self.spdef_split) // 2
         return stat
-
+    
     def get_raw_speed(self):
         """Returns the raw attack of this poke, taking into account IVs EVs and natures and forms."""
         return self.calculate_raw_stat(self.speed, self.speediv, self.speedev, self.nature_stat_deltas["Speed"])
-
+    
     def get_paradox_boosted_stat(self):
         stats = [
             ("attack", self.get_raw_attack()),
@@ -145,7 +145,7 @@ class DuelPokemonStats:
             attack *= 1.3
         attack *= self.held_item.get_stat_multiplier("attack")
         return attack
-
+    
     def get_defense(self, battle, *, critical=False, ignore_stages=False, attacker=None, move=None):
         """Helper method to call calculate_stat for defense."""
         if battle.wonder_room.active():
@@ -169,7 +169,7 @@ class DuelPokemonStats:
             defense *= 1.3
         defense *= self.held_item.get_stat_multiplier("defense")
         return defense
-
+    
     def get_spatk(self, battle, *, critical=False, ignore_stages=False):
         """Helper method to call calculate_stat for spatk."""
         spatk = self.get_raw_spatk()
@@ -194,7 +194,7 @@ class DuelPokemonStats:
             spatk *= 1.3
         spatk *= self.held_item.get_stat_multiplier("spatk")
         return spatk
-
+    
     def get_spdef(self, battle, *, critical=False, ignore_stages=False, attacker=None, move=None):
         """Helper method to call calculate_stat for spdef."""
         if battle.wonder_room.active():
@@ -220,9 +220,10 @@ class DuelPokemonStats:
             spdef *= 1.3
         spdef *= self.held_item.get_stat_multiplier("spdef")
         return spdef
-
+    
     def get_speed(self, battle):
         """Helper method to call calculate_stat for speed."""
+        #Always active stage changes
         speed = self.calculate_stat(self.get_raw_speed(), self.speed_stage)
         if self.nv.paralysis() and not self.ability() == Ability.QUICK_FEET:
             speed //= 2
@@ -253,47 +254,47 @@ class DuelPokemonStats:
         speed *= self.held_item.get_stat_multiplier("speed")
         speed *= self.held_item.get_speed_multiplier()
         return speed
-
+    
     def get_accuracy(self, battle):
         """Helper method to calculate accuracy stage."""
         return self.accuracy_stage
-
+        
     def get_evasion(self, battle):
         """Helper method to calculate evasion stage."""
         return self.evasion_stage
-
+    
     def append_attack(self, stage_change: int, *, attacker=None, move=None, source: str="", check_looping: bool=True):
         """Helper method to call append_stat for attack."""
         return self.append_stat(stage_change, attacker, move, "attack", source, check_looping)
-
+    
     def append_defense(self, stage_change: int, *, attacker=None, move=None, source: str="", check_looping: bool=True):
         """Helper method to call append_stat for defense."""
         return self.append_stat(stage_change, attacker, move, "defense", source, check_looping)
-
+    
     def append_spatk(self, stage_change: int, *, attacker=None, move=None, source: str="", check_looping: bool=True):
         """Helper method to call append_stat for special attack."""
         return self.append_stat(stage_change, attacker, move, "special attack", source, check_looping)
-
+    
     def append_spdef(self, stage_change: int, *, attacker=None, move=None, source: str="", check_looping: bool=True):
         """Helper method to call append_stat for special defense."""
         return self.append_stat(stage_change, attacker, move, "special defense", source, check_looping)
-
+    
     def append_speed(self, stage_change: int, *, attacker=None, move=None, source: str="", check_looping: bool=True):
         """Helper method to call append_stat for speed."""
         return self.append_stat(stage_change, attacker, move, "speed", source, check_looping)
-
+    
     def append_accuracy(self, stage_change: int, *, attacker=None, move=None, source: str="", check_looping: bool=True):
         """Helper method to call append_stat for accuracy."""
         return self.append_stat(stage_change, attacker, move, "accuracy", source, check_looping)
-
+    
     def append_evasion(self, stage_change: int, *, attacker=None, move=None, source: str="", check_looping: bool=True):
         """Helper method to call append_stat for evasion."""
         return self.append_stat(stage_change, attacker, move, "evasion", source, check_looping)
-
+        
     def append_stat(self, stage_change: int, attacker, move, stat: str, source: str, check_looping: bool=True):
         """
         Adds a stat stage change to this pokemon.
-
+        
         Returns a formatted string describing the stat change.
         """
         msg = ""
@@ -314,7 +315,7 @@ class DuelPokemonStats:
             delta *= 2
         if self.ability(attacker=attacker, move=move) == Ability.CONTRARY:
             delta *= -1
-
+        
         if stat == "attack":
             current_stage = self.attack_stage
         elif stat == "defense":
@@ -331,18 +332,24 @@ class DuelPokemonStats:
             current_stage = self.evasion_stage
         else:
             raise ValueError(f"invalid stat {stat}")
-
+        
+        # Cap stat stages within -6 to 6
         if delta < 0:
+            #-6 -5 -4 ..  2
+            # 0 -1 -2 .. -8
             cap = (current_stage * -1) - 6
             delta = max(delta, cap)
             if delta == 0:
                 return f"{self.name}'s {stat} won't go any lower!\n"
         else:
+            # 6  5  4 .. -2
+            # 0  1  2 ..  8
             cap = (current_stage * -1) + 6
             delta = min(delta, cap)
             if delta == 0:
                 return f"{self.name}'s {stat} won't go any higher!\n"
-
+        
+        # Prevent stat changes
         if delta < 0 and attacker is not self:
             if self.ability(attacker=attacker, move=move) in (Ability.CLEAR_BODY, Ability.WHITE_SMOKE, Ability.FULL_METAL_BODY):
                 ability_name = Ability(self.ability_id).pretty_name
@@ -363,12 +370,13 @@ class DuelPokemonStats:
                 msg += f"{self.name} reflected the stat change with its mirror armor!\n"
                 msg += attacker.append_stat(delta, self, None, stat, "", check_looping=False)
                 return msg
-
+        
+        # Remember if stats were changed for certain moves
         if delta > 0:
             self.stat_increased = True
         elif delta < 0:
             self.stat_decreased = True
-
+        
         if stat == "attack":
             self.attack_stage += delta
         elif stat == "defense":
@@ -385,12 +393,14 @@ class DuelPokemonStats:
             self.evasion_stage += delta
         else:
             raise ValueError(f"invalid stat {stat}")
-
+        
         formatted_delta = min(max(delta, -3), 3)
         msg += delta_msgs[formatted_delta]
 
+        # TODO: fix this hacky way of doing this, but probably not until multi battles...
         battle = self.held_item.battle
 
+        # Effects that happen after a pokemon gains stats
         if delta < 0:
             if attacker is not self:
                 if self.ability(attacker=attacker, move=move) == Ability.DEFIANT:
@@ -398,11 +408,13 @@ class DuelPokemonStats:
                 if self.ability(attacker=attacker, move=move) == Ability.COMPETITIVE:
                     msg += self.append_spatk(2, attacker=self, source="its competitiveness")
             if self.held_item == "eject-pack":
+                # This assumes that neither attacker or poke are needed if not checking traps
                 swaps = self.owner.valid_swaps(..., ..., check_trap=False)
                 if swaps:
                     msg += f"{self.name} is switched out by its eject pack!\n"
                     self.held_item.use()
                     msg += self.remove(battle)
+                    # Force this pokemon to immediately return to be attacked
                     self.owner.mid_turn_remove = True
         elif delta > 0:
             for poke in (battle.trainer1.current_pokemon, battle.trainer2.current_pokemon):
@@ -410,24 +422,27 @@ class DuelPokemonStats:
                     msg += f"{poke.name} seizes the opportunity to boost its stat with its opportunist!\n"
                     msg += poke.append_stat(delta, poke, None, stat, "", check_looping=False)
         return msg
-
+    
     def grounded(self, battle, *, attacker=None, move=None):
         """
-        Returns true if this pokemon is grounded (and thus susceptible to ground moves and terrain).
-
-        Returns a boolean.
+        Returns True if this pokemon is considered "grounded".
+        
+        Explicit grounding applies first, then explicit ungrounding, then implicit grounding.
         """
+        if battle.gravity.active():
+            return True
+        if self.held_item == "iron-ball":
+            return True
+        if self.grounded_by_move:
+            return True
+        if ElementType.FLYING in self.type_ids and not self.roost:
+            return False
         if self.ability(attacker=attacker, move=move) == Ability.LEVITATE:
             return False
-        if self.held_item in ("iron-ball", "ironball", "heavydutyboots", "heavy-duty-boots"):
-            return True
-        if self.held_item in ("air-balloon", "airballoon", "balloon"):
+        if self.held_item == "air-balloon":
             return False
-        if battle.terrain.get() in ("electric", "grassy", "misty", "psychic"):
-            if self.ability(attacker=attacker, move=move) != Ability.TERRAIN_SURFER:
-                return True
-        if self.status == "paralysis" or self.status == "sleep" or self.status == "freeze":
+        if self.magnet_rise.active():
             return False
-        if ElementType.FLYING in self.type_ids and self.ability(attacker=attacker, move=move) != Ability.LEVITATE:
+        if self.telekinesis.active():
             return False
         return True

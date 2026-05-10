@@ -28,7 +28,7 @@ async def generate_team_preview(battle):
         font = ImageFont.load_default()
         small_font = ImageFont.load_default()
 
-    data_dir = Path(__file__).parent / "data" / "img"
+    data_dir = Path(__file__).parent.parent / "data" / "img"
 
     trainer1_text = f"{battle.trainer1.name}'s Team"
     text_bbox = draw.textbbox((0, 0), trainer1_text, font=font)

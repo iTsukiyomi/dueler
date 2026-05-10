@@ -8,6 +8,14 @@ class Terrain(ExpiringItem):
         super().__init__()
         self.battle = battle
 
+    def get(self):
+        """Get the current terrain type."""
+        return self.item
+
+    def active(self):
+        """Check if terrain is currently active."""
+        return super().active()
+
     def next_turn(self):
         expired = super().next_turn()
         if expired:

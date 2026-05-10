@@ -29,7 +29,7 @@ async def generate_main_battle_message(battle):
         font_hp = ImageFont.load_default()
         font_small = ImageFont.load_default()
 
-    data_dir = Path(__file__).parent / "data" / "img"
+    data_dir = Path(__file__).parent.parent / "data" / "img"
 
     def load_sprite(poke):
         poke_id = None

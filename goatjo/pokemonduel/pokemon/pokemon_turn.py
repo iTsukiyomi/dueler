@@ -1,4 +1,5 @@
-from ..enums import Ability
+import random
+from ..enums import Ability, ElementType
 
 
 class DuelPokemonTurn:
@@ -7,11 +8,12 @@ class DuelPokemonTurn:
     def next_turn(self, otherpoke, battle):
         """
         Updates this pokemon for a new turn.
-
+        
         `otherpoke` may be None if the opponent fainted the previous turn.
         Returns a formatted message.
         """
         msg = ""
+        # This needs to be here, as swapping sets this value explicitly
         self.has_moved = False
         if not self.swapped_in:
             self.active_turns += 1
@@ -51,6 +53,7 @@ class DuelPokemonTurn:
         if self.locked_move:
             if self.locked_move.next_turn():
                 self.locked_move = None
+                # Just in case they never actually used the move to remove it
                 self.dive = False
                 self.dig = False
                 self.fly = False
@@ -62,9 +65,10 @@ class DuelPokemonTurn:
         self.stat_decreased = False
         self.roost = False
         self.syrup_bomb.next_turn()
-
+        
         msg += self.nv.next_turn(battle)
-
+        
+        # Volatile status turn progression
         prev_disab_move = self.disable.item
         if self.disable.next_turn():
             msg += f"{self.name}'s {prev_disab_move.pretty_name} is no longer disabled!\n"
@@ -98,6 +102,8 @@ class DuelPokemonTurn:
             msg += self.held_item.eat_berry()
             self.held_item.last_used = None
 
+        
+        # Abilities
         if self.ability() == Ability.SPEED_BOOST and not self.swapped_in:
             msg += self.append_speed(1, attacker=self, source="its Speed boost")
         if self.ability() == Ability.LIMBER and self.nv.paralysis():
@@ -235,6 +241,7 @@ class DuelPokemonTurn:
         if self.ability() == Ability.POWER_CONSTRUCT and self._name in ("Zygarde", "Zygarde-10") and self.hp < self.starting_hp / 2 and self.hp > 0:
             if self.form("Zygarde-complete"):
                 msg += f"{self.name} is at full power!\n"
+                # Janky way to raise the current HP of this poke, as it's new form has a higher HP stat. Note, this is NOT healing.
                 new_hp = round((((2 * self.base_stats["Zygarde-complete"][0] + self.hpiv + (self.hpev / 4)) * self.level) / 100) + self.level + 10)
                 self.hp = new_hp - (self.starting_hp - self.hp)
                 self.starting_hp = new_hp
@@ -247,17 +254,22 @@ class DuelPokemonTurn:
             self.form("Cherrim-sunshine")
         if self.ability() == Ability.FLOWER_GIFT and self._name == "Cherrim-sunshine" and battle.weather.get() not in ("sun", "h-sun"):
             self.form("Cherrim")
-
+        
+        #Bad Dreams
         if otherpoke is not None and otherpoke.ability() == Ability.BAD_DREAMS and self.nv.sleep():
             msg += self.damage(self.starting_hp // 8, battle, source=f"{otherpoke.name}'s bad dreams")
+        #Leech seed
         if self.leech_seed and otherpoke is not None:
             damage = self.starting_hp // 8
             msg += self.damage(damage, battle, attacker=otherpoke, drain_heal_ratio=1, source="leech seed")
+        #Curse
         if self.curse:
             msg += self.damage(self.starting_hp // 4, battle, source="its curse")
+        #Syrup bomb
         if self.syrup_bomb.active() and otherpoke is not None:
             msg += self.append_speed(-1, attacker=otherpoke, source="its syrup coating")
-
+        
+        #Weather damages
         if self.ability() == Ability.OVERCOAT:
             pass
         elif self.held_item == "safety-goggles":
@@ -276,7 +288,8 @@ class DuelPokemonTurn:
                 and self.ability() not in (Ability.SNOW_CLOAK, Ability.ICE_BODY)
             ):
                 msg += self.damage(self.starting_hp // 16, battle, source="the hail")
-
+        
+        #Bind
         if self.bind.next_turn():
             msg += f"{self.name} is no longer bound!\n"
         elif self.bind.active() and otherpoke is not None:
@@ -284,22 +297,27 @@ class DuelPokemonTurn:
                 msg += self.damage(self.starting_hp // 6, battle, source=f"{otherpoke.name}'s bind")
             else:
                 msg += self.damage(self.starting_hp // 8, battle, source=f"{otherpoke.name}'s bind")
+        #Ingrain
         if self.ingrain:
             heal = self.starting_hp // 16
             if self.held_item == "big_root":
                 heal = int(heal * 1.3)
             msg += self.heal(heal, source="ingrain")
+        #Aqua Ring
         if self.aqua_ring:
             heal = self.starting_hp // 16
             if self.held_item == "big_root":
                 heal = int(heal * 1.3)
             msg += self.heal(heal, source="aqua ring")
+        #Octolock
         if self.octolock and otherpoke is not None:
             msg += self.append_defense(-1, attacker=self, source=f"{otherpoke.name}'s octolock")
             msg += self.append_spdef(-1, attacker=self, source=f"{otherpoke.name}'s octolock")
+        #Grassy Terrain
         if battle.terrain.item == "grassy" and self.grounded(battle) and not self.heal_block.active():
             msg += self.heal(self.starting_hp // 16, source="grassy terrain")
-
+        
+        #Goes at the end so everything in this func that checks it handles it correctly
         self.swapped_in = False
         msg += self.held_item.activate_end_of_turn(battle)
         return msg

@@ -42,11 +42,11 @@ class DuelPokemonMechanics:
         self.speed_stage = otherpoke.speed_stage
         self.accuracy_stage = otherpoke.accuracy_stage
         self.evasion_stage = otherpoke.evasion_stage
-
+    
     def form(self, form: str):
         """
         Changes this poke's form to the provided form.
-
+        
         This changes its name and base stats, and may affect moves, abilities, and items.
         Returns True if the poke successfully reformed.
         """
@@ -68,7 +68,7 @@ class DuelPokemonMechanics:
         self.spdef_split = None
         self.autotomize = 0
         return True
-
+    
     def effectiveness(self, attacker_type: ElementType, battle, *, attacker=None, move=None):
         """Calculates a float representing the effectiveness of `attacker_type` damage on this poke."""
         if attacker_type == ElementType.TYPELESS:
@@ -81,7 +81,7 @@ class DuelPokemonMechanics:
                 effectiveness *= 2
                 continue
             if move is not None and move.effect == 373 and defender_type == ElementType.FLYING and not self.grounded(battle, attacker=attacker, move=move):
-                return 1
+                return 1 # Ignores secondary types if defender is flying type and not grounded
             if self.roost and defender_type == ElementType.FLYING:
                 continue
             if self.foresight and attacker_type in (ElementType.FIGHTING, ElementType.NORMAL) and defender_type == ElementType.GHOST:
@@ -111,11 +111,11 @@ class DuelPokemonMechanics:
         if effectiveness >= 1 and self.hp == self.starting_hp and self.ability(attacker=attacker, move=move) == Ability.TERA_SHELL:
             effectiveness = 0.5
         return effectiveness
-
+    
     def weight(self, *, attacker=None, move=None):
         """
         Returns this pokemon's current weight.
-
+        
         Dynamically modifies the weight based on the ability of this pokemon.
         """
         cur_ability = self.ability(attacker=attacker, move=move)
@@ -128,13 +128,17 @@ class DuelPokemonMechanics:
         cur_weight -= self.autotomize * 1000
         cur_weight = max(1, cur_weight)
         return cur_weight
-
+        
+    
     def ability(self, *, attacker=None, move=None):
         """
         Returns this pokemon's current ability.
-
+        
         Returns None in cases where the ability is blocked or nullified.
         """
+        # Currently there are two categories of ability ignores, and both only apply when a move is used.
+        # Since this could change, the method signature is flexable. However, without both present, it
+        # should not consider the existing options.
         if move is None or attacker is None or attacker is self:
             return self.ability_id
         if not self.ability_ignorable():
@@ -146,7 +150,7 @@ class DuelPokemonMechanics:
         if attacker.ability_id == Ability.MYCELIUM_MIGHT and move.damage_class == DamageClass.STATUS:
             return None
         return self.ability_id
-
+    
     def ability_changeable(self):
         """Returns True if this pokemon's current ability can be changed."""
         return self.ability_id not in (
@@ -154,7 +158,7 @@ class DuelPokemonMechanics:
             Ability.SHIELDS_DOWN, Ability.DISGUISE, Ability.RKS_SYSTEM, Ability.BATTLE_BOND,
             Ability.POWER_CONSTRUCT, Ability.ICE_FACE, Ability.GULP_MISSILE, Ability.ZERO_TO_HERO
         )
-
+    
     def ability_giveable(self):
         """Returns True if this pokemon's current ability can be given to another pokemon."""
         return self.ability_id not in (
@@ -162,7 +166,7 @@ class DuelPokemonMechanics:
             Ability.IMPOSTER, Ability.POWER_OF_ALCHEMY, Ability.RECEIVER, Ability.DISGUISE, Ability.STANCE_CHANGE,
             Ability.POWER_CONSTRUCT, Ability.ICE_FACE, Ability.HUNGER_SWITCH, Ability.GULP_MISSILE, Ability.ZERO_TO_HERO
         )
-
+    
     def ability_ignorable(self):
         """Returns True if this pokemon's current ability can be ignored."""
         return self.ability_id in (
@@ -182,11 +186,11 @@ class DuelPokemonMechanics:
             Ability.WONDER_GUARD, Ability.WONDER_SKIN, Ability.ARMOR_TAIL, Ability.EARTH_EATER, Ability.GOOD_AS_GOLD,
             Ability.PURIFYING_SALT, Ability.WELL_BAKED_BODY
         )
-
+    
     def get_assist_move(self):
         """
         Returns a Move that can be used with assist, or None if none exists.
-
+        
         This selects a random move from the pool of moves from pokes in the user's party that are eligable.
         """
         moves = []

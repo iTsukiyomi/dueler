@@ -1,85 +1,166 @@
 import discord
 from ..moves import Move
 
+BUTTON_TIMEOUT = 60
+
 
 class BattlePromptView(discord.ui.View):
-    """Main battle interface view."""
-
-    def __init__(self, battle, trainer):
-        super().__init__(timeout=60)
+    """Prompts users to select an action for their turn."""
+    def __init__(self, battle):
+        super().__init__(timeout=BUTTON_TIMEOUT)
         self.battle = battle
-        self.trainer = trainer
-        self.selected_move = None
-        self.selected_action = None
+        self.turn = battle.turn
+        self.child_views = []
 
-    @discord.ui.button(label="Fight", style=discord.ButtonStyle.red)
-    async def fight(self, button, interaction):
-        if interaction.user.id != self.trainer.user.id:
-            await interaction.response.send_message("Not your turn!", ephemeral=True)
-            return
-        self.selected_action = "fight"
-        self.stop()
+    @discord.ui.button(label="View your actions", style=discord.ButtonStyle.primary)
+    async def actions(self, interaction, button):
+        if interaction.user.id == self.battle.trainer1.id:
+            trainer = self.battle.trainer1
+            opponent = self.battle.trainer2
+        else:
+            trainer = self.battle.trainer2
+            opponent = self.battle.trainer1
+        view = MoveSelectView(self.battle, trainer, opponent)
+        self.child_views.append(view)
+        await interaction.response.send_message(content="Pick an action:", view=view, ephemeral=True)
 
-    @discord.ui.button(label="Switch", style=discord.ButtonStyle.secondary)
-    async def switch(self, button, interaction):
-        if interaction.user.id != self.trainer.user.id:
-            await interaction.response.send_message("Not your turn!", ephemeral=True)
-            return
-        self.selected_action = "switch"
-        self.stop()
+    async def interaction_check(self, interaction):
+        if self.battle.turn != self.turn:
+            await interaction.response.send_message(content="This button has expired.", ephemeral=True)
+            return False
+        if self.battle.trainer1.is_human() and interaction.user.id == self.battle.trainer1.id:
+            if self.battle.trainer1.selected_action is not None:
+                await interaction.response.send_message(content="You have already selected an action.", ephemeral=True)
+                return False
+            return True
+        if self.battle.trainer2.is_human() and interaction.user.id == self.battle.trainer2.id:
+            if self.battle.trainer2.selected_action is not None:
+                await interaction.response.send_message(content="You have already selected an action.", ephemeral=True)
+                return False
+            return True
+        return False
 
-    @discord.ui.button(label="Item", style=discord.ButtonStyle.green)
-    async def item(self, button, interaction):
-        if interaction.user.id != self.trainer.user.id:
-            await interaction.response.send_message("Not your turn!", ephemeral=True)
-            return
-        self.selected_action = "item"
-        self.stop()
+    async def on_timeout(self):
+        self.battle.trainer1.event.set()
+        self.battle.trainer2.event.set()
 
-    @discord.ui.button(label="Forfeit", style=discord.ButtonStyle.gray)
-    async def forfeit(self, button, interaction):
-        if interaction.user.id != self.trainer.user.id:
-            await interaction.response.send_message("Not your turn!", ephemeral=True)
-            return
-        self.selected_action = "forfeit"
-        self.stop()
+    async def on_error(self, interaction, error, item):
+        self.battle.ctx.cog.log.error("Exception in a button.", exc_info=error)
+
+    def stop(self):
+        """Override to stop child views when this view is stopped."""
+        for view in self.child_views:
+            view.stop()
+        super().stop()
 
 
 class MoveSelectView(discord.ui.View):
-    """View for selecting a move."""
+    """Prompts the user to pick a move, enter the swap pokes view, or cancel the duel."""
+    def __init__(self, battle, trainer, opponent):
+        super().__init__(timeout=BUTTON_TIMEOUT)
+        self.battle = battle
+        self.turn = battle.turn
+        self.trainer = trainer
+        self.opponent = opponent
+        self.child_views = []
+        status_code, movedata = trainer.valid_moves(opponent.current_pokemon)
+        if status_code == "forced":
+            trainer.selected_action = movedata
+            trainer.event.set()
+            self.add_item(discord.ui.Button(style=discord.ButtonStyle.secondary, label="You were forced to play:", disabled=True))
+            self.add_item(MoveButton(movedata, disabled=True))
+            return
+        swapdata = trainer.valid_swaps(opponent.current_pokemon, battle)
+        if status_code == "struggle":
+            self.add_item(MoveButton(Move.struggle()))
+            self.add_item(SwapRequestButton(disabled=not swapdata))
+            self.add_item(ForfeitButton(row=0))
+            return
 
-    def __init__(self, pokemon):
-        super().__init__(timeout=60)
-        self.pokemon = pokemon
-        self.selected_move = None
+        for idx, move in enumerate(trainer.current_pokemon.moves):
+            self.add_item(MoveButton(move, disabled=idx not in movedata, row=idx // 2))
+        self.add_item(SwapRequestButton(disabled=not swapdata))
+        self.add_item(ForfeitButton())
+        if (
+            trainer.current_pokemon is not None
+            and trainer.current_pokemon.mega_type_ids is not None
+            and not trainer.has_mega_evolved
+        ):
+            self.add_item(MegaEvolveButton())
+
+    async def interaction_check(self, interaction):
+        if self.battle.turn != self.turn:
+            await interaction.response.send_message(content="This button has expired.", ephemeral=True)
+            return False
+        if interaction.user.id != self.trainer.id:
+            await interaction.response.send_message(content="You are not allowed to interact with this button.", ephemeral=True)
+            return False
+        if self.trainer.selected_action is not None:
+            await interaction.response.send_message(content="You have already selected an action.", ephemeral=True)
+            return False
+        return True
+
+    async def on_error(self, interaction, error, item):
+        self.battle.ctx.cog.log.error("Exception in a button.", exc_info=error)
+
+    def stop(self):
+        """Override to stop child views when this view is stopped."""
+        for view in self.child_views:
+            view.stop()
+        super().stop()
 
 
 class MoveButton(discord.ui.Button):
-    """Button to select a move."""
-
-    def __init__(self, move: Move, index):
+    """A button that represents a selection of a specific move."""
+    def __init__(self, move, *, disabled=False, row=0):
         label = f"{move.pretty_name}"
-        if move.pp == 0:
-            label += " (No PP)"
-        super().__init__(
-            label=label,
-            style=discord.ButtonStyle.primary if move.pp > 0 else discord.ButtonStyle.secondary,
-            disabled=move.pp == 0
-        )
+        if move.id != 165:
+            label += f" | {move.pp}pp"
+        super().__init__(style=discord.ButtonStyle.secondary, label=label, disabled=disabled, row=row)
         self.move = move
-        self.index = index
 
     async def callback(self, interaction):
-        self.view.selected_move = self.move
-        self.view.stop()
+        self.view.trainer.selected_action = self.move
+        self.view.trainer.event.set()
+        await interaction.response.edit_message(content=f"You picked {self.move.pretty_name}. Waiting for opponent.", view=None)
 
 
 class SwapRequestButton(discord.ui.Button):
-    """Button for swap request."""
-
-    def __init__(self, label):
-        super().__init__(label=label, style=discord.ButtonStyle.primary)
+    """A button that represents a request to swap pokemon."""
+    def __init__(self, *, disabled=False):
+        super().__init__(style=discord.ButtonStyle.primary, label="Swap pokemon", disabled=disabled)
 
     async def callback(self, interaction):
-        self.view.result = True
-        self.view.stop()
+        from .swap_ui import SwapView
+        view = SwapView(self.view.trainer, self.view.opponent, self.view.battle, set_move=True)
+        self.view.child_views.append(view)
+        await interaction.response.edit_message(content="Pick a pokemon:", view=view)
+
+
+class ForfeitButton(discord.ui.Button):
+    """A button that forfeits the game when pressed."""
+    def __init__(self, *, row=1):
+        super().__init__(style=discord.ButtonStyle.danger, label="Forfeit duel", row=row)
+
+    async def callback(self, interaction):
+        from .forfeit_ui import DuelForfeitView
+        view = DuelForfeitView(self.view.trainer)
+        self.view.child_views.append(view)
+        await interaction.response.send_message(content="Are you sure you want to forfeit?", view=view, ephemeral=True)
+        await view.wait()
+        if view.confirm:
+            self.view.trainer.event.set()
+
+
+class MegaEvolveButton(discord.ui.Button):
+    """A button that toggles whether the trainer's pokemon should mega evolve this turn."""
+    def __init__(self):
+        super().__init__(style=discord.ButtonStyle.gray, label="Mega Evolve", row=0)
+
+    def get_color(self):
+        return [discord.ButtonStyle.gray, discord.ButtonStyle.green][self.view.trainer.current_pokemon.should_mega_evolve]
+
+    async def callback(self, interaction):
+        self.view.trainer.current_pokemon.should_mega_evolve = not self.view.trainer.current_pokemon.should_mega_evolve
+        self.style = self.get_color()
+        await interaction.response.edit_message(view=self.view)

@@ -6,7 +6,7 @@ import aiohttp
 import logging
 from ..battle.battle import Battle
 from ..ui import DuelAcceptView
-from ..pokemon import DuelPokemon
+from ..pokemon import DuelPokemon, create
 from ..data_gen import generate_team_preview, find, find_one
 from ..trainers import MemberTrainer, NPCTrainer
 
@@ -324,7 +324,7 @@ class PokemonDuel(commands.Cog):
             if not party:
                 await channel.send(f"{player} has not setup their party yet!\nSet one with `{ctx.prefix}pokemonduel party set`.")
                 return
-            party = [await DuelPokemon.create(ctx, p) for p in party]
+            party = [await create(ctx, p) for p in party]
             trainers.append(MemberTrainer(player, party))
         battle = Battle(ctx, channel, *trainers, inverse_battle=inverse_battle) # pylint: disable=E1120
         preview_view = await generate_team_preview(battle)

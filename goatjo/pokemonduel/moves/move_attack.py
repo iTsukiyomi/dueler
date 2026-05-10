@@ -6,91 +6,355 @@ class MoveAttack:
     """Attack calculation and execution."""
 
     def attack(self, attacker, defender, battle):
-        """Attacks the defender using this move."""
-        from ..enums import MoveTarget
-
+        """
+        Attacks the defender using this move.
+        
+        Returns a string of formatted results of this attack and the number of hits this move did.
+        """
+        #https://bulbapedia.bulbagarden.net/wiki/Damage
         msg = ""
         current_type = self.get_type(attacker, defender, battle)
-
+        
+        # Move effectiveness
         effectiveness = defender.effectiveness(current_type, battle, attacker=attacker, move=self)
         if self.effect == 338:
             effectiveness *= defender.effectiveness(ElementType.FLYING, battle, attacker=attacker, move=self)
         if effectiveness <= 0:
-            return ("The attack had no effect!\n", 0)
+            return ("The attack had no effect!\n", 0) 
         if effectiveness <= .5:
             msg += "It's not very effective...\n"
-        elif effectiveness >= 2:
+        elif effectiveness >= 2: 
             msg += "It's super effective!\n"
-
+        
+        # Calculate the number of hits for this move.
         parental_bond = False
         min_hits = self.min_hits
         max_hits = self.max_hits
         if self.effect == 361 and attacker._name == "Greninja-ash":
-            min_hits = 1
-            max_hits = 1
-        elif self.effect == 304:
-            min_hits = 3
-            max_hits = 3
-        elif self.effect == 518:
-            min_hits = 2
-            max_hits = 5
-        elif attacker.ability() == Ability.SKILL_LINK and min_hits > 1:
-            min_hits = max_hits
-
-        numhits = random.randint(min_hits, max_hits)
-        if self.effect == 226:
-            numhits = 1
-
-        if numhits > 1 and self.id not in (681, 698, 699, 700, 701, 702, 703, 704, 705, 706, 707, 708, 709):
-            msg += f"Hit {numhits} time(s)!\n"
-
-        for hit in range(numhits):
-            if hit == 1 and attacker.ability() == Ability.PARENTAL_BOND and not parental_bond and max_hits > 1:
-                parental_bond = True
-
-            is_protect_counter = False
-            if hit > 0:
-                if defender.protect_counter >= 3:
-                    msg += "But it failed to hit!\n"
-                    break
-                is_protect_counter = True
-
-            damage, critical, is_super_effective, is_not_very_effective = self.calculate_damage(
-                attacker, defender, battle, current_type, effectiveness, is_protect_counter
-            )
-
-            if defender.ability(attacker=attacker, move=self) == Ability.STURDY and defender.hp == defender.starting_hp:
-                damage = 0
-                msg += f"{defender.name} is protected by Sturdy!\n"
-
-            if defender.ability(attacker=attacker, move=self) == Ability.ICE_FACE and defender._name == "Eiscue" and self.damage_class == DamageClass.PHYSICAL:
-                if defender.form("Eiscue"):
-                    damage = 0
-                    msg += f"{defender.name}'s Ice Face blocked the attack!\n"
-
-            if defender.ability(attacker=attacker, move=self) == Ability.ICE_SCALES and self.damage_class == DamageClass.SPECIAL:
-                damage //= 2
-                msg += f"{defender.name}'s Ice Scales reduced the damage!\n"
-
-            if defender.ability(attacker=attacker, move=self) == Ability.PASTEL_VEIL and defender.nv.poison():
-                damage //= 2
-
-            if defender.held_item.get_defensive_multiplier(current_type, is_super_effective) != 1.0:
-                msg += f"{defender.name}'s {defender.held_item} reduced the damage!\n"
-
-            if is_protect_counter:
-                defender.protect_counter += 1
+            hits = 3
+        elif min_hits is not None and max_hits is not None:
+            # Handle hit range overrides
+            if attacker.ability() == Ability.SKILL_LINK:
+                min_hits = max_hits
+            elif attacker.held_item == "loaded-dice" and max_hits >= 4 and (min_hits < 4 or self.effect == 484):
+                min_hits = 4
+            # Randomly select number of hits
+            if min_hits == 2 and max_hits == 5:
+                hits = random.choice([
+                    2, 2, 2, 2, 2, 2, 2,
+                    3, 3, 3, 3, 3, 3, 3,
+                    4, 4, 4,
+                    5, 5, 5
+                ])
             else:
-                defender.protect_counter = 0
-
-            defender.used_damaging_move_this_turn = True
-
-            self.apply_damage(attacker, defender, battle, damage, current_type, critical, msg)
-
-            if defender.hp <= 0:
+                hits = random.randint(min_hits, max_hits)
+        else:
+            if attacker.ability() == Ability.PARENTAL_BOND:
+                hits = 2
+                parental_bond = True
+            else:
+                hits = 1
+        
+        for hit in range(hits):
+            if defender.hp == 0:
                 break
+            # Explosion faints the user first, but should still do damage after death.
+            # Future sight still needs to hit after the attacker dies.
+            # Mind blown still needs to hit after the attacker dies.
+            if attacker.hp == 0 and self.effect not in (8, 149, 420, 444):
+                break
+            
+            # Critical hit chance
+            critical_stage = self.crit_rate
+            if attacker.held_item in ("scope-lens", "razor-claw"):
+                critical_stage += 1
+            if attacker.ability() == Ability.SUPER_LUCK:
+                critical_stage += 1
+            if attacker.focus_energy:
+                critical_stage += 2
+            if attacker.lansat_berry_ate:
+                critical_stage += 2
+            critical_stage = min(critical_stage, 3)
+            crit_map = {
+                0: 24,
+                1: 8,
+                2: 2,
+                3: 1,
+            }
+            critical = not random.randrange(crit_map[critical_stage])
+            if attacker.ability() == Ability.MERCILESS and defender.nv.poison():
+                critical = True
+            # Always scores a critical hit.
+            if self.effect == 289:
+                critical = True
+            if attacker.laser_focus.active():
+                critical = True
+            if defender.ability(attacker=attacker, move=self) in (Ability.SHELL_ARMOR, Ability.BATTLE_ARMOR):
+                critical = False
+            if defender.lucky_chant.active():
+                critical = False
+            # Confusion never crits
+            if self.id == 0xCFCF:
+                critical = False
+        
+            # Stats
+            if self.damage_class == DamageClass.PHYSICAL:
+                damage_class = DamageClass.PHYSICAL
+                a = attacker.get_attack(
+                    battle,
+                    critical=critical,
+                    ignore_stages=defender.ability(attacker=attacker, move=self) == Ability.UNAWARE
+                )
+                if self.effect == 304:
+                    d = defender.get_raw_defense()
+                else:
+                    d = defender.get_defense(
+                        battle,
+                        critical=critical,
+                        ignore_stages=attacker.ability() == Ability.UNAWARE,
+                        attacker=attacker,
+                        move=self
+                    )
+            else:
+                damage_class = DamageClass.SPECIAL
+                a = attacker.get_spatk(
+                    battle,
+                    critical=critical,
+                    ignore_stages=defender.ability(attacker=attacker, move=self) == Ability.UNAWARE
+                )
+                if self.effect == 304:
+                    d = defender.get_raw_spdef()
+                else:
+                    d = defender.get_spdef(
+                        battle,
+                        critical=critical,
+                        ignore_stages=attacker.ability() == Ability.UNAWARE,
+                        attacker=attacker,
+                        move=self
+                    )
+        
+            # Always uses defender's defense
+            if self.effect == 283:
+                d = defender.get_defense(
+                    battle,
+                    critical=critical,
+                    ignore_stages=attacker.ability() == Ability.UNAWARE,
+                    attacker=attacker,
+                    move=self
+                )
+            
+            # Use the user's defense instead of attack for the attack stat
+            if self.effect == 426:
+                # This does not pass critical, otherwise it would crop the wrong direction.
+                a = attacker.get_defense(
+                    battle,
+                    ignore_stages=defender.ability(attacker=attacker, move=self) == Ability.UNAWARE
+                )
+                
+            # Use the defender's attacking stat
+            if self.effect == 298:
+                if self.damage_class == DamageClass.PHYSICAL:
+                    a = defender.get_attack(
+                        battle,
+                        critical=critical,
+                        ignore_stages=defender.ability(attacker=attacker, move=self) == Ability.UNAWARE
+                    )
+                else:
+                    a = defender.get_spatk(
+                        battle,
+                        critical=critical,
+                        ignore_stages=defender.ability(attacker=attacker, move=self) == Ability.UNAWARE
+                    )
+            
+            # Use the higher of attack or special attack
+            if self.effect == 416:
+                ignore_stages = defender.ability(attacker=attacker, move=self) == Ability.UNAWARE
+                a = max(attacker.get_attack(battle, critical=critical, ignore_stages=ignore_stages), attacker.get_spatk(battle, critical=critical, ignore_stages=ignore_stages))
+            
+            if attacker.flash_fire and current_type == ElementType.FIRE:
+                a *= 1.5
+            if defender.ability(attacker=attacker, move=self) == Ability.THICK_FAT and current_type in (ElementType.FIRE, ElementType.ICE):
+                a *= .5
+        
+            power = self.get_power(attacker, defender, battle)
+            if power is None:
+                raise ValueError(f"{self.name} has no power and no override.")
+            
+            # Check accuracy on each hit
+            # WARNING: If there is something BEFORE this in the loop which adds to msg (like "A critical hit")
+            # it MUST be after this block, or it will appear even after "misses" from this move.
+            if hit > 0 and not attacker.ability() == Ability.SKILL_LINK:
+                # Increasing damage each hit
+                if self.effect == 105:
+                    if not self.check_hit(attacker, defender, battle):
+                        # Reset the number of hits to the number of ACTUAL hits
+                        hits = hit
+                        break
+                    # x2 then x3
+                    power *= 1 + hit
+                # Only checks if loaded dice did not activate
+                if self.effect == 484 and attacker.held_item != "loaded-dice":
+                    if not self.check_hit(attacker, defender, battle):
+                        hits = hit
+                        break
+            
+            # --- Showdown-accurate damage formula ---
+            # Step 1: Base damage with integer flooring at each step
+            # floor(floor(floor(2*L/5+2) * Bp * A/D) / 50 + 2)
+            damage = int(int(int(2 * attacker.level / 5) + 2) * power * a / d)
+            damage = int(damage / 50) + 2
 
-        return msg, numhits
+            # Step 2: Critical hit (1.5x, floored)
+            if critical:
+                msg += "A critical hit!\n"
+                damage = int(damage * 3 / 2)
+
+            # Step 3: Weather type boosts (before random, matches Showdown ordering)
+            # Harsh sun/rain (h-sun/h-rain) give the same boost as normal sun/rain
+            weather = battle.weather.get()
+            if current_type == ElementType.WATER and weather in ("rain", "h-rain"):
+                damage = int(damage * 3 / 2)
+            elif current_type == ElementType.FIRE and weather in ("rain", "h-rain"):
+                damage = int(damage / 2)
+            elif current_type == ElementType.FIRE and weather in ("sun", "h-sun"):
+                damage = int(damage * 3 / 2)
+            elif current_type == ElementType.WATER and weather in ("sun", "h-sun"):
+                damage = int(damage / 2)
+
+            # Step 4: Random damage roll (Showdown integer method: 85-100, floor)
+            damage = damage * random.randint(85, 100) // 100
+            
+        
+            # Same type attack bonus - extra damage for using a move that is the same type as your poke's type.
+            if current_type in attacker.type_ids:
+                if attacker.ability() == Ability.ADAPTABILITY:
+                    damage *= 2
+                else:
+                    damage *= 1.5
+        
+            # Move effectiveness
+            damage *= effectiveness
+        
+            # Burn
+            if (
+                attacker.nv.burn()
+                and damage_class == DamageClass.PHYSICAL
+                and attacker.ability() != Ability.GUTS
+                and self.effect != 170
+            ):
+                damage *= .5
+        
+            # Aurora Veil, Light Screen, Reflect do not stack but all reduce incoming damage in some way
+            if not critical and attacker.ability() != Ability.INFILTRATOR:
+                if defender.owner.aurora_veil.active():
+                    damage *= .5
+                elif defender.owner.light_screen.active() and damage_class == DamageClass.SPECIAL:
+                    damage *= .5
+                elif defender.owner.reflect.active() and damage_class == DamageClass.PHYSICAL:
+                    damage *= .5
+        
+            # Moves that do extra damage to minimized pokes
+            if defender.minimized and self.effect == 338:
+                damage *= 2
+            
+            # Fluffy
+            if defender.ability(attacker=attacker, move=self) == Ability.FLUFFY:
+                if self.makes_contact(attacker):
+                    damage *= .5
+                if current_type == ElementType.FIRE:
+                    damage *= 2
+        
+            # Abilities that change damage
+            if defender.ability(attacker=attacker, move=self) in (Ability.FILTER, Ability.PRISM_ARMOR, Ability.SOLID_ROCK) and effectiveness > 1:
+                damage *= .75
+            if attacker.ability() == Ability.NEUROFORCE and effectiveness > 1:
+                damage *= 1.25
+            if defender.ability(attacker=attacker, move=self) == Ability.ICE_SCALES and damage_class == DamageClass.SPECIAL:
+                damage *= .5
+            if attacker.ability() == Ability.SNIPER and critical:
+                damage *= 1.5
+            if attacker.ability() == Ability.TINTED_LENS and effectiveness < 1:
+                damage *= 2
+            if attacker.ability() == Ability.PUNK_ROCK and self.is_sound_based():
+                damage *= 1.3
+            if defender.ability(attacker=attacker, move=self) == Ability.PUNK_ROCK and self.is_sound_based():
+                damage *= .5
+            if defender.ability(attacker=attacker, move=self) == Ability.HEATPROOF and current_type == ElementType.FIRE:
+                damage *= .5
+            if defender.ability(attacker=attacker, move=self) == Ability.PURIFYING_SALT and current_type == ElementType.GHOST:
+                damage *= .5
+            if Ability.DARK_AURA in (attacker.ability(), defender.ability(attacker=attacker, move=self)) and current_type == ElementType.DARK:
+                if Ability.AURA_BREAK in (attacker.ability(), defender.ability(attacker=attacker, move=self)):
+                    damage *= .75
+                else:
+                    damage *= 4/3
+            if Ability.FAIRY_AURA in (attacker.ability(), defender.ability(attacker=attacker, move=self)) and current_type == ElementType.FAIRY:
+                if Ability.AURA_BREAK in (attacker.ability(), defender.ability(attacker=attacker, move=self)):
+                    damage *= .75
+                else:
+                    damage *= 4/3
+            if defender.ability(attacker=attacker, move=self) == Ability.DRY_SKIN and current_type == ElementType.FIRE:
+                damage *= 1.25
+        
+            # Items that change damage
+            if defender.held_item == "chilan-berry" and current_type == ElementType.NORMAL:
+                damage *= .5
+            if attacker.held_item == "expert-belt" and effectiveness > 1:
+                damage *= 1.2
+            if (
+                attacker.held_item == "life-orb"
+                and self.damage_class != DamageClass.STATUS
+                and self.effect != 149
+            ):
+                damage *= 1.3
+            if attacker.held_item == "metronome":
+                damage *= attacker.metronome.get_buff(self.name)
+            
+            # Parental bond - adds an extra low power hit
+            if parental_bond and hit > 0:
+                damage *= .25
+            
+            # Reduced damage while at full hp
+            if defender.ability(attacker=attacker, move=self) in (Ability.MULTISCALE, Ability.SHADOW_SHIELD) and defender.hp == defender.starting_hp:
+                damage *= .5
+
+            # Random damage scaling
+            damage *= random.uniform(0.85, 1)
+            damage = max(1, int(damage))
+            
+            # Cannot lower the target's HP below 1.
+            if self.effect == 102:
+                damage = min(damage, defender.hp - 1)
+            
+            # Drain ratios
+            drain_heal_ratio = None
+            if self.effect in (4, 9, 346, 500):
+                drain_heal_ratio = 1/2
+            elif self.effect == 349:
+                drain_heal_ratio = 3/4
+
+            # Do the damage
+            msgadd, damage = defender._damage(damage, battle, move=self, move_type=current_type, attacker=attacker, critical=critical, drain_heal_ratio=drain_heal_ratio)
+            msg += msgadd
+            
+            # Recoil
+            if attacker.ability() != Ability.ROCK_HEAD and defender.owner.has_alive_pokemon():
+                if self.effect == 49:
+                    msg += attacker.damage(damage // 4, battle, source="recoil")
+                if self.effect in (199, 254, 263, 469):
+                    msg += attacker.damage(damage // 3, battle, source="recoil")
+                if self.effect == 270:
+                    msg += attacker.damage(damage // 2, battle, source="recoil")
+                if self.effect == 463:
+                    msg += attacker.damage(attacker.starting_hp // 2, battle, source="recoil")
+        
+        # Weakness Policy
+        if effectiveness > 1 and defender.held_item == "weakness-policy" and not defender.substitute:
+            msg += defender.append_attack(2, attacker=defender, move=self, source="its weakness policy")
+            msg += defender.append_spatk(2, attacker=defender, move=self, source="its weakness policy")
+            defender.held_item.use()
+        
+        return (msg, hits)
 
     def calculate_damage(self, attacker, defender, battle, current_type, effectiveness, is_protect_counter):
         """Calculate damage dealt by the move."""

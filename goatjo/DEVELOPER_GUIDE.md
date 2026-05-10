@@ -1,659 +1,647 @@
-# Pokemon Duel - Developer Technical Manual
+# Pokemon Duel - Developer Guide
 
-This guide documents the fully modularized Pokemon Discord bot architecture. Every system has been separated into focused, single-responsibility modules that can be extended independently.
-
----
-
-## 1. The Modular Blueprint
-
-### Directory Structure
-
-```
-goatjo/
-├── DEVELOPER_GUIDE.md          # This file
-└── pokemonduel/                 # Main package
-    ├── __init__.py              # Entry point (exports PokemonDuel cog)
-    │
-    ├── battle/                  # Core battle system
-    │   ├── __init__.py
-    │   └── battle.py            # Main Battle class (~491 lines)
-    │
-    ├── cog/                     # Discord command handler
-    │   ├── __init__.py
-    │   └── commands.py          # PokemonDuel Cog class (~480 lines)
-    │
-    ├── config/                  # Configuration management
-    │   ├── __init__.py
-    │   └── config_manager.py    # EnhancedConfigManager classes
-    │
-    ├── data_gen/                # Data access & image generation
-    │   ├── __init__.py          # Exports find, find_one, generate_*
-    │   ├── query.py             # find() and find_one() functions
-    │   ├── preview.py           # Team preview image generation
-    │   └── battle_message.py    # Battle UI image generation
-    │
-    ├── enums/                   # Enumeration definitions
-    │   ├── __init__.py
-    │   ├── ability.py           # Ability enum (300+ abilities)
-    │   ├── damage_class.py     # PHYSICAL/SPECIAL/STATUS
-    │   ├── element_type.py      # 18 Pokemon types
-    │   └── move_target.py       # Move targeting enums
-    │
-    ├── misc/                    # Shared utility classes
-    │   ├── __init__.py
-    │   ├── baton_pass.py        # Baton pass effect handler
-    │   ├── expiring_effect.py   # Base class for timed effects
-    │   ├── expiring_item.py     # Item with duration
-    │   ├── expiring_wish.py     # Wish move effect
-    │   ├── held_item.py         # Pokemon held item logic
-    │   ├── item.py              # Base Item class
-    │   ├── locked_move.py       # LockedMove (bound/trapped)
-    │   ├── metronome.py         # Metronome random move
-    │   ├── non_volatile_effect.py  # Status (burn/paralyze/sleep)
-    │   ├── terrain.py           # Battle terrain (grassy/electric)
-    │   └── weather.py           # Weather system (rain/sun/sand)
-    │
-    ├── moves/                   # Move execution logic
-    │   ├── __init__.py          # Move class (inherits all mixins)
-    │   ├── move_init.py        # Move initialization & properties
-    │   ├── move_use.py         # Move execution & targeting
-    │   ├── move_attack.py      # Damage dealing logic
-    │   ├── move_power.py       # Power calculation
-    │   ├── move_type.py        # Move type determination
-    │   └── move_checks.py      # Validation & helper methods
-    │
-    ├── pokemon/                 # Pokemon entity logic
-    │   ├── __init__.py         # DuelPokemon class (mixin inheritance)
-    │   ├── pokemon_init.py     # Pokemon initialization
-    │   ├── pokemon_send_out.py # Send out / remove from battle
-    │   ├── pokemon_turn.py     # Turn-based updates
-    │   ├── pokemon_damage.py   # Damage, heal, faint, status
-    │   ├── pokemon_stats.py    # Stat calculation & stages
-    │   └── pokemon_mechanics.py # Transform, form, abilities
-    │
-    ├── trainers/               # Trainer logic
-    │   ├── __init__.py
-    │   ├── trainer_base.py     # Base Trainer class
-    │   ├── member_trainer.py   # Discord member trainer
-    │   └── npc_trainer.py      # AI NPC trainer
-    │
-    └── ui/                     # Discord UI components
-        ├── __init__.py
-        ├── duel_accept.py      # Duel request accept view
-        ├── team_preview.py     # Team selection preview
-        ├── battle_ui.py       # Battle action buttons
-        ├── swap_ui.py         # Pokemon swap UI
-        ├── forfeit_ui.py      # Forfeit confirmation
-        └── mega_evo.py        # Mega evolution UI
-```
-
-### Single Responsibility Principle
-
-| Folder | Responsibility | Extension Pattern |
-|--------|----------------|-------------------|
-| `moves/` | Move execution | Add new file, inherit from Move mixins |
-| `pokemon/` | Pokemon entity | Add new mixin, extend DuelPokemon |
-| `enums/` | Game constants | Add new enum value |
-| `misc/` | Shared effects | Create new effect class |
-| `ui/` | Discord UI | Create new View class |
-| `data_gen/` | Data/Images | Add new generator function |
-| `trainers/` | Trainer logic | Extend Trainer base |
-| `battle/` | Battle loop | Modify Battle class |
+This guide explains how to extend the Pokemon Duel bot with new content. The bot uses JSON data files for content and Python code for game logic.
 
 ---
 
-## 2. The "Plug-and-Play" Framework
+## Table of Contents
 
-### 2.1 Moves System
-
-**Location:** `goatjo/pokemonduel/moves/`
-
-**Pattern:** The Move class uses Python multiple inheritance (mixins). Each aspect of a move is in a separate file:
-- `move_init.py` - Basic properties (name, power, accuracy, etc.)
-- `move_use.py` - How the move is selected and executed
-- `move_attack.py` - Damage calculation
-- `move_power.py` - Power modifications
-- `move_type.py` - Type determination
-- `move_checks.py` - Validation and helpers
-
-**Boilerplate Template:**
-
-```python
-# In moves/move_init.py or a new file
-from ..enums import DamageClass, ElementType, MoveTarget
-
-class MoveInit:
-    """Mixin for move initialization."""
-    
-    def _init_move(self, name: str, power: int, accuracy: int, 
-                   element: ElementType, damage_class: DamageClass,
-                   target: MoveTarget, effect: int = 0):
-        self.name = name
-        self.power = power
-        self.accuracy = accuracy
-        self.element_id = element
-        self.damage_class = damage_class
-        self.target = target
-        self.effect = effect
-        # ... other initialization
-```
-
-**Registration:** All move files are combined in `moves/__init__.py`:
-```python
-from .move_init import MoveInit
-from .move_use import MoveUse
-# ... other imports
-
-class Move(MoveInit, MoveUse, ...):
-    pass
-```
-
-**How to add a new Move:**
-1. Use the `Move` class directly in Pokemon's moves list
-2. Moves are loaded from JSON data in `data_gen/query.py`
-3. To add new move behavior, add methods to appropriate mixin file
+1. [Data Files Overview](#1-data-files-overview)
+2. [Adding New Pokemon](#2-adding-new-pokemon)
+3. [Adding New Moves](#3-adding-new-moves)
+4. [Adding New Abilities](#4-adding-new-abilities)
+5. [Adding New Items](#5-adding-new-items)
+6. [Adding Images](#6-adding-images)
+7. [Forms and Variants](#7-forms-and-variants)
+8. [Code Architecture](#8-code-architecture)
 
 ---
 
-### 2.2 Pokemon System
+## 1. Data Files Overview
 
-**Location:** `goatjo/pokemonduel/pokemon/`
+All game data is stored in `/home/gojo/projects/dueler/goatjo/pokemonduel/data/`. Here's what each file contains:
 
-**Pattern:** DuelPokemon uses 6 mixins for separation of concerns:
-- `pokemon_init.py` - __init__ and basic setup
-- `pokemon_send_out.py` - Send out / remove logic  
-- `pokemon_turn.py` - Turn-by-turn updates
-- `pokemon_damage.py` - Damage/healing/faint/staus
-- `pokemon_stats.py` - Stat calculation, stages
-- `pokemon_mechanics.py` - Transform, form, type effectiveness
-
-**Boilerplate Template:**
-
-```python
-# In pokemon/pokemon_xxx.py
-class DuelPokemonXXX:
-    """Documentation for what this mixin handles."""
-    
-    def new_method(self, arg1, arg2):
-        """Method that handles specific Pokemon functionality."""
-        # Implementation
-        return result
-```
-
-**Registration:** Add import to `pokemon/__init__.py` and add to class inheritance:
-```python
-from .pokemon_init import DuelPokemonInit
-from .pokemon_xxx import DuelPokemonXXX
-
-class DuelPokemon(DuelPokemonInit, DuelPokemonXXX, ...):
-    pass
-```
+| File | Purpose |
+|------|---------|
+| `forms.json` | Pokemon names, IDs, weights, and form relationships |
+| `pokemon_stats.json` | Base stats (HP, Atk, Def, SpA, SpD, Spe) for each Pokemon |
+| `ptypes.json` | Type assignments for each Pokemon form |
+| `poke_abilities.json` | Which abilities each Pokemon can have |
+| `moves.json` | Move data (power, accuracy, type, effects, etc.) |
+| `abilities.json` | Ability names and descriptions |
+| `items.json` | Item names and descriptions |
+| `type_effectiveness.json` | Type matchups (super effective, not very effective, etc.) |
+| `natures.json` | Nature stat modifiers |
+| `pfile.json` | Evolution data (which Pokemon evolve from which) |
 
 ---
 
-### 2.3 Abilities System
+## 2. Adding New Pokemon
 
-**Location:** `goatjo/pokemonduel/enums/ability.py`
+### Step 1: Add to forms.json
 
-**Pattern:** Abilities are defined as Enum values with metadata (name, ID, pretty_name).
-
-**Boilerplate Template:**
-
-```python
-# In enums/ability.py
-class Ability(Enum):
-    """Pokemon abilities enumeration."""
-    
-    # Existing abilities...
-    NEW_ABILITY = auto()
-    
-    @property
-    def pretty_name(self):
-        return self.name.replace("_", " ").title()
+```json
+{
+  "identifier": "gholdengo",
+  "base_id": 1000,
+  "pokemon_id": 1000,
+  "height": 30,
+  "weight": 43,
+  "base_experience": 265,
+  "order": 1000
+}
 ```
 
-**Registration:** Abilities are automatically available once added to the enum. Usage in code:
-```python
-from ..enums import Ability
+### Step 2: Add to pokemon_stats.json
 
-if self.ability() == Ability.NEW_ABILITY:
-    # Handle new ability
+```json
+{
+  "pokemon_id": 1000,
+  "stats": [60, 55, 65, 125, 65, 85]
+}
 ```
 
-**How to add ability logic:** Abilities are checked in various places:
-- In `pokemon_damage.py` - damage modifications
-- In `pokemon_stats.py` - stat calculations
-- In `pokemon_send_out.py` - on-send-out effects
-- In `pokemon_turn.py` - end-of-turn effects
+The stats array order is: `[HP, Attack, Defense, Sp. Attack, Sp. Defense, Speed]`
+
+Example for Gholdengo (Ghost/Steel type):
+- HP: 60, Attack: 55, Defense: 65, SpA: 125, SpD: 65, Spe: 85
+
+### Step 3: Add to ptypes.json
+
+```json
+{
+  "id": 1000,
+  "types": [9, 8]
+}
+```
+
+Type IDs: 1=Normal, 2=Fighting, 3=Flying, 4=Poison, 5=Ground, 6=Rock, 7=Bug, 8=Ghost, 9=Steel, 10=Fire, 11=Water, 12=Grass, 13=Electric, 14=Ice, 15=Psychic, 16=Dragon, 17=Dark, 18=Fairy
+
+### Step 4: Add to poke_abilities.json
+
+```json
+{
+  "pokemon_id": 1000,
+  "ability_id": 271,
+  "is_hidden": false
+},
+{
+  "pokemon_id": 1000,
+  "ability_id": 33,
+  "is_hidden": true
+}
+```
+
+- `ability_id` must match an ID from `abilities.json`
+- `is_hidden: true` means it's a hidden ability
+
+### Step 5: Add to pfile.json (if it evolves)
+
+```json
+{
+  "id": 1000,
+  "identifier": "gholdengo",
+  "evolution_chain_id": 500,
+  "evolves_from_species_id": 999,
+  "is_default": true
+}
+```
+
+If the Pokemon doesn't evolve, either omit from pfile.json or set `evolves_from_species_id` to null.
 
 ---
 
-### 2.4 Items System
+## 3. Adding New Moves
 
-**Location:** `goatjo/pokemonduel/misc/`
+### Step 1: Add to moves.json
 
-**Pattern:** Two main classes:
-- `item.py` - Base Item class
-- `held_item.py` - Logic for held items (activation, consumption)
-
-**Boilerplate Template:**
-
-```python
-# In misc/held_item.py or new file
-class MyCustomItem:
-    """Custom item behavior."""
-    
-    def activate_on_switch_in(self, battle):
-        """Called when Pokemon switches in."""
-        return "Custom item activated!\n"
-    
-    def activate_end_of_turn(self, battle):
-        """Called at end of turn."""
-        return ""
+```json
+{
+  "id": 1000,
+  "identifier": "make-it-rain",
+  "power": 120,
+  "pp": 20,
+  "accuracy": 80,
+  "priority": 0,
+  "type_id": 11,
+  "damage_class_id": 2,
+  "effect_id": 450,
+  "effect_chance": 100,
+  "target_id": 9,
+  "crit_rate": 0,
+  "min_hits": 1,
+  "max_hits": 1
+}
 ```
 
-**Registration:** Import in `misc/__init__.py`:
-```python
-from .held_item import HeldItem, MyCustomItem
+**Field Explanations:**
+
+| Field | Description | Values |
+|-------|-------------|--------|
+| `id` | Unique move ID | Any unused integer |
+| `identifier` | Move name (lowercase, hyphens) | e.g., "make-it-rain" |
+| `power` | Base power (0 for status moves) | 0-250 |
+| `pp` | Power Points | 1-64 |
+| `accuracy` | Accuracy percentage | 0-100 |
+| `priority` | Move priority | -7 to 5 |
+| `type_id` | Element type (see types above) | 1-18 |
+| `damage_class_id` | 1=Physical, 2=Special, 3=Status | 1, 2, or 3 |
+| `effect_id` | Unique effect identifier | See effect codes below |
+| `effect_chance` | Chance for secondary effect | 0-100 or null |
+| `target_id` | Who the move targets | See target IDs below |
+| `crit_rate` | Critical hit rate | 0-4 (0=never, 4=always) |
+| `min_hits`/`max_hits` | Number of hits for multi-hit moves | Usually 1-1 |
+
+**Common Target IDs:**
+- `9` = Opponent (single target)
+- `8` = User
+- `10` = Both opponents
+- `11` = All Pokemon
+- `7` = User's field
+
+**Common Effect IDs (pick one that matches the move's behavior):**
+- `0` = No special effect
+- `100` = Chance to poison (33%)
+- `106` = Chance to flinch (33%)
+- `107` = Chance to freeze (20%)
+- `108` = Chance to paralyze (25%)
+- `109` = Chance to burn (20%)
+- `187` = Self-destruct
+- `210` = Recoil (Jump 2 turns)
+- `241` = Sleep powder/sing (accuracy-based sleep)
+- `252` = Thunder/Blizzard accuracy boost in rain/sun
+- `266` = Charge (electric moves)
+- `302` = Razer Leaf/Solar Beam (solar power)
+- `331` = Fly/Dig (semi-invulnerable)
+- `334` = Explosion/Final Gambit (faints user)
+- `364` = Wish (heal next turn)
+- `380` = Protect/Detect
+- `401` = Stealth Rock
+- `437` = Grassy Glide (priority in terrain)
+
+For complex moves like "Make It Rain", use `effect_id` as an identifier code - the game logic in `move.py` or move effect files will handle the actual implementation.
+
+### Implementing Move Effects in Code
+
+For moves with special effects (beyond basic damage), you need to implement the effect in Python code. Here's how:
+
+#### Example: Thousand Arrows (ignores type immunity)
+
+**Step 1: Add to moves.json**
+
+```json
+{
+  "id": 614,
+  "identifier": "thousand-arrows",
+  "power": 90,
+  "pp": 10,
+  "accuracy": 100,
+  "priority": 0,
+  "type_id": 5,
+  "damage_class_id": 1,
+  "effect_id": 373,
+  "effect_chance": null,
+  "target_id": 9,
+  "crit_rate": 0,
+  "min_hits": 1,
+  "max_hits": 1
+}
 ```
+
+Effect ID 373 is the code for "ignores type immunity" - used by Thousand Arrows and Thousand Waves.
+
+**Step 2: Add the logic in pokemon_mechanics.py**
+
+In `/home/gojo/projects/dueler/goatjo/pokemonduel/pokemon/pokemon_mechanics.py`, the `effectiveness()` method checks for this:
+
+```python
+def effectiveness(self, attacker_type: ElementType, battle, *, attacker=None, move=None):
+    """Calculates a float representing the effectiveness of `attacker_type` damage on this poke."""
+    effectiveness = 1
+    
+    defender_types = self.type_ids.copy()
+    
+    # Special case: Thousand Arrows (effect 373) ignores type immunity
+    if move is not None and move.effect == 373:
+        # Still hit Flying types even if Ground move would normally be immune
+        # Type effectiveness still applies (2x, 0.5x, etc.)
+        pass  # Don't return early on immunity
+    else:
+        # Normal type immunity logic
+        if attacker_type == ElementType.GROUND and ElementType.FLYING in defender_types and not self.grounded(battle, attacker=attacker, move=move):
+            return 1  # Immune
+        if attacker_type == ElementType.GHOST and ElementType.NORMAL in defender_types:
+            return 1  # Immune
+        if attacker_type == ElementType.Psychic and ElementType.DARK in defender_types:
+            return 1  # Immune
+        # ... more immunity cases
+    
+    # Continue with effectiveness calculation...
+```
+
+#### Example: Smack Down (makes Flying types grounded)
+
+**Step 1: Add to moves.json**
+
+```json
+{
+  "id": 441,
+  "identifier": "smack-down",
+  "power": 20,
+  "pp": 15,
+  "accuracy": 100,
+  "priority": 0,
+  "type_id": 6,
+  "damage_class_id": 1,
+  "effect_id": 196,
+  "effect_chance": 100,
+  "target_id": 9,
+  "crit_rate": 0,
+  "min_hits": 1,
+  "max_hits": 1
+}
+```
+
+**Step 2: Add in move_attack.py's apply_damage()**
+
+After damage is applied, check for the effect and set grounded state:
+
+```python
+def apply_damage(self, attacker, defender, battle, damage, current_type, critical, msg):
+    msg += defender.damage(damage, battle, source=self.pretty_name, critical=critical)
+    
+    # Smack Down effect - makes Flying types grounded
+    if self.effect == 196 and not critical:
+        if ElementType.FLYING in defender.type_ids:
+            defender.grounded_by_move = True
+            msg += f"{defender.name} fell out of the sky!\n"
+```
+
+#### Example: Move with Multi-Turn Lock (Outrage, Petal Dance)
+
+**Step 1: Add to moves.json**
+
+```json
+{
+  "id": 200,
+  "identifier": "outrage",
+  "power": 120,
+  "pp": 10,
+  "accuracy": 100,
+  "priority": 0,
+  "type_id": 16,
+  "damage_class_id": 1,
+  "effect_id": 160,
+  "effect_chance": null,
+  "target_id": 9,
+  "crit_rate": 0,
+  "min_hits": 1,
+  "max_hits": 1
+}
+```
+
+**Step 2: Add logic in move_use.py**
+
+In the `use()` method, handle the locked move:
+
+```python
+# In move_use.py's use() method
+if attacker.locked_move is None:
+    # Set up multi-turn moves
+    if self.effect == 160:  # Outrage, Petal Dance
+        attacker.locked_move = LockedMove(self, random.randint(2, 3))
+        attacker.outrage.set_turns(random.randint(2, 3))
+        # Or for Petal Dance: attacker.structure = LockedMove(self, ...)
+```
+
+And in `pokemon_init.py`, ensure the attributes exist:
+
+```python
+self.outrage = ExpiringEffect(0)
+self.rollout = ExpiringEffect(0)
+self.rampage = ExpiringEffect(0)  # Includes Outrage, Petal Dance, etc.
+self.structure = None  # For Petal Dance
+```
+
+#### Common Effect IDs Reference
+
+| Effect ID | Description | Implementation Location |
+|-----------|-------------|-------------------------|
+| 0 | No effect | - |
+| 100 | Chance to poison | move_attack.py apply_damage() |
+| 106 | Chance to flinch | move_attack.py attack() |
+| 196 | Smack Down (ground Flying) | move_attack.py apply_damage() |
+| 373 | Ignores type immunity | pokemon_mechanics.py effectiveness() |
+| 160 | Multi-turn lock (Outrage) | move_use.py use() |
+| 152 | Charge (Solar Beam) | move_use.py use() |
+| 256, 257 | Semi-invulnerable (Fly/Dig) | move_use.py use() |
+| 380 | Protect | move_checks.py check_protect() |
 
 ---
 
-### 2.5 Status Effects (Non-Volatile)
+## 4. Adding New Abilities
 
-**Location:** `goatjo/pokemonduel/misc/non_volatile_effect.py`
+### Step 1: Add to abilities.json
 
-**Pattern:** Handles burn, poison, paralysis, sleep, freeze.
+```json
+{
+  "id": 300,
+  "identifier": "good-as-gold",
+  "name": "Good as Gold",
+  "description": "Immune to status moves."
+}
+```
 
-**Boilerplate Template:**
+### Step 2: Add to Ability enum
+
+Edit `/home/gojo/projects/dueler/goatjo/pokemonduel/enums/ability.py`:
 
 ```python
-# In misc/non_volatile_effect.py
-class NonVolatileEffect:
-    # Existing code...
-    
-    def apply_status(self, status: str, battle, attacker=None, source=""):
-        """Apply a status condition."""
-        if status == "burn":
-            # Burn logic
-            return f"{self.poke.name} is burned!\n"
-        # ... other statuses
+class Ability(IntEnum):
+    BUG = 1
+    # ... existing abilities ...
+    GOOD_AS_GOLD = 300  # Add at the end
 ```
+
+### Step 3: Implement in Code
+
+For simple abilities that just grant immunity, add to `pokemon_mechanics.py` in the `ability()` method:
+
+```python
+def ability(self, *, attacker=None, move=None):
+    # ... existing code ...
+    if self._name == "Gholdengo" and self.ability_id == Ability.GOOD_AS_GOLD:
+        return Ability.GOOD_AS_GOLD
+    # Add new ability checks here
+```
+
+For complex abilities with in-battle effects, you'll need to add logic in appropriate places:
+- `pokemon_send_out.py` - For abilities that activate on send-out
+- `pokemon_turn.py` - For abilities that activate during turns
+- `pokemon_damage.py` - For abilities that modify damage
+- `moves/` - For abilities that interact with specific moves
 
 ---
 
-### 2.6 Weather & Terrain
+## 5. Adding New Items
 
-**Location:** `goatjo/pokemonduel/misc/weather.py` and `terrain.py`
+### Step 1: Add to items.json
 
-**Boilerplate Template:**
-
-```python
-# In misc/weather.py
-class Weather(ExpiringEffect):
-    """Base weather class."""
-    
-    def __init__(self):
-        super().__init__(5)  # 5 turns duration
-    
-    def apply(self, battle, user=None):
-        """Apply weather to battle."""
-        return f"Weather started!\n"
-
-# In misc/terrain.py
-class Terrain(ExpiringItem):
-    """Base terrain class."""
-    
-    def __init__(self):
-        super().__init__()
+```json
+{
+  "id": 2000,
+  "identifier": "booster-energy",
+  "name": "Booster Energy",
+  "description": "Activates Protosynthesis or Quark Drive on Pokemon with those abilities."
+}
 ```
 
----
+### Step 2: Add to held_item.py
 
-### 2.7 Trainer System
-
-**Location:** `gogo/pokemonduel/trainers/`
-
-**Pattern:** Base Trainer class with Human and NPC subclasses.
-
-**Boilerplate Template:**
+If the item has special effects (like type boosts or abilities), implement in `/home/gojo/projects/dueler/goatjo/pokemonduel/misc/held_item.py`:
 
 ```python
-# In trainers/trainer_base.py
-class Trainer:
-    """Base trainer class."""
-    
-    def __init__(self, name, party):
-        self.name = name
-        self.party = party
-        self.current_pokemon = party[0] if party else None
-    
-    def valid_moves(self, defender):
-        """Return list of valid move indices."""
-        return [i for i, m in enumerate(self.current_pokemon.moves) if m.pp > 0]
-
-# In trainers/member_trainer.py
-class MemberTrainer(Trainer):
-    """Human player trainer."""
-    
-    def is_human(self):
-        return True
-
-# In trainers/npc_trainer.py  
-class NPCTrainer(Trainer):
-    """AI trainer."""
-    
-    def is_human(self):
-        return False
-    
-    def move(self, defender, battle):
-        # AI logic
-        pass
-```
-
-**Registration:** Imports in `trainers/__init__.py`:
-```python
-from .trainer_base import Trainer
-from .member_trainer import MemberTrainer
-from .npc_trainer import NPCTrainer
-```
-
----
-
-### 2.8 UI System (Discord Views)
-
-**Location:** `goatjo/pokemonduel/ui/`
-
-**Pattern:** Each UI component is a separate file with Discord UI classes.
-
-**Boilerplate Template:**
-
-```python
-# In ui/my_new_view.py
-import discord
-from discord.ui import View, Button
-
-class MyNewView(View):
-    """Custom interaction view."""
-    
-    def __init__(self, battle):
-        super().__init__()
-        self.battle = battle
-    
-    @discord.ui.button(label="Action", style=discord.ButtonStyle.primary)
-    async def action_button(self, interaction, button):
-        await interaction.response.send_message("Action taken!")
-        # Handle action
-```
-
-**Registration:** Import in `ui/__init__.py`:
-```python
-from .my_new_view import MyNewView
-
-__all__ = [..., 'MyNewView']
-```
-
----
-
-### 2.9 Data System
-
-**Location:** `goatjo/pokemonduel/data_gen/`
-
-**Pattern:** Functions for JSON data access and image generation.
-
-**Boilerplate Template:**
-
-```python
-# In data_gen/my_generator.py
-async def generate_something(battle):
-    """Generate something for the battle."""
-    # Image generation or data processing
-    return view_or_embed
-
-# In data_gen/__init__.py
-from .my_generator import generate_something
-
-__all__ = [..., 'generate_something']
+def get_damage_multiplier(self, type_id, *, attacker=None, move=None, is_super_effective=False, is_not_very_effective=False):
+    # Add item-specific damage multipliers
+    if self.get() == "booster-energy":
+        if attacker and attacker.ability_id in (Ability.PROTOSYNTHESIS, Ability.QUARK_DRIVE):
+            if not attacker.booster_energy:
+                attacker.booster_energy = True
+                return 1.5
+    # ... rest of method
 ```
 
 ---
 
-## 3. Inter-System Communication
+## 6. Adding Images
 
-### How Systems Connect
+### Pokemon Sprites
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        COG (commands.py)                        │
-│  Discord command handler - creates Battle, manages context    │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                     BATTLE (battle.py)                          │
-│  Main battle loop - orchestrates turns, calls Pokemon methods │
-└─────────────────────────────────────────────────────────────────┘
-          │                    │                      │
-          ▼                    ▼                      ▼
-┌──────────────────┐  ┌────────────────┐    ┌─────────────────────┐
-│   POKEMON        │  │    TRAINER    │    │     MOVE           │
-│ (pokemon/*)      │  │ (trainers/*)  │    │    (moves/*)       │
-│                  │  │                │    │                    │
-│ - HP calc        │  │ - Party mgmt  │    │ - Damage calc      │
-│ - Stats          │  │ - Move select │    │ - Type effect      │
-│ - Abilities      │  │ - Swap logic  │    │ - Accuracy check   │
-└──────────────────┘  └────────────────┘    └─────────────────────┘
-          │                    │                      │
-          ▼                    ▼                      ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                        SHARED SYSTEMS                          │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────┐   │
-│  │ ENUMS    │  │  MISC    │  │  DATA    │  │     UI       │   │
-│  │ Ability  │  │ Weather  │  │ find()   │  │ Views/Buttons│   │
-│  │ Element  │  │ Status   │  │ JSON     │  │              │   │
-│  │ Damage   │  │ Items    │  │ Images   │  │              │   │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
-```
+Place sprite images in `/home/gojo/projects/dueler/goatjo/pokemonduel/data/img/`
 
-### Communication Examples
+Filename format: `{pokemon_id}.png`
 
-**Battle calling Pokemon ability:**
-```python
-# In battle/battle.py
-if self.trainer1.current_pokemon.ability() == Ability.INTIMIDATE:
-    msg += self.trainer2.current_pokemon.append_attack(-1, attacker=attacker, source="Intimidate")
-```
+For example, Gholdengo (ID 1000):
+- Place at: `data/img/1000.png`
 
-**Pokemon using Move:**
-```python
-# In pokemon/pokemon_damage.py
-move.power = move.calculate_power(self, otherpoke, battle)
-```
+Supported formats: PNG, JPG, GIF
 
-**UI triggering Battle action:**
-```python
-# In ui/battle_ui.py
-async def callback(self, interaction):
-    await self.battle.process_turn(self.selected_move)
-```
+### Team Preview Background
+
+Team preview uses images in `generate_team_preview()` from `data_gen/preview.py`.
+
+### Battle UI Images
+
+Battle message generation uses images in `generate_main_battle_message()` from `data_gen/battle_message.py`.
 
 ---
 
-## 4. Developer Workflow
+## 7. Forms and Variants
 
-### Checklist: Adding a New Feature
+### Adding a Form (like Aegislash-Blade)
 
-1. **Identify the domain** - Which folder does it belong to?
-   - New move behavior → `moves/`
-   - New Pokemon logic → `pokemon/`
-   - New ability → `enums/ability.py` + relevant pokemon file
-   - New item → `misc/held_item.py`
-   - New UI → `ui/`
-   - New data source → `data_gen/`
+The code handles many forms automatically in `pokemon/__init__.py`'s `create()` function. For special forms:
 
-2. **Create or modify the file**
-   - For new files: Follow the boilerplate templates above
-   - For modifications: Find the relevant method in appropriate file
+#### Step 1: Add form entry in forms.json
 
-3. **Update `__init__.py` if needed**
-   - Add new imports to the folder's `__init__.py`
+```json
+{
+  "identifier": "gholdengo-h",
+  "base_id": 1000,
+  "pokemon_id": 1001,
+  "height": 30,
+  "weight": 43,
+  "base_experience": 265,
+  "order": 1001
+}
+```
 
-4. **Test the import**
-   ```bash
-   cd /home/gojo/projects/dueler
-   PYTHONPATH=/home/gojo/projects/dueler .venv/bin/python -c "from goatjo.pokemonduel.whatever import Whatever"
-   ```
+#### Step 2: Add stats for form in pokemon_stats.json
 
-5. **Test the functionality**
-   - Run the bot and test the feature
+```json
+{
+  "pokemon_id": 1001,
+  "stats": [60, 55, 65, 125, 65, 100]
+}
+```
 
-### Debugging a Micro-Module
+#### Step 3: Add types for form in ptypes.json
 
-**To test a specific module without running the bot:**
+```json
+{
+  "id": 1001,
+  "types": [9, 8]
+}
+```
+
+The `create()` function in `pokemon/__init__.py` automatically handles:
+- Mega evolutions (mega-stone items)
+- Form transformations (Aegislash-blade, etc.)
+- Form-based stat lookups
+
+---
+
+## 8. Code Architecture
+
+### How the Modules Work
+
+```
+pokemonduel/
+├── pokemon/
+│   ├── __init__.py          # DuelPokemon class + create() function
+│   ├── pokemon_init.py      # __init__ with all attributes
+│   ├── pokemon_send_out.py  # send_out(), send_out_ability(), remove()
+│   ├── pokemon_turn.py      # next_turn() - turn-based resets
+│   ├── pokemon_damage.py    # damage(), heal(), faint(), confusion, flinch, etc.
+│   ├── pokemon_stats.py     # stat calculations, stage modifiers
+│   └── pokemon_mechanics.py # ability(), effectiveness(), grounded(), etc.
+│
+├── moves/
+│   ├── __init__.py          # Move class combining all mixins
+│   ├── move_init.py         # __init__, setup(), get_priority(), get_effect_chance()
+│   ├── move_use.py          # use() - main move execution logic
+│   ├── move_attack.py       # attack(), calculate_damage(), apply_damage()
+│   ├── move_power.py        # get_power() - damage calculation
+│   ├── move_type.py         # get_type() - type determination
+│   └── move_checks.py       # check_executable(), check_hit(), etc.
+│
+├── trainers/
+│   ├── trainer_base.py      # Base Trainer class
+│   ├── member_trainer.py    # Human player (Discord member)
+│   └── npc_trainer.py       # AI opponent
+│
+├── battle/
+│   └── battle.py            # Main battle loop and logic
+│
+├── misc/
+│   ├── expiring_effect.py   # Time-based effects (confusion, etc.)
+│   ├── expiring_item.py     # Items with duration (disable, encore)
+│   ├── non_volatile_effect.py # Status conditions
+│   ├── held_item.py         # Held item logic
+│   └── weather.py           # Weather system
+│
+└── data_gen/
+    ├── query.py             # find(), find_one() - data access
+    ├── preview.py           # Team preview image
+    └── battle_message.py    # Battle UI image
+```
+
+### Key Class Inheritance
+
+**DuelPokemon** inherits from multiple mixin classes:
+- `DuelPokemonInit` - All attributes and initialization
+- `DuelPokemonSendOut` - Send out logic
+- `DuelPokemonTurn` - Turn processing
+- `DuelPokemonDamage` - Damage and healing
+- `DuelPokemonStats` - Stat calculations
+- `DuelPokemonMechanics` - Abilities, types, mechanics
+
+**Move** inherits from:
+- `MoveInit` - Properties and setup
+- `MoveUse` - Execution logic
+- `MoveAttack` - Attack calculation
+- `MovePower` - Power calculation
+- `MoveType` - Type determination
+- `MoveChecks` - Validity checks
+- `MoveHelpers` - Helper properties
+
+---
+
+## 9. Testing New Content
+
+### Quick Test
+
+```python
+# Test a Pokemon can be created
+from pokemonduel.pokemon import create
+from pokemonduel.data_gen import find_one
+
+# Get some test data
+ctx = None  # Not needed for most queries
+form = await find_one(ctx, "forms", {"identifier": "gholdengo"})
+print(f"Found: {form}")
+
+# Test creating the pokemon
+raw_data = {
+    "pokname": "Gholdengo",
+    "poknick": "None",
+    "hpiv": 31, "atkiv": 31, "defiv": 31,
+    "spatkiv": 31, "spdefiv": 31, "speediv": 31,
+    "hpev": 252, "atkev": 0, "defev": 0,
+    "spatkev": 252, "spdefev": 0, "speedev": 4,
+    "pokelevel": 50, "shiny": False, "radiant": False,
+    "skin": "", "id": 1, "hitem": "none",
+    "happiness": 70, "moves": ["make-it-rain", "shadow-ball"],
+    "nature_stat_deltas": {"Attack": 1, "Defense": 1, "Special attack": 1, "Special defense": 1, "Speed": 1},
+    "ability_index": 0, "nature": "Modest", "gender": "M",
+    "ability": "good-as-gold", "mega_ability": "None"
+}
+poke = await create(ctx, raw_data)
+print(f"Created: {poke.name}, HP: {poke.hp}")
+```
+
+### Run the Bot
 
 ```bash
-cd /home/gojo/projects/dueler
-PYTHONPATH=/home/gojo/projects/dueler .venv/bin/python << 'EOF'
-# Import the specific module
-from goatjo.pokemonduel.moves import Move
-from goatjo.pokemonduel.enums import ElementType, DamageClass
-
-# Create a simple test move
-move = Move(
-    name="Test Move",
-    element_id=ElementType.FIRE,
-    damage_class=DamageClass.SPECIAL,
-    power=80,
-    accuracy=100,
-    pp=20
-)
-
-# Test methods
-print(f"Move name: {move.name}")
-print(f"Power: {move.power}")
-print("Module works!")
-EOF
+cd /home/gojo/projects/dueler/goatjo
+source .venv/bin/activate
+python main.py
 ```
+
+Then use the bot commands to test battles:
+- `;pokemonduel party set` - Set your team
+- `;pokemonduel duel @opponent` - Start a battle
 
 ---
 
-## 5. Extensibility & Future-Proofing
+## 10. Common Issues and Solutions
 
-### Adding a New Top-Level System (e.g., Trading System)
+### Missing attributes error
 
-**Step 1: Create the folder structure**
-```
-goatjo/pokemonduel/
-├── trading/                 # New system folder
-│   ├── __init__.py         # Export main classes
-│   ├── trading_init.py     # Trading initialization
-│   ├── trading_offers.py   # Offer handling
-│   ├── trading_accept.py   # Accept/Decline logic
-│   └── trading_ui.py       # Discord UI for trading
-```
+If you get `AttributeError: 'DuelPokemon' object has no attribute 'X'`, the attribute is missing from `pokemon_init.py`. Add it to the `__init__` method.
 
-**Step 2: Create base classes**
+### Data file not found
+
+Make sure JSON files are in `/home/gojo/projects/dueler/goatjo/pokemonduel/data/`, not in subdirectories.
+
+### Import errors
+
+When adding new enums, make sure to import them where used:
 ```python
-# In trading/trading_init.py
-class TradeManager:
-    """Manages all trading operations."""
-    
-    def __init__(self):
-        self.active_trades = {}
-    
-    def create_offer(self, user1, user2, pokemon_id):
-        """Create a new trade offer."""
-        # Implementation
-        pass
-    
-    def accept_offer(self, trade_id):
-        """Accept and process a trade."""
-        # Implementation
-        pass
+from ..enums import Ability, ElementType, DamageClass, MoveTarget
 ```
 
-**Step 3: Add to Cog**
-```python
-# In cog/commands.py
-from ..trading import TradeManager
+### Form not loading
 
-class PokemonDuel(commands.Cog):
-    def __init__(self, bot):
-        # ... existing code ...
-        self.trading = TradeManager()
-```
-
-**Step 4: Add Discord commands**
-```python
-# In cog/commands.py
-@commands.command()
-async def trade(self, ctx, pokemon_id: int):
-    await ctx.send("Trading not implemented yet!")
-```
-
-### Extension Patterns Summary
-
-| Component | Pattern | Add New By |
-|-----------|---------|------------|
-| Moves | Mixin inheritance | Creating Move instance |
-| Pokemon | Mixin inheritance | Adding mixin + __init__ |
-| Abilities | Enum + checks | Adding enum + code checks |
-| Items | Class inheritance | Creating HeldItem subclass |
-| Status | Class methods | Adding status case |
-| Weather | Class inheritance | Subclass Weather |
-| Terrain | Class inheritance | Subclass Terrain |
-| UI | View inheritance | Creating View subclass |
-| Trainers | Class inheritance | Subclass Trainer |
+Check that the form identifier in `forms.json` matches exactly what's used in code (lowercase, hyphens).
 
 ---
 
-## 6. Important File Locations Reference
+## 11. Finding IDs for Data
 
-| Feature | File Path | Key Class/Function |
-|---------|-----------|-------------------|
-| Main entry | `cog/commands.py` | `PokemonDuel` class |
-| Battle loop | `battle/battle.py` | `Battle` class |
-| Pokemon entity | `pokemon/__init__.py` | `DuelPokemon` class |
-| Move execution | `moves/__init__.py` | `Move` class |
-| Ability enum | `enums/ability.py` | `Ability` enum |
-| Type enum | `enums/element_type.py` | `ElementType` enum |
-| Status handling | `misc/non_volatile_effect.py` | `NonVolatileEffect` |
-| Weather system | `misc/weather.py` | `Weather` class |
-| Terrain system | `misc/terrain.py` | `Terrain` class |
-| Item handling | `misc/held_item.py` | `HeldItem` class |
-| Data lookup | `data_gen/query.py` | `find()`, `find_one()` |
-| Human trainer | `trainers/member_trainer.py` | `MemberTrainer` |
-| AI trainer | `trainers/npc_trainer.py` | `NPCTrainer` |
-| Battle UI | `ui/battle_ui.py` | `BattlePromptView` |
-| Team preview | `ui/team_preview.py` | `PreviewPromptView` |
-
----
-
-## 7. Quick Reference Commands
+To find the next available ID for new content:
 
 ```bash
-# Test all imports
-PYTHONPATH=/home/gojo/projects/dueler .venv/bin/python -c "
-from goatjo.pokemonduel.cog.commands import PokemonDuel
-from goatjo.pokemonduel.battle.battle import Battle
-from goatjo.pokemonduel.pokemon import DuelPokemon
-from goatjo.pokemonduel.moves import Move
-from goatjo.pokemonduel.trainers import Trainer
-from goatjo.pokemonduel.data_gen import find, find_one
-print('All imports OK!')
+# Find highest Pokemon ID
+python -c "
+import json
+with open('pokemonduel/data/forms.json') as f:
+    data = json.load(f)
+    max_id = max(item['pokemon_id'] for item in data)
+    print(f'Next available Pokemon ID: {max_id + 1}')
+
+with open('pokemonduel/data/moves.json') as f:
+    data = json.load(f)
+    max_id = max(item['id'] for item in data)
+    print(f'Next available Move ID: {max_id + 1}')
+
+with open('pokemonduel/data/abilities.json') as f:
+    data = json.load(f)
+    max_id = max(item['id'] for item in data)
+    print(f'Next available Ability ID: {max_id + 1}')
 "
-
-# Test specific module
-PYTHONPATH=/home/gojo/projects/dueler .venv/bin/python -c "from goatjo.pokemonduel.enums import Ability; print(Ability.INTIMIDATE)"
 ```
 
 ---
 
-This architecture allows any developer to:
-1. **Easily locate** where any functionality lives
-2. **Quickly extend** any system without touching other code
-3. **Safely modify** individual modules in isolation
-4. **Scale** the bot by adding new systems without breaking existing code
-
-The modular design ensures that adding a new Pokemon, Move, Ability, or Item requires changes only in the specific relevant file, not scattered throughout the codebase.
+This guide covers the essentials. For more complex mechanics like specific move effects or ability interactions, examine the existing implementations in the source code to understand the patterns used.
