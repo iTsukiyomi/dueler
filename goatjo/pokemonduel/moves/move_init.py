@@ -1,7 +1,4 @@
-import random
-from ..enums import Ability, DamageClass, ElementType, MoveTarget
-from ..misc import LockedMove, BatonPass, ExpiringEffect, ExpiringItem
-
+from ..enums import Ability, DamageClass, ElementType
 
 class MoveInit:
     """Move initialization and basic properties."""

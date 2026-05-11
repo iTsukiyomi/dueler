@@ -1,6 +1,8 @@
 import discord
+from discord.ext import commands
 import asyncio
 
+BUTTON_TIMEOUT = 60
 
 class DuelAcceptView(discord.ui.View):
     """View to accept a duel."""

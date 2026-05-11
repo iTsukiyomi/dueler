@@ -1,6 +1,6 @@
 import random
-from ..misc import LockedMove
-from ..enums import Ability, ElementType, MoveTarget
+from ..misc import LockedMove, BatonPass, ExpiringEffect, ExpiringItem
+from ..enums import Ability, ElementType, DamageClass
 
 
 class MoveUse:
@@ -12,6 +12,7 @@ class MoveUse:
         
         Returns a string of formatted results of the move.
         """
+        from ..moves import Move
         #This handles an edge case for moves that cause the target to swap out
         if attacker.has_moved and use_pp:
             return ""

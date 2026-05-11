@@ -1,6 +1,5 @@
 import random
 from ..enums import Ability, DamageClass, MoveTarget, ElementType
-from moves import Move
 
 class MoveChecks:
     """Move validation and checking methods."""
@@ -710,6 +709,7 @@ class MoveHelpers:
     
     def copy(self):
         """Generate a copy of this move."""
+        from moves import Move
         return Move(
             id=self.id,
             identifier=self.name,

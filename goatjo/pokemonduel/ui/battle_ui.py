@@ -1,8 +1,7 @@
 import discord
 from ..moves import Move
-from forfeit_ui import ForfeitButton
-from mega_evolve_ui import MegaEvolveButton
-from swap_ui import SwapView
+from .forfeit_ui import ForfeitButton
+from .swap_ui import SwapView
 
 BUTTON_TIMEOUT = 60
 

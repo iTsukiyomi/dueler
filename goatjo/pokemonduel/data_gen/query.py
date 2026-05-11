@@ -6,7 +6,7 @@ async def find(ctx, db, filter):
     """Fetch all matching rows from a data file."""
     # Get the directory where your data files are located
     # ctx parameter is kept for compatibility, but we'll use a fixed path
-    data_dir = Path(__file__).parent / "data"
+    data_dir = Path(__file__).parent.parent / "data"
     path = data_dir / f"{db}.json"
 
     with open(path, 'r', encoding='utf-8') as f:

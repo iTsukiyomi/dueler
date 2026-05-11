@@ -6,7 +6,7 @@ import os
 
 async def generate_team_preview(battle):
     """Generates a message for trainers to preview their team with images."""
-    from .buttons import PreviewPromptView
+    from ..ui.team_preview import PreviewPromptView
 
     preview_view = PreviewPromptView(battle)
 

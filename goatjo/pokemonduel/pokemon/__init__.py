@@ -6,11 +6,8 @@ from .pokemon_stats import DuelPokemonStats
 from .pokemon_mechanics import DuelPokemonMechanics
 
 from ..moves import Move
-from ..misc import ExpiringEffect, NonVolatileEffect, Metronome
-from ..misc import LockedMove
-from ..enums import Ability, ElementType
+from ..enums import ElementType
 from ..data_gen.query import find, find_one
-import random
 
 
 class DuelPokemon(

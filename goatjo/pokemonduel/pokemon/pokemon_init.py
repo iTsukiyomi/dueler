@@ -1,8 +1,5 @@
-import random
 from ..data_gen import find, find_one
-from ..enums import Ability, DamageClass, ElementType
 from ..misc import NonVolatileEffect, Metronome, ExpiringEffect, ExpiringItem, HeldItem
-from ..moves import Move
 
 
 class DuelPokemonInit:

@@ -1,4 +1,3 @@
-import random
 import asyncio
 from ..enums import Ability, DamageClass, ElementType
 from ..misc import ExpiringEffect, ExpiringWish, ExpiringItem
