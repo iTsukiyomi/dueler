@@ -10,7 +10,7 @@ async def generate_team_preview(battle):
 
     preview_view = PreviewPromptView(battle)
 
-    # Image configuration
+    # Image configuration 
     poke_width = 96
     poke_height = 96
     padding = 12
