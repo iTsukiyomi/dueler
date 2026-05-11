@@ -3,6 +3,7 @@ import discord
 BUTTON_TIMEOUT = 60
 
 
+
 class SwapPromptView(discord.ui.View):
     """Prompts the trainer to view their pokemon."""
     def __init__(self, trainer, opponent, battle, *, mid_turn=False):
@@ -36,10 +37,10 @@ class SwapPromptView(discord.ui.View):
     async def on_timeout(self):
         self.battle.trainer1.event.set()
         self.battle.trainer2.event.set()
-
+    
     async def on_error(self, interaction, error, item):
         self.battle.ctx.cog.log.error("Exception in a button.", exc_info=error)
-
+    
     def stop(self):
         """Override to stop child views when this view is stopped."""
         for view in self.child_views:
@@ -59,7 +60,7 @@ class SwapView(discord.ui.View):
         swapdata = trainer.valid_swaps(opponent.current_pokemon, battle, check_trap=set_move)
         for idx, poke in enumerate(trainer.party):
             self.add_item(SwapButton(poke, disabled=idx not in swapdata))
-
+    
     async def on_error(self, interaction, error, item):
         self.battle.ctx.cog.log.error("Exception in a button.", exc_info=error)
 

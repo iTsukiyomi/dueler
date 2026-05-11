@@ -2,6 +2,7 @@ from enum import IntEnum
 
 
 class MoveTarget(IntEnum):
+    """Helper enum for move targets to make them more readable."""
     SPECIFIC_MOVE = 1
     SELECTED_POKEMON_ME_FIRST = 2
     ALLY = 3

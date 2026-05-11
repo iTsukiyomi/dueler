@@ -1,5 +1,8 @@
 import discord
 from ..moves import Move
+from forfeit_ui import ForfeitButton
+from mega_evolve_ui import MegaEvolveButton
+from swap_ui import SwapView
 
 BUTTON_TIMEOUT = 60
 
@@ -43,10 +46,10 @@ class BattlePromptView(discord.ui.View):
     async def on_timeout(self):
         self.battle.trainer1.event.set()
         self.battle.trainer2.event.set()
-
+    
     async def on_error(self, interaction, error, item):
         self.battle.ctx.cog.log.error("Exception in a button.", exc_info=error)
-
+    
     def stop(self):
         """Override to stop child views when this view is stopped."""
         for view in self.child_views:
@@ -76,7 +79,7 @@ class MoveSelectView(discord.ui.View):
             self.add_item(SwapRequestButton(disabled=not swapdata))
             self.add_item(ForfeitButton(row=0))
             return
-
+        
         for idx, move in enumerate(trainer.current_pokemon.moves):
             self.add_item(MoveButton(move, disabled=idx not in movedata, row=idx // 2))
         self.add_item(SwapRequestButton(disabled=not swapdata))
@@ -87,11 +90,12 @@ class MoveSelectView(discord.ui.View):
             and not trainer.has_mega_evolved
         ):
             self.add_item(MegaEvolveButton())
-
+        
     async def interaction_check(self, interaction):
         if self.battle.turn != self.turn:
             await interaction.response.send_message(content="This button has expired.", ephemeral=True)
             return False
+        # Should never be hit, but just in case :P
         if interaction.user.id != self.trainer.id:
             await interaction.response.send_message(content="You are not allowed to interact with this button.", ephemeral=True)
             return False
@@ -99,10 +103,10 @@ class MoveSelectView(discord.ui.View):
             await interaction.response.send_message(content="You have already selected an action.", ephemeral=True)
             return False
         return True
-
+    
     async def on_error(self, interaction, error, item):
         self.battle.ctx.cog.log.error("Exception in a button.", exc_info=error)
-
+    
     def stop(self):
         """Override to stop child views when this view is stopped."""
         for view in self.child_views:
@@ -131,36 +135,7 @@ class SwapRequestButton(discord.ui.Button):
         super().__init__(style=discord.ButtonStyle.primary, label="Swap pokemon", disabled=disabled)
 
     async def callback(self, interaction):
-        from .swap_ui import SwapView
         view = SwapView(self.view.trainer, self.view.opponent, self.view.battle, set_move=True)
         self.view.child_views.append(view)
         await interaction.response.edit_message(content="Pick a pokemon:", view=view)
 
-
-class ForfeitButton(discord.ui.Button):
-    """A button that forfeits the game when pressed."""
-    def __init__(self, *, row=1):
-        super().__init__(style=discord.ButtonStyle.danger, label="Forfeit duel", row=row)
-
-    async def callback(self, interaction):
-        from .forfeit_ui import DuelForfeitView
-        view = DuelForfeitView(self.view.trainer)
-        self.view.child_views.append(view)
-        await interaction.response.send_message(content="Are you sure you want to forfeit?", view=view, ephemeral=True)
-        await view.wait()
-        if view.confirm:
-            self.view.trainer.event.set()
-
-
-class MegaEvolveButton(discord.ui.Button):
-    """A button that toggles whether the trainer's pokemon should mega evolve this turn."""
-    def __init__(self):
-        super().__init__(style=discord.ButtonStyle.gray, label="Mega Evolve", row=0)
-
-    def get_color(self):
-        return [discord.ButtonStyle.gray, discord.ButtonStyle.green][self.view.trainer.current_pokemon.should_mega_evolve]
-
-    async def callback(self, interaction):
-        self.view.trainer.current_pokemon.should_mega_evolve = not self.view.trainer.current_pokemon.should_mega_evolve
-        self.style = self.get_color()
-        await interaction.response.edit_message(view=self.view)

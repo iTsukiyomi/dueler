@@ -2,6 +2,7 @@ from enum import IntEnum
 
 
 class ElementType(IntEnum):
+    """Helper enum for element types to make them more readable."""
     NORMAL = 1
     FIGHTING = 2
     FLYING = 3

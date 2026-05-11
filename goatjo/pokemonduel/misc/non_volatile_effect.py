@@ -4,6 +4,7 @@ from ..enums import Ability, ElementType
 
 
 class NonVolatileEffect():
+    """The current non volatile effect status."""
 
     def __init__(self, pokemon):
         self.current = ""
@@ -12,6 +13,11 @@ class NonVolatileEffect():
         self.badly_poisoned_turn = 0
 
     def next_turn(self, battle):
+        """
+        Progresses this status by a turn.
+
+        Returns a formatted string if a status wore off.
+        """
         if not self.current:
             return ""
         if self.current == "b-poison":
@@ -24,6 +30,7 @@ class NonVolatileEffect():
             removed = self.current
             self.reset()
             return f"{self.pokemon.name}'s shed skin cured its {removed}!\n"
+        # The poke still has a status effect, apply damage
         if self.current == "burn":
             damage = max(1, self.pokemon.starting_hp // 16)
             if self.pokemon.ability() == Ability.HEATPROOF:
@@ -44,23 +51,33 @@ class NonVolatileEffect():
         return ""
 
     def burn(self):
+        """Returns True if the pokemon is burned."""
         return self.current == "burn"
 
     def sleep(self):
+        """Returns True if the pokemon is asleep."""
         if self.pokemon.ability() == Ability.COMATOSE:
             return True
         return self.current == "sleep"
 
     def poison(self):
+        """Returns True if the pokemon is poisoned."""
         return self.current in ("poison", "b-poison")
 
     def paralysis(self):
+        """Returns True if the pokemon is paralyzed."""
         return self.current == "paralysis"
 
     def freeze(self):
+        """Returns True if the pokemon is frozen."""
         return self.current == "freeze"
 
     def apply_status(self, status, battle, *, attacker=None, move=None, turns=None, force=False, source: str = ""):
+        """
+        Apply a non volatile status to a pokemon.
+
+        Returns a formatted message.
+        """
         msg = ""
         if source:
             source = f" from {source}"
@@ -154,6 +171,7 @@ class NonVolatileEffect():
         return msg
 
     def reset(self):
+        """Remove a non volatile status from a pokemon."""
         self.current = ""
         self.badly_poisoned_turn = 0
         self.sleep_timer.set_turns(0)

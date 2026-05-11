@@ -3,31 +3,31 @@ from ..enums import Ability, ElementType
 
 
 class Terrain(ExpiringItem):
+    """The terrain of the battle"""
 
     def __init__(self, battle):
         super().__init__()
         self.battle = battle
 
-    def get(self):
-        """Get the current terrain type."""
-        return self.item
-
-    def active(self):
-        """Check if terrain is currently active."""
-        return super().active()
-
     def next_turn(self):
+        """Progresses the effect a turn."""
         expired = super().next_turn()
         if expired:
             self.end()
         return expired
 
     def set(self, item, attacker):
+        """
+        Set the terrain and turns until expiration.
+
+        Returns a formatted string.
+        """
         if item == self.item:
             return f"There's already a {item} terrain!\n"
         turns = 8 if attacker.held_item == "terrain-extender" else 5
         super().set(item, turns)
         msg = f"{attacker.name} creates a{'n' if item == 'electric' else ''} {item} terrain!\n"
+        # Mimicry
         element = None
         if item == "electric":
             element = ElementType.ELECTRIC
@@ -59,7 +59,9 @@ class Terrain(ExpiringItem):
         return msg
 
     def end(self):
+        """Ends the terrain."""
         super().end()
+        # Mimicry
         for poke in (self.battle.trainer1.current_pokemon, self.battle.trainer2.current_pokemon):
             if poke is None:
                 continue

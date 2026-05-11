@@ -4,7 +4,9 @@ from pathlib import Path
 
 async def find(ctx, db, filter):
     """Fetch all matching rows from a data file."""
-    data_dir = Path(__file__).parent.parent / "data"
+    # Get the directory where your data files are located
+    # ctx parameter is kept for compatibility, but we'll use a fixed path
+    data_dir = Path(__file__).parent / "data"
     path = data_dir / f"{db}.json"
 
     with open(path, 'r', encoding='utf-8') as f:

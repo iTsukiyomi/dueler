@@ -3,6 +3,18 @@ from ..enums import Ability, ElementType
 
 
 class Weather(ExpiringEffect):
+    """
+    The current weather of the battlefield.
+
+    Options:
+    -hail
+    -sandstorm
+    -h-rain
+    -rain
+    -h-sun
+    -sun
+    -h-wind
+    """
 
     def __init__(self, battle):
         super().__init__(0)
@@ -10,22 +22,26 @@ class Weather(ExpiringEffect):
         self.battle = battle
 
     def _expire_weather(self):
+        """Clear the current weather and update Castform forms."""
         self._weather_type = ""
         for poke in (self.battle.trainer1.current_pokemon, self.battle.trainer2.current_pokemon):
             if poke is None:
                 continue
+            # Forecast
             if poke.ability() == Ability.FORECAST and poke._name in ("Castform-snowy", "Castform-rainy",
                                                                      "Castform-sunny"):
                 if poke.form("Castform"):
                     poke.type_ids = [ElementType.NORMAL]
 
     def next_turn(self):
+        """Progresses the weather a turn."""
         if super().next_turn():
             self._expire_weather()
             return True
         return False
 
     def recheck_ability_weather(self):
+        """Checks if strong weather effects from a pokemon with a weather ability need to be removed."""
         maintain_weather = False
         for poke in (self.battle.trainer1.current_pokemon, self.battle.trainer2.current_pokemon):
             if poke is None:
@@ -43,6 +59,7 @@ class Weather(ExpiringEffect):
         return False
 
     def get(self):
+        """Get the current weather type."""
         for poke in (self.battle.trainer1.current_pokemon, self.battle.trainer2.current_pokemon):
             if poke is None:
                 continue
@@ -51,6 +68,11 @@ class Weather(ExpiringEffect):
         return self._weather_type
 
     def set(self, weather: str, pokemon):
+        """
+        Set the weather, lasting a certain number of turns.
+
+        Returns a formatted message indicating any weather change.
+        """
         msg = ""
         turns = None
         element = None
@@ -112,6 +134,7 @@ class Weather(ExpiringEffect):
         else:
             raise ValueError("unexpected weather")
 
+        # Forecast
         t = ElementType(element).name.lower()
         for poke in (self.battle.trainer1.current_pokemon, self.battle.trainer2.current_pokemon):
             if poke is None:

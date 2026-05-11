@@ -2,6 +2,7 @@ from ..enums import Ability
 
 
 class BatonPass():
+    """Stores the necessary data from a pokemon to baton pass to another pokemon."""
 
     def __init__(self, poke):
         self.attack_stage = poke.attack_stage
@@ -28,6 +29,7 @@ class BatonPass():
         self.telekinesis = poke.telekinesis
 
     def apply(self, poke):
+        """Push this objects data to a poke."""
         if poke.ability() != Ability.CURIOUS_MEDICINE:
             poke.attack_stage = self.attack_stage
             poke.defense_stage = self.defense_stage

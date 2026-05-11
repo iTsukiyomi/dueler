@@ -2,6 +2,7 @@ from enum import IntEnum
 
 
 class Ability(IntEnum):
+    """Helper enum for ability ids to make them more readable."""
     STENCH = 1
     DRIZZLE = 2
     SPEED_BOOST = 3
@@ -312,7 +313,8 @@ class Ability(IntEnum):
     TERA_SHELL = 308
     TERAFORM_ZERO = 309
     POISON_PUPPETEER = 310
-
+    
     @property
     def pretty_name(self):
-        return self.name.lower().replace("_", " ")
+        """Formats the ability name for outputs."""
+        return self.name.lower().replace("_", " ") # pylint: disable=E1101
