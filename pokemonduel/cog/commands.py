@@ -1,3 +1,4 @@
+from pathlib import Path
 import discord
 from discord.ext import commands
 from ..config import EnhancedConfigManager
@@ -478,3 +479,32 @@ class PokemonDuel(commands.Cog):
                 await ctx.send("The game will now be run in a per-game thread.")
             else:
                 await ctx.send("The game will not be run in a thread.")
+
+    @commands.command(name = "info", aliases=["sprite", "img"])
+    async def info(self, ctx, name:str):
+        """get poke sprite"""
+
+        poke = await find_one(ctx, "forms", {"identifier": name.lower()})
+        if poke is None:
+            return await ctx.send(f"no poke named `{name}`, maybe devs are lazy and didnt add.")
+
+        poke_id = poke["pokemon_id"]
+        sprite = Path(__file__).parent.parent / "data" / "img" / f"{poke_id}.png"
+
+        if not sprite.exists():
+            return await ctx.send(f"no sprite for ``{name}`` add it yourself bruv id is ``{poke_id}``")
+        
+        poke = await find_one(ctx, "pokemon_stats", {"pokemon_id": poke_id})
+        stats = poke["stats"]
+        
+        hp = stats[0]
+        atk = stats[1]
+        defense = stats[2]
+        spatk = stats[3]
+        spdef = stats[4]
+        speed = stats[5]
+
+        e = discord.Embed(description=f"hp: `{hp}` | atk: `{atk}` | def: `{defense}`\nspatk: `{spatk}` | spdef: `{spdef}` | speed: `{speed}`")
+        e.set_image(url=f"attachment://{sprite.name}")
+        e.set_footer(text=f"id: {poke_id}")
+        await ctx.send(embed=e, file=discord.File(sprite))
