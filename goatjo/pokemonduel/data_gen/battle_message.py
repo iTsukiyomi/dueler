@@ -60,23 +60,9 @@ async def generate_main_battle_message(battle):
         for sprite_path in possible_paths:
             if sprite_path.exists():
                 try:
-                    sprite = Image.open(sprite_path)
-
-                    if sprite.n_frames > 1:
-                        frames = []
-                        durations = []
-                        for frame in range(sprite.n_frames):
-                            sprite.seek(frame)
-                            frames.append(sprite.copy().convert("RGBA"))
-                            durations.append(sprite.info.get('duration', 100))
-                        return {
-                            'frames': frames,
-                            'durations': durations,
-                            'animated': True
-                        }
-                    else:
-                        sprite = sprite.resize((poke_width, poke_height), Image.Resampling.LANCZOS)
-                        return sprite
+                    sprite = Image.open(sprite_path).convert("RGBA")
+                    sprite = sprite.resize((poke_width, poke_height), Image.Resampling.LANCZOS)
+                    return sprite
                 except:
                     continue
         return None
@@ -127,8 +113,6 @@ async def generate_main_battle_message(battle):
             # Draw question mark
             draw_obj.text((x + poke_width // 2 - 10, y + poke_height // 2 - 15), "?",
                           fill=(255, 255, 255, 255), font=font_name)
-        elif isinstance(sprite, dict) and sprite.get('animated'):
-            return sprite
         else:
             battle_image.paste(sprite, (x, y), sprite)
 
@@ -186,25 +170,12 @@ async def generate_main_battle_message(battle):
     right_x = padding * 2 + poke_width
     poke_y = padding + bar_height + 10
 
-    left_sprite = load_sprite(battle.trainer1.current_pokemon)
-    right_sprite = load_sprite(battle.trainer2.current_pokemon)
+    draw_pokemon(draw, battle.trainer1.current_pokemon, left_x, poke_y, is_left=True)
+    draw_pokemon(draw, battle.trainer2.current_pokemon, right_x, poke_y, is_left=False)
 
-    image_path = "battle_msg.gif"
-    
-    from .gif_sprite_handler import create_animated_battle_composite
-    animated_result = await create_animated_battle_composite(
-        left_sprite, right_sprite, battle, img_width, img_height, poke_width, poke_height,
-        padding, bar_height, bar_width, font_name, font_hp, font_small, draw_hp_bar
-    )
-
-    if animated_result:
-        frames, durations = animated_result
-        frames[0].save(image_path, save_all=True, append_images=frames[1:], 
-                      duration=durations, loop=0, format='GIF')
-    else:
-        draw_pokemon(draw, battle.trainer1.current_pokemon, left_x, poke_y, is_left=True)
-        draw_pokemon(draw, battle.trainer2.current_pokemon, right_x, poke_y, is_left=False)
-        battle_image.save(image_path, "GIF")
+    # Save image
+    image_path = "battle_msg.png"
+    battle_image.save(image_path, "PNG")
 
     # Build description text
     desc = ""
@@ -236,11 +207,11 @@ async def generate_main_battle_message(battle):
         title=f"Battle between {battle.trainer1.name} and {battle.trainer2.name}",
         description=desc)
     e.set_footer(text="Who Wins!?")
-    e.set_image(url="attachment://battle_msg.gif")
+    e.set_image(url="attachment://battle_msg.png")
 
     try:
         battle_view = BattlePromptView(battle)
-        file = discord.File(image_path, filename="battle_msg.gif")
+        file = discord.File(image_path, filename="battle_msg.png")
         await battle.channel.send(embed=e, file=file, view=battle_view)
     except RuntimeError:
         pass
