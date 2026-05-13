@@ -192,6 +192,13 @@ def _load_moves_data():
             _MOVES_DATA = json.load(f)
     return _MOVES_DATA
 
+def _load_poke_abilities_data():
+    global _POKE_ABILITIES_DATA
+    if _POKE_ABILITIES_DATA is None:
+        with open(POKE_ABILITIES_JSON_PATH, 'r') as f:
+            _POKE_ABILITIES_DATA = json.load(f)
+    return _POKE_ABILITIES_DATA
+
 # Build move lookup: identifier -> move data with normalized keys
 _MOVE_DATA = None
 
