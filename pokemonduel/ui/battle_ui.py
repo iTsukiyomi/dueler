@@ -1,5 +1,6 @@
 import discord
 from ..moves import Move
+from .mega_evo import MegaEvolveButton
 from .forfeit_ui import ForfeitButton
 from .swap_ui import SwapView
 

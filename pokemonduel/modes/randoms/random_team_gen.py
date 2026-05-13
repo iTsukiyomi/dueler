@@ -18,6 +18,7 @@ PTYPES_JSON_PATH = Path(__file__).parent.parent.parent / 'data' / 'ptypes.json'
 TEFF_JSON_PATH = Path(__file__).parent.parent.parent / 'data' / 'type_effectiveness.json'
 ABILITY_JSON_PATH = Path(__file__).parent.parent.parent / 'data' / 'abilities.json'
 MOVES_JSON_PATH = Path(__file__).parent.parent.parent / 'data' / 'moves.json'
+POKE_ABILITIES_JSON_PATH = Path(__file__).parent.parent.parent / 'data' / 'poke_abilities.json'
 
 # Data caches
 _PFILE_DATA = None
@@ -28,9 +29,112 @@ _TEFF_DATA = None
 _ABILITY_DATA = None
 _SETS_DATA = None
 _MOVES_DATA = None
+_POKE_ABILITIES_DATA = None
 
 # Pokemon name to form ID mapping (built on first use)
 _PNAME_TO_FORM_ID = None
+
+# ============================================
+# NORMALIZATION
+# ============================================
+
+def normalize_id(text: str) -> str:
+    """Centralized ID normalization - removes spaces, hyphens, underscores"""
+    return (
+        text.lower()
+        .replace(" ", "")
+        .replace("-", "")
+        .replace("_", "")
+    )
+
+# ============================================
+# NATURES
+# ============================================
+
+NATURES_JSON_PATH = Path(__file__).parent.parent.parent / 'data' / 'natures.json'
+_NATURE_DATA = None
+
+def _load_natures_data():
+    global _NATURE_DATA
+    if _NATURE_DATA is None:
+        with open(NATURES_JSON_PATH, 'r') as f:
+            _NATURE_DATA = json.load(f)
+    return _NATURE_DATA
+
+# Nature stat mapping (stat_id: 1=HP, 2=Atk, 3=Def, 4=SpA, 5=SpD, 6=Spe)
+# decreased_stat_id and increased_stat_id define the nature
+_NATURE_LOOKUP = None
+
+def _build_nature_lookup():
+    global _NATURE_LOOKUP
+    if _NATURE_LOOKUP is not None:
+        return _NATURE_LOOKUP
+
+    natures = _load_natures_data()
+    _NATURE_LOOKUP = {}
+
+    for n in natures:
+        increased = n.get('increased_stat_id', 2)
+        decreased = n.get('decreased_stat_id', 2)
+
+        # Build lookup by (increased_stat, decreased_stat)
+        identifier = n.get('identifier', 'hardy')
+
+        # Map to stat names
+        stat_map = {1: 'hp', 2: 'atk', 3: 'def', 4: 'spa', 5: 'spd', 6: 'spe'}
+        inc_stat = stat_map.get(increased, 'atk')
+        dec_stat = stat_map.get(decreased, 'def')
+
+        _NATURE_LOOKUP[(inc_stat, dec_stat)] = identifier
+
+    return _NATURE_LOOKUP
+
+def get_nature_id(nature_name: str) -> int:
+    """Get nature ID from name"""
+    natures = _load_natures_data()
+    norm = normalize_id(nature_name)
+    for n in natures:
+        if normalize_id(n.get('identifier', '')) == norm:
+            return n.get('id', 1)
+    return 1
+
+def get_nature_for_role(role: str, counter: MoveCounter, base_stats: Dict, types: Set[str]) -> str:
+    """Select appropriate nature based on role and stats"""
+    nature_lookup = _build_nature_lookup()
+
+    atk = base_stats.get('atk', 100)
+    spa = base_stats.get('spa', 100)
+    spe = base_stats.get('spe', 100)
+    def_stat = base_stats.get('def', 100)
+    spd = base_stats.get('spd', 100)
+
+    # Setup roles
+    if 'Setup' in role or role == 'Wallbreaker':
+        if counter.get('Physical', 0) > counter.get('Special', 0):
+            return nature_lookup.get(('atk', 'spd'), 'Adamant')
+        return nature_lookup.get(('spa', 'atk'), 'Modest')
+
+    # Fast attacker
+    if 'Fast' in role:
+        if counter.get('Physical', 0) > counter.get('Special', 0):
+            return nature_lookup.get(('spe', 'def'), 'Jolly')
+        return nature_lookup.get(('spe', 'atk'), 'Timid')
+
+    # Bulky roles
+    if 'Bulky' in role:
+        if counter.get('Physical', 0) > counter.get('Special', 0):
+            return nature_lookup.get(('def', 'spe'), 'Bold')
+        return nature_lookup.get(('spd', 'atk'), 'Calm')
+
+    # Default based on move spread
+    if counter.get('Physical', 0) >= 2:
+        return nature_lookup.get(('atk', 'spa'), 'Adamant')
+    elif counter.get('Special', 0) >= 2:
+        return nature_lookup.get(('spa', 'atk'), 'Modest')
+    elif counter.get('Physical', 0) == counter.get('Special', 0):
+        return nature_lookup.get(('spe', 'def'), 'Jolly')
+
+    return 'Hardy'
 
 def _load_pfile_data():
     global _PFILE_DATA
@@ -536,12 +640,12 @@ class RandomTeamGenerator:
             if move_priority > 0:
                 counter.add('priority')
 
-            # Recoil
-            if move_id in ['flareblitz', 'bravebird', 'doubleedge', 'voltswitch', 'uturn']:
+            # Pivot moves (NOT recoil - they're switching moves)
+            if move_id in ['flareblitz', 'bravebird', 'doubleedge']:
                 counter.add('recoil')
 
-            # Skill Link
-            if move_id in ['bulletseed', 'pinmissile', 'icepunch', 'rockblast']:
+            # Skill Link (only multi-hit moves)
+            if move_id in ['bulletseed', 'pinmissile', 'iciclespear', 'rockblast']:
                 counter.add('skilllink')
 
         counter.set('Physical', categories['Physical'])
@@ -1049,7 +1153,7 @@ class RandomTeamGenerator:
 
         life_orb_reqs = all(m not in moves for m in ['flamecharge', 'nuzzle', 'rapidspot'])
 
-        # Choice items
+        # Choice items - only if mostly attacking moves
         if counter.get('Physical', 0) >= len(moves) and all(m not in moves for m in ['dragontail', 'fakeout', 'firstimpression', 'flamecharge', 'rapidspin', 'trailblaze']):
             base_atk = species.get('base_stats', {}).get('atk', 100)
             base_spe = species.get('base_stats', {}).get('spe', 100)
@@ -1079,9 +1183,64 @@ class RandomTeamGenerator:
             if total_stats <= 235:
                 return 'Focus Sash'
 
-        # Heavy-Duty Boots for rock weakness
-        # Simplified - assume most Pokemon benefit
-        return 'Heavy-Duty Boots'
+        # Recovery moves prefer Leftovers
+        if counter.get('recovery', 0) > 0:
+            return 'Leftovers'
+
+        # Bulky support gets Leftovers
+        if role == 'Bulky Support':
+            return 'Leftovers'
+
+        # Bulky attackers get variety
+        if 'Bulky' in role:
+            if counter.get('Status', 0) > 0:
+                return self.sample(['Leftovers', 'Heavy-Duty Boots', 'Lum Berry'])
+
+        # Setup sweepers with setup moves
+        if counter.get('setup', 0) > 0 and counter.get('recovery', 0) == 0:
+            if counter.get('speedsetup', 0) > 0:
+                return 'Life Orb'
+            elif counter.get('physicalsetup', 0) > 0:
+                return 'Life Orb'
+
+        # Wallbreakers with strong attacks
+        if role == 'Wallbreaker':
+            if counter.get('Physical', 0) > counter.get('Special', 0):
+                return self.sample(['Life Orb', 'Choice Band', 'Choice Scarf'])
+            else:
+                return self.sample(['Life Orb', 'Choice Specs', 'Choice Scarf'])
+
+        # Fast attackers - more variety
+        if 'Fast' in role:
+            # Life Orb users
+            if counter.get('stab', 0) >= 2 and counter.get('priority', 0) == 0:
+                return self.sample(['Life Orb', 'Choice Scarf', 'Choice Band', 'Heavy-Duty Boots'])
+            elif counter.get('priority', 0) > 0:
+                return self.sample(['Life Orb', 'Focus Sash', 'Heavy-Duty Boots'])
+
+        # Defensive Pokemon
+        if role not in ['Wallbreaker', 'Fast Attacker'] and counter.get('Physical', 0) + counter.get('Special', 0) <= 2:
+            return 'Leftovers'
+
+        # Weather setters
+        if 'sunnyday' in moves or 'raindance' in moves or 'sandstorm' in moves or 'hail' in moves:
+            return 'Heavy-Duty Boots'
+
+        # Hazard users
+        if counter.get('hazards', 0) > 0 and not team_details.get('defog'):
+            return self.sample(['Heavy-Duty Boots', 'Leftovers', 'Lum Berry'])
+
+        # Default variety - reduce Heavy-Duty Boots frequency
+        return self.sample([
+            'Leftovers',
+            'Heavy-Duty Boots',
+            'Life Orb',
+            'Lum Berry',
+            'Focus Sash',
+            'Sitrus Berry',
+            'Leftovers',
+            'Heavy-Duty Boots',
+        ])
 
     # ============================================
     # SET GENERATION
@@ -1166,12 +1325,12 @@ class RandomTeamGenerator:
         # Shiny
         shiny = self.randomChance(1, 1024)
 
-        # EVs - simplified HP optimization
-        evs = {'hp': 85, 'atk': 85, 'def': 85, 'spa': 85, 'spd': 85, 'spe': 85}
+        # EVs - proper EV optimization based on role
+        evs = self.get_evs(role, base_stats, counter, types, ability, item, moves)
 
-        # Optimize HP for SR
-        if 'substitute' not in moves and item != 'Sitrus Berry' and ability != 'Regenerator':
-            evs['hp'] = 0
+        # Nature selection
+        nature = get_nature_for_role(role, counter, base_stats, types)
+        nature_id = get_nature_id(nature)
 
         # IVs
         ivs = {'hp': 31, 'atk': 31, 'def': 31, 'spa': 31, 'spd': 31, 'spe': 31}
@@ -1191,6 +1350,8 @@ class RandomTeamGenerator:
             'moves': moves,
             'ability': ability,
             'ability_id': ability_id,
+            'nature': nature,
+            'nature_id': nature_id,
             'tera_type': tera_type,
             'item': item if item else 'Leftovers',
             'level': level,
@@ -1199,6 +1360,128 @@ class RandomTeamGenerator:
             'ivs': ivs,
             'shiny': shiny,
             'base_stats': base_stats,
+        }
+
+    def get_evs(self, role: str, base_stats: Dict, counter: MoveCounter,
+                types: Set[str], ability: str, item: str, moves: List[str]) -> Dict:
+        """Generate appropriate EVs based on role and stats"""
+        hp = 0
+        atk = 0
+        def_stat = 0
+        spa = 0
+        spd = 0
+        spe = 0
+
+        base_atk = base_stats.get('atk', 100)
+        base_spa = base_stats.get('spa', 100)
+        base_spe = base_stats.get('spe', 100)
+        base_def = base_stats.get('def', 100)
+        base_spd = base_stats.get('spd', 100)
+
+        # Wallbreaker - max attack
+        if role == 'Wallbreaker':
+            if counter.get('Physical', 0) > counter.get('Special', 0):
+                atk = 252
+                spe = 252
+            else:
+                spa = 252
+                spe = 252
+
+        # Fast Attacker - speed + offense
+        elif 'Fast' in role:
+            if counter.get('Physical', 0) >= counter.get('Special', 0):
+                atk = 252
+            else:
+                spa = 252
+            spe = 252
+
+        # Bulky Setup - bulk + speed
+        elif role == 'Bulky Setup':
+            if counter.get('Physical', 0) > counter.get('Special', 0):
+                atk = 252
+            else:
+                spa = 252
+            spe = 252
+
+        # Tera Blast user
+        elif role == 'Tera Blast user':
+            if counter.get('Physical', 0) > counter.get('Special', 0):
+                atk = 252
+            else:
+                spa = 252
+            spe = 252
+
+        # AV Pivot - special bulk
+        elif role == 'AV Pivot':
+            atk = 252
+            spd = 252
+
+        # Bulky Attacker
+        elif 'Bulky' in role:
+            # Balance bulk based on types
+            if 'Fire' in types or 'Ice' in types or 'Dragon' in types:
+                def_stat = 252
+                spd = 252
+            elif 'Steel' in types or 'Rock' in types:
+                def_stat = 252
+                spd = 252
+            else:
+                def_stat = 252
+                spd = 252
+
+        # Bulky Support - max HP and bulk
+        elif role == 'Bulky Support':
+            hp = 252
+            def_stat = 252
+            spd = 252
+
+        # Default - offensive spread
+        else:
+            if counter.get('Physical', 0) > counter.get('Special', 0):
+                atk = 252
+            elif counter.get('Special', 0) > counter.get('Physical', 0):
+                spa = 252
+            else:
+                # Mixed - put in better stat
+                if base_atk >= base_spa:
+                    atk = 252
+                else:
+                    spa = 252
+            spe = 252
+
+        # Special cases
+        if 'trickroom' in moves:
+            # TR spreads - min speed
+            if spe > 4:
+                spe = 4
+                hp = 252
+                def_stat = 252
+
+        if item in ['Choice Scarf', 'Choice Band', 'Choice Specs']:
+            if counter.get('Physical', 0) >= counter.get('Special', 0):
+                atk = 252
+            else:
+                spa = 252
+            spe = 252
+
+        if ability in ['Guts', 'Toxic Boost']:
+            atk = 252
+            spe = 252
+
+        if ability in ['Huge Power', 'Pure Power']:
+            atk = 252
+            spe = 252
+
+        if 'dragondance' in moves or 'swordsdance' in moves or 'nastyplot' in moves:
+            if counter.get('Physical', 0) > counter.get('Special', 0):
+                atk = 252
+            else:
+                spa = 252
+            spe = 252
+
+        return {
+            'hp': hp, 'atk': atk, 'def': def_stat,
+            'spa': spa, 'spd': spd, 'spe': spe
         }
 
     # ============================================
@@ -1292,21 +1575,31 @@ class RandomTeamGenerator:
             for type_name in [TYPE_ID_TO_NAME.get(tid, 'normal') for tid in pokemon_set.get('type_ids', [])]:
                 team_details['types'][type_name] = team_details['types'].get(type_name, 0) + 1
 
-            # Calculate team weaknesses and resistances based on all types
-            all_type_ids = []
-            for p in team:
-                all_type_ids.extend(p.get('type_ids', []))
-            all_type_ids = list(set(all_type_ids))
+            # Calculate team weaknesses and resistances PER POKEMON (not merged)
+            # Track which types are weak/resist/immune per team member
+            team_details['type_chart'] = {}  # {type_name: {'weak': count, 'resist': count, 'immune': count}}
 
-            team_details['weaknesses'] = set()
-            team_details['resistances'] = set()
+            for attack_type_id in range(1, 19):
+                type_name = TYPE_ID_TO_NAME.get(attack_type_id, 'normal')
+                weak_count = 0
+                resist_count = 0
+                immune_count = 0
 
-            for attack_type_id in range(1, 19):  # All 18 types
-                effectiveness = get_type_effectiveness(attack_type_id, all_type_ids)
-                if effectiveness >= 2.0:
-                    team_details['weaknesses'].add(TYPE_ID_TO_NAME.get(attack_type_id, 'normal'))
-                elif effectiveness <= 0.5:
-                    team_details['resistances'].add(TYPE_ID_TO_NAME.get(attack_type_id, 'normal'))
+                for p in team + [pokemon_set]:
+                    p_types = p.get('type_ids', [])
+                    eff = get_type_effectiveness(attack_type_id, p_types)
+                    if eff == 0:
+                        immune_count += 1
+                    elif eff >= 2.0:
+                        weak_count += 1
+                    elif eff <= 0.5:
+                        resist_count += 1
+
+                team_details['type_chart'][type_name] = {
+                    'weak': weak_count,
+                    'resist': resist_count,
+                    'immune': immune_count
+                }
 
             team.append(pokemon_set)
 
@@ -1372,8 +1665,33 @@ def convert_team_to_raw_data(team: List[Dict], team_name: str = "Random Team") -
         if pokemon_id == 1:
             # ID 1 is the fallback - use the original sets.json name
             proper_name = pokemon['pokemon_name']
+            base_pokemon_id = 1
         else:
             proper_name = id_to_identifier.get(pokemon_id, pokemon['pokemon_name'])
+            base_pokemon_id = pokemon_id
+
+        # Find ability index by matching ability name to poke_abilities
+        selected_ability = pokemon.get('ability', '')
+        ability_index = 0
+
+        # Get all abilities for this pokemon from poke_abilities
+        poke_abilities_data = _load_poke_abilities_data()
+        pokemon_abilities = [pa for pa in poke_abilities_data if pa.get('pokemon_id') == base_pokemon_id]
+        # Sort by slot to get correct order
+        pokemon_abilities = sorted(pokemon_abilities, key=lambda x: x.get('slot', 0))
+
+        # Build ability name lookup (normalize for comparison)
+        abilities_data = _load_ability_data()
+        ability_id_to_name = {ab.get('id'): ab.get('identifier', '').lower().replace('-', '').replace(' ', '')
+                            for ab in abilities_data}
+
+        # Find index of selected ability
+        normalized_selected = selected_ability.lower().replace('-', '').replace(' ', '')
+        for i, pa in enumerate(pokemon_abilities):
+            ability_name = ability_id_to_name.get(pa.get('ability_id'), '')
+            if ability_name == normalized_selected:
+                ability_index = i
+                break
 
         # Build raw_data dict
         raw_data = {
@@ -1399,8 +1717,8 @@ def convert_team_to_raw_data(team: List[Dict], team_name: str = "Random Team") -
             "hitem": item,
             "happiness": 255,
             "moves": moves,
-            "ability_index": 0,  # Will be determined by create() based on ability
-            "nature": "Hardy",
+            "ability_index": ability_index,
+            "nature": pokemon.get('nature', 'Hardy'),
             "gender": gender_str,
         }
         raw_party.append(raw_data)
