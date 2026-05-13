@@ -286,6 +286,93 @@ class PokemonDuel(commands.Cog):
     async def inverse(self, ctx, opponent: discord.Member):
         """Battle in an Inverse Duel with another member of your server."""
         await self._start_duel(ctx, opponent, inverse_battle=True)
+
+    @pokemonduel.command(aliases=["random", "randombattle"])
+    async def random_battle(self, ctx, opponent: discord.Member):
+        """
+        Battle in a Random Duel against another member.
+        Both players get randomly generated teams.
+        """
+        await self._start_random_duel(ctx, opponent)
+
+    async def _start_random_duel(self, ctx, opponent: discord.Member, *, inverse_battle=False):
+        """Start a random battle between two members."""
+        # Import here to avoid circular imports
+        from ..modes.randoms.random_team_gen import generate_two_teams, convert_team_to_raw_data
+
+        if opponent.id == ctx.author.id:
+            await ctx.send("You cannot duel yourself!")
+            return
+        if opponent.bot:
+            await ctx.send("You cannot duel a bot!")
+            return
+
+        channel = ctx.channel
+
+        # Generate two random teams
+        team1_data, team2_data = generate_two_teams(seed=int(ctx.message.id) if ctx.message else None)
+
+        # Convert to raw data format
+        raw_party1 = convert_team_to_raw_data(team1_data, "Player Team")
+        raw_party2 = convert_team_to_raw_data(team2_data, "Random Team")
+
+        # Create Pokemon objects
+        party1 = []
+        for raw_data in raw_party1:
+            try:
+                poke = await create(ctx, raw_data)
+                party1.append(poke)
+            except Exception as e:
+                await channel.send(f"Error creating Pokemon: {e}")
+                return
+
+        party2 = []
+        for raw_data in raw_party2:
+            try:
+                poke = await create(ctx, raw_data)
+                party2.append(poke)
+            except Exception as e:
+                await channel.send(f"Error creating Pokemon: {e}")
+                return
+
+        # Check if opponent accepts
+        view = DuelAcceptView(ctx, opponent)
+        initial_message = await ctx.send(
+            f"{opponent.mention} You have been challenged to a Random Battle by {ctx.author.name}!\n",
+            view=view
+        )
+        view.message = initial_message
+
+        if (
+            await self.config.guild(ctx.guild).useThreads()
+            and ctx.channel.permissions_for(ctx.guild.me).create_public_threads
+            and ctx.channel.type is discord.ChannelType.text
+        ):
+            try:
+                channel = await initial_message.create_thread(
+                    name='PokemonDuel',
+                    reason='Automated thread for PokemonDuels.',
+                )
+            except discord.HTTPException:
+                pass
+
+        await view.wait()
+        if not view.confirm:
+            return
+
+        # Create trainers
+        trainer1 = MemberTrainer(ctx.author, party1)
+        trainer2 = MemberTrainer(opponent, party2)
+
+        await ctx.send("Starting a Random Battle!")
+
+        # Create and run battle
+        battle = Battle(ctx, channel, trainer1, trainer2, inverse_battle=inverse_battle)
+        preview_view = await generate_team_preview(battle)
+        await battle.trainer1.event.wait()
+        await battle.trainer2.event.wait()
+        preview_view.stop()
+        await self.wrapped_run(battle)
     
     async def _start_duel(self, ctx, opponent: discord.Member, *, inverse_battle=False):
         """Runs a duel."""

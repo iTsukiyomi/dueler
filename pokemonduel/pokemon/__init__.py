@@ -148,8 +148,25 @@ async def create(ctx, raw_data: dict):
     #TODO: Meloetta, Shaymin
 
     form_info = await find_one(ctx, "forms", {"identifier": pn.lower()})
+
+    # Handle duplicate form entries - if pokemon_id doesn't have valid ptypes, find another
+    pokemon_id = form_info["pokemon_id"]
+    type_ids_entry = await find_one(ctx, "ptypes", {"id": pokemon_id})
+    if type_ids_entry is None:
+        # Search for another form entry with same identifier that has valid ptypes
+        all_forms = await find(ctx, "forms", {"identifier": pn.lower()})
+        for alt_form in all_forms:
+            alt_pid = alt_form.get("pokemon_id")
+            if alt_pid and alt_pid != pokemon_id:
+                alt_entry = await find_one(ctx, "ptypes", {"id": alt_pid})
+                if alt_entry:
+                    form_info = alt_form
+                    pokemon_id = alt_pid
+                    type_ids_entry = alt_entry
+                    break
+
     #List of type ids
-    type_ids = (await find_one(ctx, "ptypes", {"id": form_info["pokemon_id"]}))["types"]
+    type_ids = type_ids_entry["types"]
     
     #6 element list of stat values (int)
     stats = (await find_one(ctx, "pokemon_stats", {"pokemon_id": form_info["pokemon_id"]}))["stats"]
