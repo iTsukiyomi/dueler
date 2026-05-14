@@ -3,6 +3,7 @@ from ..moves import Move
 from .mega_evo import MegaEvolveButton
 from .forfeit_ui import ForfeitButton
 from .swap_ui import SwapView
+from .info_view import InfoButton
 
 BUTTON_TIMEOUT = 60
 
@@ -77,12 +78,14 @@ class MoveSelectView(discord.ui.View):
         if status_code == "struggle":
             self.add_item(MoveButton(Move.struggle()))
             self.add_item(SwapRequestButton(disabled=not swapdata))
+            self.add_item(InfoButton())
             self.add_item(ForfeitButton(row=0))
             return
-        
+
         for idx, move in enumerate(trainer.current_pokemon.moves):
             self.add_item(MoveButton(move, disabled=idx not in movedata, row=idx // 2))
         self.add_item(SwapRequestButton(disabled=not swapdata))
+        self.add_item(InfoButton())
         self.add_item(ForfeitButton())
         if (
             trainer.current_pokemon is not None

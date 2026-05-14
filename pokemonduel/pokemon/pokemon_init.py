@@ -38,6 +38,7 @@ class DuelPokemonInit:
         self.spdefev = kwargs['spdefev']
         self.speedev = kwargs['speedev']
         self.nature_stat_deltas = kwargs['nature_stat_deltas']
+        self.nature = kwargs['nature']
         self.moves = kwargs['moves']
         self.ability_id = kwargs['ability_id']
         self.mega_ability_id = kwargs['mega_ability_id']

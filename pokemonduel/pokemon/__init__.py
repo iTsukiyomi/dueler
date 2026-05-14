@@ -46,10 +46,10 @@ async def create(ctx, raw_data: dict):
     happiness = raw_data["happiness"]
     moves = raw_data["moves"]
     ab_index = raw_data["ability_index"]
-    nature = raw_data["nature"]
+    nature_name = raw_data["nature"]
     gender = raw_data["gender"]
 
-    nature = await find_one(ctx, "natures", {"identifier": nature.lower()})
+    nature = await find_one(ctx, "natures", {"identifier": nature_name.lower()})
     dec_stat_id = nature["decreased_stat_id"]
     inc_stat_id = nature["increased_stat_id"]
     dec_stat = await find_one(ctx, "stat_types", {"id": dec_stat_id})
@@ -369,6 +369,7 @@ async def create(ctx, raw_data: dict):
         speedev=speedev,
         level=plevel,
         nature_stat_deltas=nature_stat_deltas,
+        nature=nature_name,
         shiny=shiny,
         radiant=radiant,
         skin=skin,
