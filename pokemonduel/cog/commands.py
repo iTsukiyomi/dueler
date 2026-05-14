@@ -9,7 +9,8 @@ from ..battle.battle import Battle
 from ..ui import DuelAcceptView
 from ..pokemon import DuelPokemon, create
 from ..data_gen import generate_team_preview, find, find_one
-from ..trainers import MemberTrainer, NPCTrainer
+from ..trainers import MemberTrainer
+from ..trainers.npc_trainer import NPCTrainer
 
 
 class TeambuilderReadException(Exception):
@@ -294,6 +295,146 @@ class PokemonDuel(commands.Cog):
         Both players get randomly generated teams.
         """
         await self._start_random_duel(ctx, opponent)
+
+    @pokemonduel.command(name="npc")
+    async def battle_npc(self, ctx):
+        """
+        Battle against an NPC with your team.
+        Your team will be used as-is, the NPC gets a random team.
+        """
+        await self._start_npc_battle(ctx)
+
+    @pokemonduel.command(name="randomnpc", aliases=["randomnpcbattle"])
+    async def random_npc_battle(self, ctx):
+        """
+        Battle against an NPC with random teams.
+        Both you and the NPC get randomly generated teams.
+        """
+        await self._start_random_npc_battle(ctx)
+
+    async def _start_npc_battle(self, ctx):
+        """Start a battle against NPC using user's team."""
+        from ..modes.npc.npc_team_gen import generate_npc_team, convert_to_raw_data
+        from ..modes.npc.npc_ai import NPCTeamAI
+        from ..trainers.npc_trainer import NPCTrainer
+
+        if not ctx.author:
+            await ctx.send("This command must be used in a server!")
+            return
+
+        channel = ctx.channel
+
+        # Get user's party
+        party_data = await self.config.member(ctx.author).party()
+        if not party_data:
+            await ctx.send(f"You haven't setup your party yet!\nSet one with `{ctx.prefix}pokemonduel party set`.")
+            return
+
+        # Create user's pokemon
+        user_party = []
+        for pokemon_data in party_data:
+            try:
+                poke = await create(ctx, pokemon_data)
+                user_party.append(poke)
+            except Exception as e:
+                await channel.send(f"Error creating your pokemon: {e}")
+                return
+
+        # Generate NPC team
+        npc_team_data = generate_npc_team(seed=int(ctx.message.id) if ctx.message else None)
+        npc_raw = convert_to_raw_data(npc_team_data, "NPC Team")
+
+        npc_party = []
+        for raw_data in npc_raw:
+            try:
+                poke = await create(ctx, raw_data)
+                npc_party.append(poke)
+            except Exception as e:
+                await channel.send(f"Error creating NPC pokemon: {e}")
+                return
+
+        # Create trainers
+        user_trainer = MemberTrainer(ctx.author, user_party)
+        npc_trainer = NPCTrainer("NPC Challenger", npc_party)
+
+        await ctx.send(f"Starting a battle against NPC Challenger!")
+
+        # Create battle first so NPC can access type_effectiveness
+        battle = Battle(ctx, channel, user_trainer, npc_trainer)
+
+        # Set up AI with battle context and have NPC pick lead
+        ai = NPCTeamAI(npc_trainer, user_trainer)
+        ai.set_battle(battle)
+        npc_trainer.set_ai(ai)
+        npc_trainer.switch_poke(ai.choose_lead())
+        npc_trainer.event.set()
+
+        preview_view = await generate_team_preview(battle)
+        await battle.trainer1.event.wait()
+        await battle.trainer2.event.wait()
+        preview_view.stop()
+        await self.wrapped_run(battle)
+
+    async def _start_random_npc_battle(self, ctx):
+        """Start a random battle against NPC."""
+        from ..modes.randoms.random_team_gen import generate_two_teams, convert_team_to_raw_data
+        from ..modes.npc.npc_ai import NPCTeamAI
+        from ..trainers.npc_trainer import NPCTrainer
+
+        if not ctx.author:
+            await ctx.send("This command must be used in a server!")
+            return
+
+        channel = ctx.channel
+
+        # Generate user's random team
+        team1_data, team2_data = generate_two_teams(seed=int(ctx.message.id) if ctx.message else None)
+        raw_party1 = convert_team_to_raw_data(team1_data, "Your Random Team")
+
+        user_party = []
+        for raw_data in raw_party1:
+            try:
+                poke = await create(ctx, raw_data)
+                user_party.append(poke)
+            except Exception as e:
+                await channel.send(f"Error creating your Pokemon: {e}")
+                return
+
+        # Generate NPC team
+        from ..modes.npc.npc_team_gen import generate_npc_team, convert_to_raw_data
+        npc_team_data = generate_npc_team(seed=None)
+        npc_raw = convert_to_raw_data(npc_team_data, "NPC Team")
+
+        npc_party = []
+        for raw_data in npc_raw:
+            try:
+                poke = await create(ctx, raw_data)
+                npc_party.append(poke)
+            except Exception as e:
+                await channel.send(f"Error creating NPC Pokemon: {e}")
+                return
+
+        # Create trainers
+        user_trainer = MemberTrainer(ctx.author, user_party)
+        npc_trainer = NPCTrainer("NPC Challenger", npc_party)
+
+        await ctx.send(f"Starting a Random Battle against NPC Challenger!")
+
+        # Create battle first so NPC can access type_effectiveness
+        battle = Battle(ctx, channel, user_trainer, npc_trainer)
+
+        # Set up AI with battle context and have NPC pick lead
+        ai = NPCTeamAI(npc_trainer, user_trainer)
+        ai.set_battle(battle)
+        npc_trainer.set_ai(ai)
+        npc_trainer.switch_poke(ai.choose_lead())
+        npc_trainer.event.set()
+
+        preview_view = await generate_team_preview(battle)
+        await battle.trainer1.event.wait()
+        await battle.trainer2.event.wait()
+        preview_view.stop()
+        await self.wrapped_run(battle)
 
     async def _start_random_duel(self, ctx, opponent: discord.Member, *, inverse_battle=False):
         """Start a random battle between two members."""

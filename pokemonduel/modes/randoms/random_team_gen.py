@@ -8,7 +8,7 @@ import random
 import os
 from pathlib import Path
 from typing import Dict, List, Set, Any, Optional, Tuple
-from move_types import (CONTRARY_MOVES, HAZARDS, DEFENSIVE_TERA_BLAST_USERS, IRON_FIST_MOVES
+from .move_types import (CONTRARY_MOVES, HAZARDS, DEFENSIVE_TERA_BLAST_USERS, IRON_FIST_MOVES
                         , PHYSICAL_SETUP, PRIORITY_POKEMON,  RECOVERY_MOVES, RECOIL_MOVES, SHEER_FORCE_MOVES, SPEED_CONTROL, SPEED_SETUP, SPECIAL_SETUP,
                         SETUP, PIVOT_MOVES, MOVE_PAIRS, NO_STAB, MIXED_SETUP
                         , NO_LEAD_POKEMON, PHYSICAL_STATUS_MOVES, PROTECT_MOVES)
