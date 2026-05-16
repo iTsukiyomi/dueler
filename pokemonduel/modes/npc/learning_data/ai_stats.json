@@ -1,0 +1,9 @@
+{
+  "battles": 900,
+  "wins": 266,
+  "epsilon": 0.258977650207701,
+  "train_steps": 55296,
+  "avg_loss": 9.757571829319,
+  "total_loss": 68699.13674617186,
+  "buffer_size": 25113
+}

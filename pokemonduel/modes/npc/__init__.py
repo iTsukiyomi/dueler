@@ -1,3 +1,3 @@
-from .npc_ai import NPCTeamAI
+from .npc_learning import NPCTeamAI
 
 __all__ = ['NPCTeamAI']

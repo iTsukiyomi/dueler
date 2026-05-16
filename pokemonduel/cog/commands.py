@@ -312,10 +312,100 @@ class PokemonDuel(commands.Cog):
         """
         await self._start_random_npc_battle(ctx)
 
+    @pokemonduel.command(name="npcvsnpc", aliases=["npcbattle"])
+    async def npc_vs_npc_battle(self, ctx):
+        """
+        NPC vs NPC battle - watch two AI battle each other!
+        This trains the NPC AI through self-play.
+        Use ;npc for quick start with auto-generated teams.
+        """
+        await self._start_npc_vs_npc_battle(ctx)
+
+    async def _start_npc_vs_npc_battle(self, ctx):
+        """Start an NPC vs NPC battle - both trainers use ML AI."""
+        from ..modes.npc.npc_team_gen import generate_npc_team, convert_to_raw_data
+        from ..modes.npc import NPCTeamAI
+        from ..trainers.npc_trainer import NPCTrainer
+
+        if not ctx.author:
+            await ctx.send("This command must be used in a server!")
+            return
+
+        channel = ctx.channel
+
+        # Generate two NPC teams (run in thread to avoid blocking)
+        npc1_team_data = await asyncio.to_thread(
+            generate_npc_team, seed=int(ctx.message.id) if ctx.message else None
+        )
+        npc1_raw = convert_to_raw_data(npc1_team_data, "NPC Alpha")
+
+        npc2_team_data = await asyncio.to_thread(
+            generate_npc_team, seed=int(ctx.message.id) + 1000 if ctx.message else None
+        )
+        npc2_raw = convert_to_raw_data(npc2_team_data, "NPC Beta")
+
+        # Create NPC parties
+        npc1_party = []
+        for raw_data in npc1_raw:
+            try:
+                poke = await create(ctx, raw_data)
+                npc1_party.append(poke)
+            except Exception as e:
+                await channel.send(f"Error creating NPC Alpha pokemon: {e}")
+                return
+
+        npc2_party = []
+        for raw_data in npc2_raw:
+            try:
+                poke = await create(ctx, raw_data)
+                npc2_party.append(poke)
+            except Exception as e:
+                await channel.send(f"Error creating NPC Beta pokemon: {e}")
+                return
+
+        # Create NPC trainers
+        npc1_trainer = NPCTrainer("NPC Alpha", npc1_party)
+        npc2_trainer = NPCTrainer("NPC Beta", npc2_party)
+
+        await ctx.send("🎮 Starting NPC vs NPC Battle!\n   Alpha vs Beta - Watch them battle!")
+
+        # Create battle
+        battle = Battle(ctx, channel, npc1_trainer, npc2_trainer)
+
+        # Set up AI for both trainers
+        ai1 = NPCTeamAI(npc1_trainer, npc2_trainer)
+        ai2 = NPCTeamAI(npc2_trainer, npc1_trainer)
+
+        ai1.set_battle(battle)
+        ai2.set_battle(battle)
+
+        npc1_trainer.set_ai(ai1)
+        npc2_trainer.set_ai(ai2)
+
+        # Have both NPCs pick their leads
+        npc1_trainer.switch_poke(ai1.choose_lead())
+        npc2_trainer.switch_poke(ai2.choose_lead())
+
+        npc1_trainer.event.set()
+        npc2_trainer.event.set()
+
+        preview_view = await generate_team_preview(battle)
+        await battle.trainer1.event.wait()
+        await battle.trainer2.event.wait()
+        preview_view.stop()
+
+        winner = await self.wrapped_run(battle)
+
+        # Record results for both AIs
+        if winner and hasattr(npc1_trainer, 'ai') and npc1_trainer.ai:
+            npc1_trainer.ai.on_battle_end(winner == npc1_trainer)
+        if winner and hasattr(npc2_trainer, 'ai') and npc2_trainer.ai:
+            npc2_trainer.ai.on_battle_end(winner == npc2_trainer)
+
     async def _start_npc_battle(self, ctx):
         """Start a battle against NPC using user's team."""
         from ..modes.npc.npc_team_gen import generate_npc_team, convert_to_raw_data
-        from ..modes.npc.npc_ai import NPCTeamAI
+        from ..modes.npc import NPCTeamAI
         from ..trainers.npc_trainer import NPCTrainer
 
         if not ctx.author:
@@ -340,8 +430,10 @@ class PokemonDuel(commands.Cog):
                 await channel.send(f"Error creating your pokemon: {e}")
                 return
 
-        # Generate NPC team
-        npc_team_data = generate_npc_team(seed=int(ctx.message.id) if ctx.message else None)
+        # Generate NPC team (run in thread to avoid blocking event loop)
+        npc_team_data = await asyncio.to_thread(
+            generate_npc_team, seed=int(ctx.message.id) if ctx.message else None
+        )
         npc_raw = convert_to_raw_data(npc_team_data, "NPC Team")
 
         npc_party = []
@@ -373,12 +465,15 @@ class PokemonDuel(commands.Cog):
         await battle.trainer1.event.wait()
         await battle.trainer2.event.wait()
         preview_view.stop()
-        await self.wrapped_run(battle)
+        winner = await self.wrapped_run(battle)
+        if winner and hasattr(npc_trainer, 'ai') and npc_trainer.ai:
+            npc_won = (winner == npc_trainer)
+            npc_trainer.ai.on_battle_end(npc_won)
 
     async def _start_random_npc_battle(self, ctx):
         """Start a random battle against NPC."""
         from ..modes.randoms.random_team_gen import generate_two_teams, convert_team_to_raw_data
-        from ..modes.npc.npc_ai import NPCTeamAI
+        from ..modes.npc import NPCTeamAI
         from ..trainers.npc_trainer import NPCTrainer
 
         if not ctx.author:
@@ -387,8 +482,10 @@ class PokemonDuel(commands.Cog):
 
         channel = ctx.channel
 
-        # Generate user's random team
-        team1_data, team2_data = generate_two_teams(seed=int(ctx.message.id) if ctx.message else None)
+        # Generate user's random team (run in thread to avoid blocking event loop)
+        team1_data, team2_data = await asyncio.to_thread(
+            generate_two_teams, seed=int(ctx.message.id) if ctx.message else None
+        )
         raw_party1 = convert_team_to_raw_data(team1_data, "Your Random Team")
 
         user_party = []
@@ -434,7 +531,10 @@ class PokemonDuel(commands.Cog):
         await battle.trainer1.event.wait()
         await battle.trainer2.event.wait()
         preview_view.stop()
-        await self.wrapped_run(battle)
+        winner = await self.wrapped_run(battle)
+        if winner and hasattr(npc_trainer, 'ai') and npc_trainer.ai:
+            npc_won = (winner == npc_trainer)
+            npc_trainer.ai.on_battle_end(npc_won)
 
     async def _start_random_duel(self, ctx, opponent: discord.Member, *, inverse_battle=False):
         """Start a random battle between two members."""
@@ -721,10 +821,10 @@ class PokemonDuel(commands.Cog):
 
         if not sprite.exists():
             return await ctx.send(f"no sprite for ``{name}`` add it yourself bruv id is ``{poke_id}``")
-        
+
         poke = await find_one(ctx, "pokemon_stats", {"pokemon_id": poke_id})
         stats = poke["stats"]
-        
+
         hp = stats[0]
         atk = stats[1]
         defense = stats[2]
@@ -736,3 +836,68 @@ class PokemonDuel(commands.Cog):
         e.set_image(url=f"attachment://{sprite.name}")
         e.set_footer(text=f"id: {poke_id}")
         await ctx.send(embed=e, file=discord.File(sprite))
+
+    @pokemonduel.command(name="trainnpc", aliases=["trainai", "pretrain"])
+    async def train_npc_ai(self, ctx, battles: int = 2000):
+        """
+        Pre-train the NPC AI with simulated battles.
+        Runs simulated battles to train the DQN before real battles.
+        Recommended: 2000+ battles for a strong starting point.
+        Use a lower number for quicker training.
+        """
+        if battles < 100:
+            await ctx.send("Minimum 100 battles required for meaningful training.")
+            return
+        if battles > 10000:
+            await ctx.send("Maximum 10,000 battles to prevent long running.")
+            return
+
+        await ctx.send(f"🎮 Starting NPC AI pre-training ({battles} simulated battles)...\nThis will run in the background.")
+
+        try:
+            from ..modes.npc.simulated_battle import Pretrainer
+
+            # Run training in a thread to not block the bot
+            def run_training():
+                pt = Pretrainer()
+                pt.run(n_battles=battles, verbose=False)
+
+            await asyncio.to_thread(run_training)
+
+            # Show results
+            from ..modes.npc._dqn_core import show_progress
+            await ctx.send("✅ Pre-training complete!")
+            # Send progress info
+            import os
+            stats_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "modes", "npc", "learning_data", "ai_stats.json")
+            if os.path.exists(stats_path):
+                import json
+                with open(stats_path) as f:
+                    stats = json.load(f)
+                await ctx.send(f"📊 Training Stats:\n"
+                              f"• Battles: {stats.get('battles', 0)}\n"
+                              f"• Win Rate: {stats.get('wins', 0) / max(1, stats.get('battles', 1)):.1%}\n"
+                              f"• Epsilon: {stats.get('epsilon', 1.0):.4f}\n"
+                              f"• Buffer: {stats.get('buffer_size', 0):,}")
+        except Exception as e:
+            await ctx.send(f"❌ Training failed: {e}")
+            self.log.exception("NPC pre-training error")
+
+    @pokemonduel.command(name="npcaistats", aliases=["aistats", "npstats"])
+    async def show_npc_stats(self, ctx):
+        """Show NPC AI training progress and statistics."""
+        try:
+            from ..modes.npc._dqn_core import show_progress
+            import io
+            import sys
+
+            # Capture output
+            old_stdout = sys.stdout
+            sys.stdout = captured = io.StringIO()
+
+            show_progress()
+
+            sys.stdout = old_stdout
+            await ctx.send(f"```\n{captured.getvalue()}\n```")
+        except Exception as e:
+            await ctx.send(f"Could not load stats: {e}")

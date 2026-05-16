@@ -6,6 +6,7 @@ Uses sets.json for Pokemon data
 import json
 import random
 import os
+from functools import lru_cache
 from pathlib import Path
 from typing import Dict, List, Set, Any, Optional, Tuple
 from .move_types import (CONTRARY_MOVES, HAZARDS, DEFENSIVE_TERA_BLAST_USERS, IRON_FIST_MOVES
@@ -242,8 +243,9 @@ def _get_move_data():
 
     return _MOVE_DATA
 
+@lru_cache(maxsize=2048)
 def _get_move_info(move_identifier: str):
-    """Get move data from moves.json by identifier"""
+    """Get move data from moves.json by identifier (cached)"""
     # Normalize: remove spaces, hyphens, underscores
     move_id = move_identifier.lower().replace(' ', '-').replace('_', '')
     move_data = _get_move_data()
@@ -463,6 +465,8 @@ class RandomTeamGenerator:
         self.sets_data = self._load_sets()
         self.max_team_size = 6
         self.max_move_count = 4
+        self._move_category_cache = {}
+        self._move_power_cache = {}
 
     def _load_sets(self) -> Dict:
         """Load sets.json"""
@@ -528,20 +532,24 @@ class RandomTeamGenerator:
         return 'Normal'
 
     def get_move_category(self, move_id: str) -> str:
-        """Get move category (Physical/Special/Status) from moves.json"""
-        move_id = move_id.lower().replace(' ', '-')
-        move_data = _get_move_info(move_id)
-        if move_data:
-            return move_data.get('category', 'Status')
-        return 'Status'
+        """Get move category (Physical/Special/Status) from moves.json (cached)"""
+        if move_id in self._move_category_cache:
+            return self._move_category_cache[move_id]
+        move_id_norm = move_id.lower().replace(' ', '-')
+        move_data = _get_move_info(move_id_norm)
+        result = move_data.get('category', 'Status') if move_data else 'Status'
+        self._move_category_cache[move_id] = result
+        return result
 
     def get_move_power(self, move_id: str) -> Optional[int]:
-        """Get move base power from moves.json"""
-        move_id = move_id.lower().replace(' ', '-')
-        move_data = _get_move_info(move_id)
-        if move_data:
-            return move_data.get('power')
-        return None
+        """Get move base power from moves.json (cached)"""
+        if move_id in self._move_power_cache:
+            return self._move_power_cache[move_id]
+        move_id_norm = move_id.lower().replace(' ', '-')
+        move_data = _get_move_info(move_id_norm)
+        result = move_data.get('power') if move_data else None
+        self._move_power_cache[move_id] = result
+        return result
 
     def query_moves(self, moves: Set[str], species_types: List[str], tera_type: str, abilities: List[str],
                     base_stats: Dict = None) -> MoveCounter:
