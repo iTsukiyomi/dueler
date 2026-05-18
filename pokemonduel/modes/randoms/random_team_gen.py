@@ -258,6 +258,33 @@ def _get_move_info(move_identifier: str):
         return move_data[move_id.replace('-', '')]
     return None
 
+# Manual alias overrides for sets.json names whose word order or spelling
+# does not align with the kebab-case identifiers in forms.json. These are
+# evaluated *before* heuristic matching so we always pick the canonical form.
+_SETS_NAME_ALIASES = {
+    # Paldean Tauros variants — forms.json uses ``tauros-<paste>-paldea``
+    'taurospaldeaaqua':    'tauros-aqua-paldea',
+    'taurospaldeablaze':   'tauros-blaze-paldea',
+    'taurospaldeacombat':  'tauros-paldea',
+    # Squawkabilly cosmetic plumage variants — only the base form ships in forms.json
+    'squawkabillywhite':   'squawkabilly',
+    'squawkabillyblue':    'squawkabilly',
+    'squawkabillyyellow':  'squawkabilly',
+    # Ursaluna blood-moon (uses the SV form id 10427)
+    'ursalunabloodmoon':   'ursaluna',
+    # Oinkologne and Indeedee female forms — same stats; share base id
+    'oinkolognef':         'oinkologne',
+    'indeedeef':           'indeedee',
+    # Greninja with the Battle Bond ability — uses the base form
+    'greninjabond':        'greninja',
+    # Necrozma fusions — forms.json identifiers are ``-dusk`` / ``-dawn``
+    'necrozmaduskmane':    'necrozma-dusk',
+    'necrozmadawnwings':   'necrozma-dawn',
+    # Ogerpon cornerstone mask — falls back to default ogerpon entry
+    'ogerponcornerstone':  'ogerpon',
+}
+
+
 def _build_pname_to_form_id_map():
     """Build mapping from sets.json pokemon names to forms.json IDs"""
     global _PNAME_TO_FORM_ID
@@ -271,11 +298,37 @@ def _build_pname_to_form_id_map():
     # Build set of valid ptypes IDs for quick lookup
     valid_ptype_ids = {pt.get('id') for pt in ptypes}
 
+    # Index forms by their kebab-case identifier so alias lookups are O(1).
+    # When multiple entries share an identifier (e.g. ``ursaluna``), prefer
+    # the one with a valid ptypes record so downstream lookups don't fail.
+    forms_by_iden: Dict[str, dict] = {}
+    for entry in forms:
+        iden = entry.get('identifier', '')
+        pokemon_id = entry.get('pokemon_id', entry.get('id'))
+        form_id    = entry.get('id')
+        has_pt = pokemon_id in valid_ptype_ids or form_id in valid_ptype_ids
+        existing = forms_by_iden.get(iden)
+        if existing is None or (has_pt and not (
+            existing.get('pokemon_id') in valid_ptype_ids
+            or existing.get('id') in valid_ptype_ids
+        )):
+            forms_by_iden[iden] = entry
+
     _PNAME_TO_FORM_ID = {}
 
     for pname in sets_data.keys():
         # Normalize sets.json name
         search_name = pname.lower().replace('-', '').replace(' ', '').replace('_', '')
+
+        # ── 0. explicit alias override ────────────────────────────────
+        alias_target = _SETS_NAME_ALIASES.get(pname.lower())
+        if alias_target is not None and alias_target in forms_by_iden:
+            entry = forms_by_iden[alias_target]
+            form_id    = entry.get('id')
+            pokemon_id = entry.get('pokemon_id', form_id)
+            if pokemon_id in valid_ptype_ids or form_id in valid_ptype_ids:
+                _PNAME_TO_FORM_ID[pname] = (form_id, pokemon_id if pokemon_id else form_id)
+                continue
 
         # Try to find matching form - prefer forms with valid ptypes entries
         best_match = None
@@ -303,6 +356,31 @@ def _build_pname_to_form_id_map():
                     best_match = form_id
                     best_base_id = pokemon_id
                     best_match_len = len(search_name)
+
+        # ── final fallback: token-substring match ─────────────────────
+        # Handles cases where sets.json concatenates form tokens in a
+        # different order than forms.json (e.g. ``taurospaldeaaqua`` vs
+        # ``tauros-aqua-paldea``). We accept any forms.json entry whose
+        # hyphen-separated tokens all appear as substrings of the
+        # normalised sets.json name, taking the longest such match.
+        if best_match is None:
+            best_token_score = 0
+            for entry in forms:
+                iden = entry.get('identifier', '').lower()
+                if not iden:
+                    continue
+                tks = iden.split('-')
+                if not tks or not all(t in search_name for t in tks):
+                    continue
+                form_id    = entry.get('id')
+                pokemon_id = entry.get('pokemon_id', form_id)
+                if not (pokemon_id in valid_ptype_ids or form_id in valid_ptype_ids):
+                    continue
+                score = sum(len(t) for t in tks)
+                if score > best_token_score:
+                    best_match     = form_id
+                    best_base_id   = pokemon_id
+                    best_token_score = score
 
         if best_match:
             # Store both form_id and the base pokemon_id for ptypes lookup

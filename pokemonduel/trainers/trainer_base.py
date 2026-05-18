@@ -126,18 +126,24 @@ class Trainer():
                     return []
                 if self.current_pokemon.ingrain:
                     return []
-                if self.current_pokemon.fairy_lock.active() or defender.fairy_lock.active():
+                # ``defender`` may be ``None`` during forced switches when the
+                # opponent's active Pokémon has just fainted. Guard every
+                # ``defender.*`` access against that case.
+                if self.current_pokemon.fairy_lock.active() or (
+                    defender is not None and defender.fairy_lock.active()
+                ):
                     return []
                 if self.current_pokemon.no_retreat:
                     return []
                 if self.current_pokemon.bind.active() and not self.current_pokemon.substitute:
                     return []
-                if defender.ability() == Ability.SHADOW_TAG and not self.current_pokemon.ability() == Ability.SHADOW_TAG:
-                    return []
-                if defender.ability() == Ability.MAGNET_PULL and ElementType.STEEL in self.current_pokemon.type_ids:
-                    return []
-                if defender.ability() == Ability.ARENA_TRAP and self.current_pokemon.grounded(battle):
-                    return []
+                if defender is not None:
+                    if defender.ability() == Ability.SHADOW_TAG and not self.current_pokemon.ability() == Ability.SHADOW_TAG:
+                        return []
+                    if defender.ability() == Ability.MAGNET_PULL and ElementType.STEEL in self.current_pokemon.type_ids:
+                        return []
+                    if defender.ability() == Ability.ARENA_TRAP and self.current_pokemon.grounded(battle):
+                        return []
         result = [idx for idx, poke in enumerate(self.party) if poke.hp > 0]
         if self.last_idx in result:
             result.remove(self.last_idx)
@@ -180,7 +186,7 @@ class Trainer():
                 and not self.current_pokemon.last_move_failed
             ):
                 continue
-            if defender.imprison and move.id in [x.id for x in defender.moves]:
+            if defender is not None and defender.imprison and move.id in [x.id for x in defender.moves]:
                 continue
             if self.current_pokemon.heal_block.active() and move.is_affected_by_heal_block():
                 continue

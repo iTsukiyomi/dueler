@@ -1,16 +1,20 @@
 from pathlib import Path
-import discord
-from discord.ext import commands
-from ..config import EnhancedConfigManager
 import asyncio
 import aiohttp
+import json
 import logging
+import discord
+from discord.ext import commands
+
+from ..config import EnhancedConfigManager
 from ..battle.battle import Battle
 from ..ui import DuelAcceptView
 from ..pokemon import DuelPokemon, create
 from ..data_gen import generate_team_preview, find, find_one
 from ..trainers import MemberTrainer
 from ..trainers.npc_trainer import NPCTrainer
+from ..ai import NPCTeamAI, reload_network
+from ..ai import config as AI_CONFIG
 
 
 class TeambuilderReadException(Exception):
@@ -25,26 +29,19 @@ class PokemonDuel(commands.Cog):
         self.log = logging.getLogger('red.flamecogs.pokemonduel')
         self.games = {}
         self.config = EnhancedConfigManager.get_conf(self, identifier=145519400223506432)
-        self.config.register_member(
-			party = [],
-		)
-        self.config.register_guild(
-            useThreads = False,
-        )
+        self.config.register_member(party=[])
+        self.config.register_guild(useThreads=False)
 
+    # ──────────────────────────────────────────────────────────────────
+    #  Teambuilder parsing (unchanged)
+    # ──────────────────────────────────────────────────────────────────
     @staticmethod
     async def party_from_teambuilder(ctx, teambuilder):
-        """
-        Builds a party from an exported pokemon showdown teambuilder team.
-        https://play.pokemonshowdown.com/teambuilder
-        """
         teambuilder = teambuilder.strip()
         party = []
         for raw in teambuilder.split("\n\n"):
             raw = raw.strip()
             lines = raw.split("\n")
-            
-            # FIRST LINE
             nameraw = lines.pop(0)
             item = "None"
             if "@" in nameraw:
@@ -62,11 +59,7 @@ class PokemonDuel(commands.Cog):
                 nick, nameraw = nameraw.split("(")
                 nameraw = nameraw.strip()[:-1]
                 nick = nick.strip()
-            
             pokname = nameraw.strip().replace(" ", "-").capitalize()
-            if pokname == "nidoran":
-                name += gender
-            
             forms = await find_one(ctx, "forms", {"identifier": pokname.lower()})
             if forms is None:
                 raise TeambuilderReadException(f"`{pokname}` is not a valid pokemon.")
@@ -80,20 +73,8 @@ class PokemonDuel(commands.Cog):
                 gender = "-f"
             elif gender_rate == -1:
                 gender = "-x"
-            
-            # REST OF THE LINES
-            hpiv = 31
-            atkiv = 31
-            defiv = 31
-            spatkiv = 31
-            spdefiv = 31
-            speediv = 31
-            hpev = 0
-            atkev = 0
-            defev = 0
-            spatkev = 0
-            spdefev = 0
-            speedev = 0
+            hpiv = atkiv = defiv = spatkiv = spdefiv = speediv = 31
+            hpev = atkev = defev = spatkev = spdefev = speedev = 0
             level = 100
             happiness = 255
             ability_index = 0
@@ -104,54 +85,34 @@ class PokemonDuel(commands.Cog):
                 line = line.strip()
                 if line.startswith("IVs:"):
                     line = line[4:].strip()
-                    ivs = line.split("/")
-                    for iv in ivs:
+                    for iv in line.split("/"):
                         amount, iv = iv.strip().split(" ")
-                        amount = int(amount)
-                        iv = iv.lower()
-                        if iv == "hp":
-                            hpiv = amount
-                        elif iv == "atk":
-                            atkiv = amount
-                        elif iv == "def":
-                            defiv = amount
-                        elif iv == "spa":
-                            spatkiv = amount
-                        elif iv == "spd":
-                            spdefiv = amount
-                        elif iv == "spe":
-                            speediv = amount
+                        amount = int(amount); iv = iv.lower()
+                        if iv == "hp": hpiv = amount
+                        elif iv == "atk": atkiv = amount
+                        elif iv == "def": defiv = amount
+                        elif iv == "spa": spatkiv = amount
+                        elif iv == "spd": spdefiv = amount
+                        elif iv == "spe": speediv = amount
                 elif line.startswith("EVs:"):
                     line = line[4:].strip()
-                    evs = line.split("/")
-                    for ev in evs:
+                    for ev in line.split("/"):
                         amount, ev = ev.strip().split(" ")
-                        amount = int(amount)
-                        ev = ev.lower()
-                        if ev == "hp":
-                            hpev = amount
-                        elif ev == "atk":
-                            atkev = amount
-                        elif ev == "def":
-                            defev = amount
-                        elif ev == "spa":
-                            spatkev = amount
-                        elif ev == "spd":
-                            spdefev = amount
-                        elif ev == "spe":
-                            speedev = amount
-                elif line.startswith("Shiny:"):
-                    if "Yes" in line:
-                        shiny = True
+                        amount = int(amount); ev = ev.lower()
+                        if ev == "hp": hpev = amount
+                        elif ev == "atk": atkev = amount
+                        elif ev == "def": defev = amount
+                        elif ev == "spa": spatkev = amount
+                        elif ev == "spd": spdefev = amount
+                        elif ev == "spe": speedev = amount
+                elif line.startswith("Shiny:") and "Yes" in line:
+                    shiny = True
                 elif line.startswith("Level:"):
-                    line = line[6:].strip()
-                    level = int(line)
+                    level = int(line[6:].strip())
                 elif line.startswith("Happiness:"):
-                    line = line[10:].strip()
-                    happiness = int(line)
+                    happiness = int(line[10:].strip())
                 elif line.endswith("Nature"):
-                    line = line[:-6].strip()
-                    nature = line.capitalize()
+                    nature = line[:-6].strip().capitalize()
                 elif line.startswith("Ability:"):
                     ability = line[8:].strip().lower().replace(" ", "-")
                     ability_raw = await find_one(ctx, "abilities", {"identifier": ability})
@@ -171,10 +132,8 @@ class PokemonDuel(commands.Cog):
                     if await find_one(ctx, "moves", {"identifier": move}) is None:
                         raise TeambuilderReadException(f"`{pokname}` was given a move `{move}` which does not exist.")
                     moves.append(move)
-                elif line.startswith("Hidden Power:"):
+                elif line.startswith("Hidden Power:") or line.startswith("Tera Type:"):
                     pass
-                elif line.startswith("Tera Type:"):
-                    pass # TODO: figure out how to handle teras
                 else:
                     raise TeambuilderReadException(f"Data line `{line[:200]}` is not properly formatted.")
             if len(moves) != 4:
@@ -192,97 +151,80 @@ class PokemonDuel(commands.Cog):
                 item_raw = await find_one(ctx, "items", {"identifier": item})
                 if item_raw is None:
                     raise TeambuilderReadException(f"`{pokname}` was given an item `{item}` which does not exist.")
-                if item in (
-                    "venusaurite", "blastoisinite", "alakazite", "gengarite", "kangaskhanite", "pinsirite",
-                    "gyaradosite", "aerodactylite", "ampharosite", "scizorite", "heracronite", "houndoominite",
-                    "tyranitarite", "blazikenite", "gardevoirite", "mawilite", "aggronite", "medichamite",
-                    "manectite", "banettite", "absolite", "latiasite", "latiosite", "garchompite", "lucarionite",
-                    "abomasite", "beedrillite", "pidgeotite", "slowbronite", "steelixite", "sceptilite",
-                    "swampertite", "sablenite", "sharpedonite", "cameruptite", "altarianite", "glalitite",
-                    "salamencite", "metagrossite", "lopunnite", "galladite", "audinite", "diancite",
-                ):
+                MEGA_STONES = (
+                    "venusaurite","blastoisinite","alakazite","gengarite","kangaskhanite","pinsirite",
+                    "gyaradosite","aerodactylite","ampharosite","scizorite","heracronite","houndoominite",
+                    "tyranitarite","blazikenite","gardevoirite","mawilite","aggronite","medichamite",
+                    "manectite","banettite","absolite","latiasite","latiosite","garchompite","lucarionite",
+                    "abomasite","beedrillite","pidgeotite","slowbronite","steelixite","sceptilite",
+                    "swampertite","sablenite","sharpedonite","cameruptite","altarianite","glalitite",
+                    "salamencite","metagrossite","lopunnite","galladite","audinite","diancite",
+                )
+                if item in MEGA_STONES:
                     item = "mega-stone"
                 elif item in ("charizardite-x", "mewtwonite-x"):
                     item = "mega-stone-x"
                 elif item in ("charizardite-y", "mewtwonite-y"):
                     item = "mega-stone-y"
             if nature not in (
-                "Hardy", "Bold", "Modest", "Calm", "Timid", "Lonely", "Docile", "Mild", "Gentle", "Hasty", "Adamant", "Impish", "Bashful",
-                "Careful", "Jolly", "Naughty", "Lax", "Rash", "Quirky", "Naive", "Brave", "Relaxed", "Quiet", "Sassy", "Serious",
+                "Hardy","Bold","Modest","Calm","Timid","Lonely","Docile","Mild","Gentle","Hasty","Adamant","Impish","Bashful",
+                "Careful","Jolly","Naughty","Lax","Rash","Quirky","Naive","Brave","Relaxed","Quiet","Sassy","Serious",
             ):
                 raise TeambuilderReadException(f"`{pokname}` was given a nature `{nature}` which does not exist.")
             if level > 100 or level < 1:
-                raise TeambuilderReadException(f"`{pokname}` was given a level of {level}. Its level must be between 1 and 100.")
+                raise TeambuilderReadException(f"`{pokname}` was given a level of {level}.")
             if happiness < 0:
-                raise TeambuilderReadException(f"`{pokname}` was given a happiness of {happiness}. Its happiness must be at least 0.")
+                raise TeambuilderReadException(f"`{pokname}` was given a happiness of {happiness}.")
             pokemon = {
                 'id': 0,
                 'pokname': pokname,
-                'hpiv': hpiv,
-                'atkiv': atkiv,
-                'defiv': defiv,
-                'spatkiv': spatkiv,
-                'spdefiv': spdefiv,
-                'speediv': speediv,
-                'hpev': hpev,
-                'atkev': atkev,
-                'defev': defev,
-                'spatkev': spatkev,
-                'spdefev': spdefev,
-                'speedev': speedev,
-                'moves': moves,
-                'hitem': item,
-                'nature': nature,
-                'poknick': nick,
-                'pokelevel': level,
-                'happiness': happiness,
-                'ability_index': ability_index,
-                'gender': gender,
-                'shiny': shiny,
-                'radiant': False,
-                'skin': None,
+                'hpiv': hpiv, 'atkiv': atkiv, 'defiv': defiv,
+                'spatkiv': spatkiv, 'spdefiv': spdefiv, 'speediv': speediv,
+                'hpev': hpev, 'atkev': atkev, 'defev': defev,
+                'spatkev': spatkev, 'spdefev': spdefev, 'speedev': speedev,
+                'moves': moves, 'hitem': item, 'nature': nature,
+                'poknick': nick, 'pokelevel': level, 'happiness': happiness,
+                'ability_index': ability_index, 'gender': gender,
+                'shiny': shiny, 'radiant': False, 'skin': None,
             }
             party.append(pokemon)
         if len(party) < 1 or len(party) > 6:
             raise TeambuilderReadException(f"Your party has {len(party)} pokemon. It must have 1 to 6 pokemon.")
         return party
-    
+
+    # ──────────────────────────────────────────────────────────────────
+    #  Battle runner
+    # ──────────────────────────────────────────────────────────────────
     async def wrapped_run(self, battle):
-        """
-        Runs the provided battle, handling any errors that are raised.
-        
-        Returns the output of the battle, or None if the battle errored.
-        """
         self.games[int(battle.ctx.message.id)] = battle
         try:
             winner = await battle.run()
         except (aiohttp.client_exceptions.ClientOSError, asyncio.TimeoutError):
             await battle.channel.send(
                 "The bot encountered an unexpected network issue, "
-                "and the duel could not continue. "
-                "Please try again in a few moments.\n"
-                "Note: Do not report this as a bug."
+                "and the duel could not continue. Please try again in a few moments."
             )
             return None
         except Exception as exc:
             msg = 'Error in PokemonDuel.\n'
             self.log.exception(msg)
             self.bot.dispatch('flamecogs_game_error', battle, exc)
-            await battle.channel.send(
-                f'error lmaoo.\n{exc}'
-            )
+            await battle.channel.send(f'error lmaoo.\n{exc}')
             return None
         else:
             if int(battle.ctx.message.id) in self.games:
                 del self.games[int(battle.ctx.message.id)]
             return winner
 
-    @commands.group(aliases=["pokeduel","duel"], invoke_without_command=True)
+    # ──────────────────────────────────────────────────────────────────
+    #  Top-level command groups
+    # ──────────────────────────────────────────────────────────────────
+    @commands.group(aliases=["pokeduel", "duel"], invoke_without_command=True)
     @commands.bot_has_permissions(attach_files=True, embed_links=True)
     async def pokemonduel(self, ctx, opponent: discord.Member):
         """Battle in a Pokemon Duel with another member of your server."""
         await self._start_duel(ctx, opponent)
-    
+
     @pokemonduel.command()
     async def inverse(self, ctx, opponent: discord.Member):
         """Battle in an Inverse Duel with another member of your server."""
@@ -298,350 +240,235 @@ class PokemonDuel(commands.Cog):
 
     @pokemonduel.command(name="npc")
     async def battle_npc(self, ctx):
-        """
-        Battle against an NPC with your team.
-        Your team will be used as-is, the NPC gets a random team.
-        """
+        """Battle against the AlphaZero NPC with your team."""
         await self._start_npc_battle(ctx)
 
     @pokemonduel.command(name="randomnpc", aliases=["randomnpcbattle"])
     async def random_npc_battle(self, ctx):
-        """
-        Battle against an NPC with random teams.
-        Both you and the NPC get randomly generated teams.
-        """
+        """Random battle against the AlphaZero NPC."""
         await self._start_random_npc_battle(ctx)
 
     @pokemonduel.command(name="npcvsnpc", aliases=["npcbattle"])
     async def npc_vs_npc_battle(self, ctx):
-        """
-        NPC vs NPC battle - watch two AI battle each other!
-        This trains the NPC AI through self-play.
-        Use ;npc for quick start with auto-generated teams.
-        """
+        """NPC vs NPC battle — watch the AlphaZero AI play itself."""
         await self._start_npc_vs_npc_battle(ctx)
 
+    # ──────────────────────────────────────────────────────────────────
+    #  NPC vs NPC
+    # ──────────────────────────────────────────────────────────────────
     async def _start_npc_vs_npc_battle(self, ctx):
-        """Start an NPC vs NPC battle - both trainers use ML AI."""
         from ..modes.npc.npc_team_gen import generate_npc_team, convert_to_raw_data
-        from ..modes.npc import NPCTeamAI
-        from ..trainers.npc_trainer import NPCTrainer
-
         if not ctx.author:
             await ctx.send("This command must be used in a server!")
             return
-
         channel = ctx.channel
-
-        # Generate two NPC teams (run in thread to avoid blocking)
         npc1_team_data = await asyncio.to_thread(
-            generate_npc_team, seed=int(ctx.message.id) if ctx.message else None
-        )
+            generate_npc_team, seed=int(ctx.message.id) if ctx.message else None)
         npc1_raw = convert_to_raw_data(npc1_team_data, "NPC Alpha")
-
         npc2_team_data = await asyncio.to_thread(
-            generate_npc_team, seed=int(ctx.message.id) + 1000 if ctx.message else None
-        )
+            generate_npc_team, seed=int(ctx.message.id) + 1000 if ctx.message else None)
         npc2_raw = convert_to_raw_data(npc2_team_data, "NPC Beta")
 
-        # Create NPC parties
-        npc1_party = []
-        for raw_data in npc1_raw:
-            try:
-                poke = await create(ctx, raw_data)
-                npc1_party.append(poke)
-            except Exception as e:
-                await channel.send(f"Error creating NPC Alpha pokemon: {e}")
-                return
+        npc1_party, npc2_party = [], []
+        try:
+            for raw_data in npc1_raw:
+                npc1_party.append(await create(ctx, raw_data))
+            for raw_data in npc2_raw:
+                npc2_party.append(await create(ctx, raw_data))
+        except Exception as e:
+            await channel.send(f"Error creating NPC pokemon: {e}")
+            return
 
-        npc2_party = []
-        for raw_data in npc2_raw:
-            try:
-                poke = await create(ctx, raw_data)
-                npc2_party.append(poke)
-            except Exception as e:
-                await channel.send(f"Error creating NPC Beta pokemon: {e}")
-                return
-
-        # Create NPC trainers
-        npc1_trainer = NPCTrainer("NPC Alpha", npc1_party)
-        npc2_trainer = NPCTrainer("NPC Beta", npc2_party)
-
-        await ctx.send("🎮 Starting NPC vs NPC Battle!\n   Alpha vs Beta - Watch them battle!")
-
-        # Create battle
-        battle = Battle(ctx, channel, npc1_trainer, npc2_trainer)
-
-        # Set up AI for both trainers
-        ai1 = NPCTeamAI(npc1_trainer, npc2_trainer)
-        ai2 = NPCTeamAI(npc2_trainer, npc1_trainer)
-
-        ai1.set_battle(battle)
-        ai2.set_battle(battle)
-
-        npc1_trainer.set_ai(ai1)
-        npc2_trainer.set_ai(ai2)
-
-        # Have both NPCs pick their leads
-        npc1_trainer.switch_poke(ai1.choose_lead())
-        npc2_trainer.switch_poke(ai2.choose_lead())
-
-        npc1_trainer.event.set()
-        npc2_trainer.event.set()
-
+        t1 = NPCTrainer("NPC Alpha", npc1_party)
+        t2 = NPCTrainer("NPC Beta",  npc2_party)
+        await ctx.send("🎮 Starting NPC vs NPC Battle!\n   Alpha vs Beta — watch the AlphaZero brain play itself.")
+        battle = Battle(ctx, channel, t1, t2)
+        ai1 = NPCTeamAI(t1, t2); ai2 = NPCTeamAI(t2, t1)
+        ai1.set_battle(battle); ai2.set_battle(battle)
+        t1.set_ai(ai1); t2.set_ai(ai2)
+        t1.switch_poke(ai1.choose_lead())
+        t2.switch_poke(ai2.choose_lead())
+        t1.event.set(); t2.event.set()
         preview_view = await generate_team_preview(battle)
         await battle.trainer1.event.wait()
         await battle.trainer2.event.wait()
         preview_view.stop()
-
         winner = await self.wrapped_run(battle)
+        if winner:
+            if hasattr(t1, 'ai') and t1.ai: t1.ai.on_battle_end(winner == t1)
+            if hasattr(t2, 'ai') and t2.ai: t2.ai.on_battle_end(winner == t2)
 
-        # Record results for both AIs
-        if winner and hasattr(npc1_trainer, 'ai') and npc1_trainer.ai:
-            npc1_trainer.ai.on_battle_end(winner == npc1_trainer)
-        if winner and hasattr(npc2_trainer, 'ai') and npc2_trainer.ai:
-            npc2_trainer.ai.on_battle_end(winner == npc2_trainer)
-
+    # ──────────────────────────────────────────────────────────────────
+    #  User vs NPC
+    # ──────────────────────────────────────────────────────────────────
     async def _start_npc_battle(self, ctx):
-        """Start a battle against NPC using user's team."""
         from ..modes.npc.npc_team_gen import generate_npc_team, convert_to_raw_data
-        from ..modes.npc import NPCTeamAI
-        from ..trainers.npc_trainer import NPCTrainer
-
         if not ctx.author:
             await ctx.send("This command must be used in a server!")
             return
-
         channel = ctx.channel
-
-        # Get user's party
         party_data = await self.config.member(ctx.author).party()
         if not party_data:
             await ctx.send(f"You haven't setup your party yet!\nSet one with `{ctx.prefix}pokemonduel party set`.")
             return
-
-        # Create user's pokemon
         user_party = []
-        for pokemon_data in party_data:
-            try:
-                poke = await create(ctx, pokemon_data)
-                user_party.append(poke)
-            except Exception as e:
-                await channel.send(f"Error creating your pokemon: {e}")
-                return
-
-        # Generate NPC team (run in thread to avoid blocking event loop)
+        try:
+            for pdata in party_data:
+                user_party.append(await create(ctx, pdata))
+        except Exception as e:
+            await channel.send(f"Error creating your pokemon: {e}")
+            return
         npc_team_data = await asyncio.to_thread(
-            generate_npc_team, seed=int(ctx.message.id) if ctx.message else None
-        )
+            generate_npc_team, seed=int(ctx.message.id) if ctx.message else None)
         npc_raw = convert_to_raw_data(npc_team_data, "NPC Team")
-
         npc_party = []
-        for raw_data in npc_raw:
-            try:
-                poke = await create(ctx, raw_data)
-                npc_party.append(poke)
-            except Exception as e:
-                await channel.send(f"Error creating NPC pokemon: {e}")
-                return
+        try:
+            for raw_data in npc_raw:
+                npc_party.append(await create(ctx, raw_data))
+        except Exception as e:
+            await channel.send(f"Error creating NPC pokemon: {e}")
+            return
 
-        # Create trainers
         user_trainer = MemberTrainer(ctx.author, user_party)
         npc_trainer = NPCTrainer("NPC Challenger", npc_party)
-
-        await ctx.send(f"Starting a battle against NPC Challenger!")
-
-        # Create battle first so NPC can access type_effectiveness
+        await ctx.send("Starting a battle against the AlphaZero NPC Challenger!")
         battle = Battle(ctx, channel, user_trainer, npc_trainer)
-
-        # Set up AI with battle context and have NPC pick lead
         ai = NPCTeamAI(npc_trainer, user_trainer)
-        ai.set_battle(battle)
-        npc_trainer.set_ai(ai)
+        ai.set_battle(battle); npc_trainer.set_ai(ai)
         npc_trainer.switch_poke(ai.choose_lead())
         npc_trainer.event.set()
-
         preview_view = await generate_team_preview(battle)
         await battle.trainer1.event.wait()
         await battle.trainer2.event.wait()
         preview_view.stop()
         winner = await self.wrapped_run(battle)
         if winner and hasattr(npc_trainer, 'ai') and npc_trainer.ai:
-            npc_won = (winner == npc_trainer)
-            npc_trainer.ai.on_battle_end(npc_won)
+            npc_trainer.ai.on_battle_end(winner == npc_trainer)
 
+    # ──────────────────────────────────────────────────────────────────
+    #  Random NPC
+    # ──────────────────────────────────────────────────────────────────
     async def _start_random_npc_battle(self, ctx):
-        """Start a random battle against NPC."""
         from ..modes.randoms.random_team_gen import generate_two_teams, convert_team_to_raw_data
-        from ..modes.npc import NPCTeamAI
-        from ..trainers.npc_trainer import NPCTrainer
-
+        from ..modes.npc.npc_team_gen import generate_npc_team, convert_to_raw_data
         if not ctx.author:
             await ctx.send("This command must be used in a server!")
             return
-
         channel = ctx.channel
-
-        # Generate user's random team (run in thread to avoid blocking event loop)
-        team1_data, team2_data = await asyncio.to_thread(
-            generate_two_teams, seed=int(ctx.message.id) if ctx.message else None
-        )
+        team1_data, _ = await asyncio.to_thread(
+            generate_two_teams, seed=int(ctx.message.id) if ctx.message else None)
         raw_party1 = convert_team_to_raw_data(team1_data, "Your Random Team")
-
         user_party = []
-        for raw_data in raw_party1:
-            try:
-                poke = await create(ctx, raw_data)
-                user_party.append(poke)
-            except Exception as e:
-                await channel.send(f"Error creating your Pokemon: {e}")
-                return
-
-        # Generate NPC team
-        from ..modes.npc.npc_team_gen import generate_npc_team, convert_to_raw_data
+        try:
+            for raw_data in raw_party1:
+                user_party.append(await create(ctx, raw_data))
+        except Exception as e:
+            await channel.send(f"Error creating your Pokemon: {e}")
+            return
         npc_team_data = generate_npc_team(seed=None)
         npc_raw = convert_to_raw_data(npc_team_data, "NPC Team")
-
         npc_party = []
-        for raw_data in npc_raw:
-            try:
-                poke = await create(ctx, raw_data)
-                npc_party.append(poke)
-            except Exception as e:
-                await channel.send(f"Error creating NPC Pokemon: {e}")
-                return
-
-        # Create trainers
+        try:
+            for raw_data in npc_raw:
+                npc_party.append(await create(ctx, raw_data))
+        except Exception as e:
+            await channel.send(f"Error creating NPC Pokemon: {e}")
+            return
         user_trainer = MemberTrainer(ctx.author, user_party)
-        npc_trainer = NPCTrainer("NPC Challenger", npc_party)
-
-        await ctx.send(f"Starting a Random Battle against NPC Challenger!")
-
-        # Create battle first so NPC can access type_effectiveness
+        npc_trainer  = NPCTrainer("NPC Challenger", npc_party)
+        await ctx.send("Starting a Random Battle against the AlphaZero NPC Challenger!")
         battle = Battle(ctx, channel, user_trainer, npc_trainer)
-
-        # Set up AI with battle context and have NPC pick lead
         ai = NPCTeamAI(npc_trainer, user_trainer)
-        ai.set_battle(battle)
-        npc_trainer.set_ai(ai)
+        ai.set_battle(battle); npc_trainer.set_ai(ai)
         npc_trainer.switch_poke(ai.choose_lead())
         npc_trainer.event.set()
-
         preview_view = await generate_team_preview(battle)
         await battle.trainer1.event.wait()
         await battle.trainer2.event.wait()
         preview_view.stop()
         winner = await self.wrapped_run(battle)
         if winner and hasattr(npc_trainer, 'ai') and npc_trainer.ai:
-            npc_won = (winner == npc_trainer)
-            npc_trainer.ai.on_battle_end(npc_won)
+            npc_trainer.ai.on_battle_end(winner == npc_trainer)
 
+    # ──────────────────────────────────────────────────────────────────
+    #  Random duel between two members (unchanged)
+    # ──────────────────────────────────────────────────────────────────
     async def _start_random_duel(self, ctx, opponent: discord.Member, *, inverse_battle=False):
-        """Start a random battle between two members."""
-        # Import here to avoid circular imports
         from ..modes.randoms.random_team_gen import generate_two_teams, convert_team_to_raw_data
-
         if opponent.id == ctx.author.id:
             await ctx.send("You cannot duel yourself!")
             return
         if opponent.bot:
             await ctx.send("You cannot duel a bot!")
             return
-
         channel = ctx.channel
-
-        # Generate two random teams
         team1_data, team2_data = generate_two_teams(seed=int(ctx.message.id) if ctx.message else None)
-
-        # Convert to raw data format
         raw_party1 = convert_team_to_raw_data(team1_data, "Player Team")
         raw_party2 = convert_team_to_raw_data(team2_data, "Random Team")
-
-        # Create Pokemon objects
-        party1 = []
+        party1, party2 = [], []
         for raw_data in raw_party1:
             try:
-                poke = await create(ctx, raw_data)
-                party1.append(poke)
+                party1.append(await create(ctx, raw_data))
             except Exception as e:
                 await channel.send(f"Error creating Pokemon: {e}")
                 return
-
-        party2 = []
         for raw_data in raw_party2:
             try:
-                poke = await create(ctx, raw_data)
-                party2.append(poke)
+                party2.append(await create(ctx, raw_data))
             except Exception as e:
                 await channel.send(f"Error creating Pokemon: {e}")
                 return
-
-        # Check if opponent accepts
         view = DuelAcceptView(ctx, opponent)
         initial_message = await ctx.send(
             f"{opponent.mention} You have been challenged to a Random Battle by {ctx.author.name}!\n",
-            view=view
-        )
+            view=view)
         view.message = initial_message
-
-        if (
-            await self.config.guild(ctx.guild).useThreads()
-            and ctx.channel.permissions_for(ctx.guild.me).create_public_threads
-            and ctx.channel.type is discord.ChannelType.text
-        ):
+        if (await self.config.guild(ctx.guild).useThreads()
+                and ctx.channel.permissions_for(ctx.guild.me).create_public_threads
+                and ctx.channel.type is discord.ChannelType.text):
             try:
                 channel = await initial_message.create_thread(
                     name='PokemonDuel',
-                    reason='Automated thread for PokemonDuels.',
-                )
+                    reason='Automated thread for PokemonDuels.')
             except discord.HTTPException:
                 pass
-
         await view.wait()
         if not view.confirm:
             return
-
-        # Create trainers
         trainer1 = MemberTrainer(ctx.author, party1)
-        trainer2 = MemberTrainer(opponent, party2)
-
+        trainer2 = MemberTrainer(opponent,   party2)
         await ctx.send("Starting a Random Battle!")
-
-        # Create and run battle
         battle = Battle(ctx, channel, trainer1, trainer2, inverse_battle=inverse_battle)
         preview_view = await generate_team_preview(battle)
         await battle.trainer1.event.wait()
         await battle.trainer2.event.wait()
         preview_view.stop()
         await self.wrapped_run(battle)
-    
+
+    # ──────────────────────────────────────────────────────────────────
+    #  Two-member duel (unchanged)
+    # ──────────────────────────────────────────────────────────────────
     async def _start_duel(self, ctx, opponent: discord.Member, *, inverse_battle=False):
-        """Runs a duel."""
         if opponent.id == ctx.author.id:
             await ctx.send("You cannot duel yourself!")
             return
         if opponent.bot:
             await ctx.send("You cannot duel a bot!")
             return
-        
         view = DuelAcceptView(ctx, opponent)
         battle_type = "an inverse battle" if inverse_battle else "a duel"
         initial_message = await ctx.send(
             f"{opponent.mention} You have been challenged to {battle_type} by {ctx.author.name}!\n",
-            view=view
-        )
+            view=view)
         view.message = initial_message
         channel = ctx.channel
-        if (
-            await self.config.guild(ctx.guild).useThreads()
-            and ctx.channel.permissions_for(ctx.guild.me).create_public_threads
-            and ctx.channel.type is discord.ChannelType.text
-        ):
+        if (await self.config.guild(ctx.guild).useThreads()
+                and ctx.channel.permissions_for(ctx.guild.me).create_public_threads
+                and ctx.channel.type is discord.ChannelType.text):
             try:
                 channel = await initial_message.create_thread(
                     name='PokemonDuel',
-                    reason='Automated thread for PokemonDuels.',
-                )
+                    reason='Automated thread for PokemonDuels.')
             except discord.HTTPException:
                 pass
         await view.wait()
@@ -655,249 +482,218 @@ class PokemonDuel(commands.Cog):
                 return
             party = [await create(ctx, p) for p in party]
             trainers.append(MemberTrainer(player, party))
-        battle = Battle(ctx, channel, *trainers, inverse_battle=inverse_battle) # pylint: disable=E1120
+        battle = Battle(ctx, channel, *trainers, inverse_battle=inverse_battle)
         preview_view = await generate_team_preview(battle)
         await battle.trainer1.event.wait()
         await battle.trainer2.event.wait()
         preview_view.stop()
-        winner = await self.wrapped_run(battle)
-    
+        await self.wrapped_run(battle)
+
+    # ──────────────────────────────────────────────────────────────────
+    #  Party management
+    # ──────────────────────────────────────────────────────────────────
     @commands.group("party")
     async def party(self, ctx):
         """Manage your party of pokemon."""
         pass
-    
+
     @party.command(name="set")
     async def party_set(self, ctx, *, pokemon_data):
-        """
-        Set your party of pokemon.
-        
-        In order to set your party, you will need to create a team on Pokemon Showdown Team Builder.
-        1. Go to the [Team Builder site](https://play.pokemonshowdown.com/teambuilder).
-        2. Click the "New Team" button.
-        3. Select the format "Anything Goes".
-        4. Use the "Add Pokemon" button to create a new pokemon.
-        5. Pick its moves, ability, gender, level, etc.
-        6. Repeat steps 4 and 5 for up to 6 total pokemon
-        7. On the team view, select the "Import/Export" button at the TOP.
-        8. Copy the text provided, and pass that to this command.
-        """
+        """Set your party of pokemon (Pokémon Showdown teambuilder format)."""
         try:
             party = await self.party_from_teambuilder(ctx, pokemon_data)
         except TeambuilderReadException as e:
             await ctx.send(f"Couldn't validate your team.\n{e}")
             return
         except Exception:
-            await ctx.send("Couldn't properly parse your team. Make sure you follow the format provided by Showdown's Team Builder. An error has been logged to console to debug this issue.")
+            await ctx.send("Couldn't properly parse your team. Make sure you follow the Showdown format.")
             self.log.exception("Failed to read a teambuilder team string.")
             return
         await self.config.member(ctx.author).party.set(party)
-        embed = discord.Embed(
-            title="Your new party",
-        )
+        embed = discord.Embed(title="Your new party")
         embed.set_thumbnail(url=ctx.author.display_avatar.url)
         await self.gen_party_embed(ctx, party, embed)
         await ctx.send(embed=embed)
-    
+
     @party.command(name="pokecord", hidden=True)
     async def party_pokecord(self, ctx, *ids: int):
         """Create a party of pokemon imported from Pokecord."""
         pass
-    
+
     @party.command(name="list", aliases=["view"])
     async def party_list(self, ctx, user: discord.Member = None):
-        """View the pokeemon currently in your party."""
         member = user or ctx.author
         party = await self.config.member(member).party()
         if len(party) == 0:
             await ctx.send(f"You haven't setup your party yet!\nSet one with `{ctx.prefix}pokemonduel party set`.")
             return
-        embed = discord.Embed(
-            title=f"{member.display_name}'s Party"
-        )
+        embed = discord.Embed(title=f"{member.display_name}'s Party")
         embed.set_thumbnail(url=member.display_avatar.url)
         await self.gen_party_embed(ctx, party, embed)
         await ctx.send(embed=embed)
- 
+
     @staticmethod
     async def gen_party_embed(ctx, party, embed):
-        """Adds fields to the provided `embed` that are rendered descriptors of the pokemon in the provided `party`."""
         for idx, pokemon in enumerate(party):
-            pokname = pokemon["pokname"]
-            poknick = pokemon["poknick"]
+            pokname = pokemon["pokname"]; poknick = pokemon["poknick"]
             gender = pokemon["gender"]
-            if gender == "-m":
-                gender = "Male"
-            elif gender == "-f":
-                gender = "Female"
-            elif gender == "-x":
-                gender = "Genderless"
+            if gender == "-m": gender = "Male"
+            elif gender == "-f": gender = "Female"
+            elif gender == "-x": gender = "Genderless"
             moves = pokemon["moves"]
             moves = "|".join([f"`{x}`" for x in moves])
             ability_index = pokemon["ability_index"]
             form_info = await find_one(ctx, "forms", {"identifier": pokname.lower()})
-            ab_ids = []
-            for record in await find(ctx, "poke_abilities", {"pokemon_id": form_info["pokemon_id"]}):
-                ab_ids.append(record["ability_id"])
+            ab_ids = [record["ability_id"] for record in
+                      await find(ctx, "poke_abilities", {"pokemon_id": form_info["pokemon_id"]})]
             try:
                 ab_id = ab_ids[ability_index]
             except IndexError:
                 ab_id = ab_ids[0]
             ability = await find_one(ctx, "abilities", {"id": ab_id})
             ability = ability["identifier"]
-            hitem = pokemon["hitem"]
-            nature = pokemon["nature"].lower()
+            hitem = pokemon["hitem"]; nature = pokemon["nature"].lower()
             happiness = pokemon["happiness"]
-            hpiv = pokemon["hpiv"]
-            atkiv = pokemon["atkiv"]
-            defiv = pokemon["defiv"]
-            spatkiv = pokemon["spatkiv"]
-            spdefiv = pokemon["spdefiv"]
-            speediv = pokemon["speediv"]
-            hpev = pokemon["hpev"]
-            atkev = pokemon["atkev"]
-            defev = pokemon["defev"]
-            spatkev = pokemon["spatkev"]
-            spdefev = pokemon["spdefev"]
-            speedev = pokemon["speedev"]
-            
             title = f"{gender} {pokname} "
             if poknick != "None":
                 title += f"({poknick}) "
-            
             desc = f"{moves}\nAbility `{ability}`"
             if hitem != "None":
                 desc += f" | Holding `{hitem}`"
             desc += f"\nNature `{nature}` | Happiness `{happiness}`\n"
             desc += "`    `|` hp`|`atk`|`def`|`spa`|`spd`|`spe`\n"
-            desc += f"`IVs:`|`{hpiv:3d}`|`{atkiv:3d}`|`{defiv:3d}`|`{spatkiv:3d}`|`{spdefiv:3d}`|`{speediv:3d}`\n"
-            desc += f"`EVs:`|`{hpev:3d}`|`{atkev:3d}`|`{defev:3d}`|`{spatkev:3d}`|`{spdefev:3d}`|`{speedev:3d}`\n"
-            
+            desc += (f"`IVs:`|`{pokemon['hpiv']:3d}`|`{pokemon['atkiv']:3d}`|`{pokemon['defiv']:3d}`|"
+                     f"`{pokemon['spatkiv']:3d}`|`{pokemon['spdefiv']:3d}`|`{pokemon['speediv']:3d}`\n")
+            desc += (f"`EVs:`|`{pokemon['hpev']:3d}`|`{pokemon['atkev']:3d}`|`{pokemon['defev']:3d}`|"
+                     f"`{pokemon['spatkev']:3d}`|`{pokemon['spdefev']:3d}`|`{pokemon['speedev']:3d}`\n")
             embed.add_field(name=title, value=desc, inline=bool(idx % 2))
 
+    # ──────────────────────────────────────────────────────────────────
+    #  Server config
+    # ──────────────────────────────────────────────────────────────────
     @commands.guild_only()
     @commands.is_owner()
     @commands.group(invoke_without_command=True)
     async def pokemonduelset(self, ctx):
-        """Config options for pokemon duels."""
         await ctx.send_help()
         cfg = await self.config.guild(ctx.guild).all()
-        msg = (
-            "Game contained to a thread: {useThreads}\n"
-        ).format_map(cfg)
+        msg = "Game contained to a thread: {useThreads}\n".format_map(cfg)
         await ctx.send(f"```py\n{msg}```")
 
     @pokemonduelset.command()
-    async def thread(self, ctx, value: bool=None):
-        """
-        Set if a thread should be created per-game to contain game messages.
-        
-        Defaults to False.
-        This value is server specific.
-        """
+    async def thread(self, ctx, value: bool = None):
         if value is None:
             v = await self.config.guild(ctx.guild).useThreads()
-            if v:
-                await ctx.send("The game is currently run in a per-game thread.")
-            else:
-                await ctx.send("The game is not currently run in a thread.")
+            await ctx.send("The game is currently run in a per-game thread." if v
+                           else "The game is not currently run in a thread.")
         else:
             await self.config.guild(ctx.guild).useThreads.set(value)
-            if value:
-                await ctx.send("The game will now be run in a per-game thread.")
-            else:
-                await ctx.send("The game will not be run in a thread.")
+            await ctx.send("The game will now be run in a per-game thread." if value
+                           else "The game will not be run in a thread.")
 
-    @commands.command(name = "info", aliases=["sprite", "img"])
-    async def info(self, ctx, name:str):
-        """get poke sprite"""
-
+    # ──────────────────────────────────────────────────────────────────
+    #  Sprite info
+    # ──────────────────────────────────────────────────────────────────
+    @commands.command(name="info", aliases=["sprite", "img"])
+    async def info(self, ctx, name: str):
         poke = await find_one(ctx, "forms", {"identifier": name.lower()})
         if poke is None:
             return await ctx.send(f"no poke named `{name}`, maybe devs are lazy and didnt add.")
-
         poke_id = poke["pokemon_id"]
         sprite = Path(__file__).parent.parent / "data" / "img" / f"{poke_id}.png"
-
         if not sprite.exists():
             return await ctx.send(f"no sprite for ``{name}`` add it yourself bruv id is ``{poke_id}``")
-
         poke = await find_one(ctx, "pokemon_stats", {"pokemon_id": poke_id})
         stats = poke["stats"]
-
-        hp = stats[0]
-        atk = stats[1]
-        defense = stats[2]
-        spatk = stats[3]
-        spdef = stats[4]
-        speed = stats[5]
-
-        e = discord.Embed(description=f"hp: `{hp}` | atk: `{atk}` | def: `{defense}`\nspatk: `{spatk}` | spdef: `{spdef}` | speed: `{speed}`")
+        e = discord.Embed(description=f"hp: `{stats[0]}` | atk: `{stats[1]}` | def: `{stats[2]}`\n"
+                                       f"spatk: `{stats[3]}` | spdef: `{stats[4]}` | speed: `{stats[5]}`")
         e.set_image(url=f"attachment://{sprite.name}")
         e.set_footer(text=f"id: {poke_id}")
         await ctx.send(embed=e, file=discord.File(sprite))
 
+    # ──────────────────────────────────────────────────────────────────
+    #  AlphaZero training & inspection
+    # ──────────────────────────────────────────────────────────────────
     @pokemonduel.command(name="trainnpc", aliases=["trainai", "pretrain"])
-    async def train_npc_ai(self, ctx, battles: int = 2000):
+    @commands.is_owner()
+    async def train_npc_ai(self, ctx, battles: int = 200):
         """
-        Pre-train the NPC AI with simulated battles.
-        Runs simulated battles to train the DQN before real battles.
-        Recommended: 2000+ battles for a strong starting point.
-        Use a lower number for quicker training.
+        Run headless NPC vs NPC games to grow the live replay buffer
+        and refresh the AI’s knowledge.
+
+        For real long-running training, launch:
+            python -m pokemonduel.ai.distributed --workers 8
         """
-        if battles < 100:
-            await ctx.send("Minimum 100 battles required for meaningful training.")
+        if battles < 10:
+            await ctx.send("Minimum 10 battles required.")
             return
-        if battles > 10000:
-            await ctx.send("Maximum 10,000 battles to prevent long running.")
+        if battles > 5000:
+            await ctx.send("Maximum 5000 battles to keep things responsive.")
             return
-
-        await ctx.send(f"🎮 Starting NPC AI pre-training ({battles} simulated battles)...\nThis will run in the background.")
-
+        await ctx.send(f"🎮 Starting headless training — {battles} battles. "
+                       f"This runs in a background thread.")
         try:
-            from ..modes.npc.simulated_battle import Pretrainer
-
-            # Run training in a thread to not block the bot
-            def run_training():
-                pt = Pretrainer()
-                pt.run(n_battles=battles, verbose=False)
-
-            await asyncio.to_thread(run_training)
-
-            # Show results
-            from ..modes.npc._dqn_core import show_progress
-            await ctx.send("✅ Pre-training complete!")
-            # Send progress info
-            import os
-            stats_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "modes", "npc", "learning_data", "ai_stats.json")
-            if os.path.exists(stats_path):
-                import json
-                with open(stats_path) as f:
-                    stats = json.load(f)
-                await ctx.send(f"📊 Training Stats:\n"
-                              f"• Battles: {stats.get('battles', 0)}\n"
-                              f"• Win Rate: {stats.get('wins', 0) / max(1, stats.get('battles', 1)):.1%}\n"
-                              f"• Epsilon: {stats.get('epsilon', 1.0):.4f}\n"
-                              f"• Buffer: {stats.get('buffer_size', 0):,}")
+            def _run():
+                import importlib, sys
+                here = Path(__file__).resolve().parent.parent.parent
+                if str(here) not in sys.path:
+                    sys.path.insert(0, str(here))
+                from simulated_battle import run_battle  # type: ignore
+                wins = [0, 0, 0]
+                for _ in range(battles):
+                    ws, _t, _a, _b = run_battle()
+                    wins[ws] += 1
+                return wins
+            wins = await asyncio.to_thread(_run)
+            await ctx.send(
+                f"✅ Headless training complete!\n"
+                f"• side1 wins: {wins[1]} ({wins[1]/max(1,sum(wins)):.1%})\n"
+                f"• side2 wins: {wins[2]} ({wins[2]/max(1,sum(wins)):.1%})\n"
+                f"• ties:       {wins[0]}\n"
+                f"Run `python -m pokemonduel.ai.distributed` to start a real "
+                f"multi-process AlphaZero training session."
+            )
         except Exception as e:
             await ctx.send(f"❌ Training failed: {e}")
-            self.log.exception("NPC pre-training error")
+            self.log.exception("NPC training error")
+
+    @pokemonduel.command(name="npcaireload", aliases=["reloadai"])
+    @commands.is_owner()
+    async def reload_ai(self, ctx):
+        """Hot-reload the AlphaZero network from disk."""
+        try:
+            reload_network()
+            await ctx.send("🔁 AlphaZero network reloaded from disk.")
+        except Exception as e:
+            await ctx.send(f"❌ Reload failed: {e}")
+            self.log.exception("AI reload error")
 
     @pokemonduel.command(name="npcaistats", aliases=["aistats", "npstats"])
     async def show_npc_stats(self, ctx):
-        """Show NPC AI training progress and statistics."""
+        """Show AlphaZero training progress (steps, ELO, buffer size)."""
         try:
-            from ..modes.npc._dqn_core import show_progress
-            import io
-            import sys
-
-            # Capture output
-            old_stdout = sys.stdout
-            sys.stdout = captured = io.StringIO()
-
-            show_progress()
-
-            sys.stdout = old_stdout
-            await ctx.send(f"```\n{captured.getvalue()}\n```")
+            meta = {}
+            if AI_CONFIG.META_PATH.exists():
+                with open(AI_CONFIG.META_PATH, "r") as f:
+                    meta = json.load(f)
+            elo  = {}
+            if AI_CONFIG.ELO_PATH.exists():
+                with open(AI_CONFIG.ELO_PATH, "r") as f:
+                    elo = json.load(f).get("ratings", {})
+            params = meta.get("params", {})
+            step   = meta.get("step", 0)
+            txt = (
+                "**AlphaZero AI**\n"
+                f"```\n"
+                f"steps   : {step:,}\n"
+                f"params  : total={params.get('total',0):,}  trainable={params.get('trainable',0):,}\n"
+                f"ELO     : latest={elo.get('latest',1200):.0f}  best={elo.get('best',1200):.0f}\n"
+                f"checkpoint dir : {AI_CONFIG.CKPT_DIR}\n"
+                f"best model     : {AI_CONFIG.BEST_MODEL.name} "
+                f"({'present' if AI_CONFIG.BEST_MODEL.exists() else 'absent'})\n"
+                f"```"
+            )
+            await ctx.send(txt)
         except Exception as e:
             await ctx.send(f"Could not load stats: {e}")
+            self.log.exception("show stats error")
