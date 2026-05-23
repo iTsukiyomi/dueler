@@ -709,7 +709,11 @@ class MoveHelpers:
     
     def copy(self):
         """Generate a copy of this move."""
+<<<<<<< HEAD
         from moves import Move
+=======
+        from . import Move
+>>>>>>> 05d15f7 (updated npc ai)
         return Move(
             id=self.id,
             identifier=self.name,

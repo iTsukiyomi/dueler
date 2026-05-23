@@ -20,6 +20,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional, Tuple
 
+<<<<<<< HEAD
+=======
+import signal
+>>>>>>> 05d15f7 (updated npc ai)
 import numpy as np
 
 from . import config as C
@@ -160,11 +164,28 @@ def evaluate(candidate_inference, best_inference,
     """Return ``(win_rate, wins, losses, draws)`` for the candidate."""
     wins = losses = draws = 0
     rng = random.Random(seed)
+<<<<<<< HEAD
+=======
+    def _guarded_match(*a, **kw):
+        signal.signal(signal.SIGALRM, lambda *_: (_ for _ in ()).throw(TimeoutError()))
+        signal.alarm(180)
+        try:
+            return play_match(*a, **kw)
+        except TimeoutError:
+            return 0
+        finally:
+            signal.alarm(0)
+
+>>>>>>> 05d15f7 (updated npc ai)
     for i in range(n_matches):
         s = rng.randint(0, 2**31 - 1)
         # alternate sides to remove first-move advantage
         if i % 2 == 0:
+<<<<<<< HEAD
             r = play_match(candidate_inference, best_inference,
+=======
+            r = _guarded_match(candidate_inference, best_inference,
+>>>>>>> 05d15f7 (updated npc ai)
                            simulations=simulations, seed=s)
             if r == 1:
                 wins += 1
@@ -173,7 +194,11 @@ def evaluate(candidate_inference, best_inference,
             else:
                 draws += 1
         else:
+<<<<<<< HEAD
             r = play_match(best_inference, candidate_inference,
+=======
+            r = _guarded_match(best_inference, candidate_inference,
+>>>>>>> 05d15f7 (updated npc ai)
                            simulations=simulations, seed=s)
             if r == 1:
                 losses += 1

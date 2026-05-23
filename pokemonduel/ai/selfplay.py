@@ -43,7 +43,12 @@ def play_one_game(inference,
                   seed: Optional[int] = None,
                   simulations: int = C.MCTS_SIMULATIONS,
                   max_turns: int = C.SELFPLAY_MAX_TURNS,
+<<<<<<< HEAD
                   verbose: bool = False
+=======
+                  verbose: bool = False,
+                  progress_cb=None,
+>>>>>>> 05d15f7 (updated npc ai)
                   ) -> Tuple[TrajectoryBatch, TrajectoryBatch, int]:
     """Play one full self-play game.
 
@@ -128,6 +133,14 @@ def play_one_game(inference,
 
         # ── step engine ──
         _msg, w = run_turn(battle)
+<<<<<<< HEAD
+=======
+        if progress_cb is not None:
+            try:
+                progress_cb(battle.turn)
+            except Exception:
+                pass    # never let a progress callback break a game
+>>>>>>> 05d15f7 (updated npc ai)
         if w is not None:
             winner = 1 if w is t1 else (2 if w is t2 else 0)
             break

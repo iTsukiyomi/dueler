@@ -441,11 +441,42 @@ class DuelPokemonSendOut:
             self.owner.current_pokemon = None
         if battle.weather.recheck_ability_weather():
             msg += "The weather cleared!\n"
+<<<<<<< HEAD
         self.attack = self.base_stats[self._name][1]
         self.defense = self.base_stats[self._name][2]
         self.spatk = self.base_stats[self._name][3]
         self.spdef = self.base_stats[self._name][4]
         self.speed = self.base_stats[self._name][5]
+=======
+        # Look up base stats for the current form name. If the form is
+        # missing from the table (e.g. a rare regional/mega variant whose
+        # key differs from the engine's ``_name``), fall back to the
+        # starting name. If that's also missing, keep the live stats and
+        # log a warning instead of crashing the whole battle — this is
+        # what was causing the ``KeyError: 'moltres'`` / ``'dewgong'``
+        # crashes in self-play.
+        _stats_key = None
+        if self._name in self.base_stats:
+            _stats_key = self._name
+        elif getattr(self, "_starting_name", None) in self.base_stats:
+            _stats_key = self._starting_name
+        if _stats_key is not None:
+            _row = self.base_stats[_stats_key]
+            self.attack  = _row[1]
+            self.defense = _row[2]
+            self.spatk   = _row[3]
+            self.spdef   = _row[4]
+            self.speed   = _row[5]
+        else:
+            try:
+                import logging as _logging
+                _logging.getLogger("dueler.pokemon").warning(
+                    "base_stats missing key %r (starting=%r); keeping current stats",
+                    self._name, getattr(self, "_starting_name", None),
+                )
+            except Exception:
+                pass
+>>>>>>> 05d15f7 (updated npc ai)
         self.hpiv = self.starting_hpiv
         self.atkiv = self.starting_atkiv
         self.defiv = self.starting_defiv

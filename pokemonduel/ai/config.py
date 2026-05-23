@@ -70,7 +70,11 @@ VALUE_HIDDEN       = 384
 # MCTS
 # ─────────────────────────────────────────────────────────────────────────────
 MCTS_SIMULATIONS   = 96           # per move in self-play
+<<<<<<< HEAD
 MCTS_EVAL_SIMS     = 256          # per move in evaluation / live play
+=======
+MCTS_EVAL_SIMS     = 32          # per move in evaluation / live play
+>>>>>>> 05d15f7 (updated npc ai)
 MCTS_C_PUCT        = 1.8
 MCTS_DIRICHLET_A   = 0.30         # noise alpha for root exploration
 MCTS_DIRICHLET_E   = 0.25         # mixture weight
@@ -88,6 +92,10 @@ MCTS_MAX_DEPTH     = 4            # how many real-engine turns to look ahead
 SELFPLAY_WORKERS       = max(1, (os.cpu_count() or 4) - 1)
 SELFPLAY_BATTLES_PER_W = 10_000                # before worker recycles
 SELFPLAY_MAX_TURNS     = 120
+<<<<<<< HEAD
+=======
+SELFPLAY_GAME_TIMEOUT_S = 300
+>>>>>>> 05d15f7 (updated npc ai)
 SELFPLAY_RESIGN_V      = -0.97
 SELFPLAY_RESIGN_TURNS  = 5
 
@@ -119,15 +127,24 @@ OPT_WARMUP_STEPS   = 2_000
 OPT_COSINE_PERIOD  = 200_000      # cosine restart period (in steps)
 OPT_MIN_BUFFER     = 4_096        # minimum samples before training begins
 OPT_LOG_EVERY      = 50
+<<<<<<< HEAD
 OPT_SAVE_EVERY     = 2_000
 OPT_EVAL_EVERY     = 5_000
+=======
+OPT_SAVE_EVERY     = 10
+OPT_EVAL_EVERY     = 500
+>>>>>>> 05d15f7 (updated npc ai)
 OPT_MIXED_PREC     = True         # set False to force fp32
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # EVALUATION
 # ─────────────────────────────────────────────────────────────────────────────
+<<<<<<< HEAD
 EVAL_MATCHES       = 60
+=======
+EVAL_MATCHES       = 10
+>>>>>>> 05d15f7 (updated npc ai)
 EVAL_PROMOTE_WR    = 0.55         # candidate must win ≥ 55% to replace best
 ELO_K              = 16.0
 ELO_INIT           = 1200.0

@@ -191,8 +191,14 @@ class PrioritizedReplayBuffer:
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
         with self._lock:
+<<<<<<< HEAD
             np.savez_compressed(
                 path,
+=======
+            _tmp = str(path) + ".tmp"
+            np.savez_compressed(
+                _tmp,
+>>>>>>> 05d15f7 (updated npc ai)
                 states  = self._states[: self._tree.size],
                 policy  = self._policy[: self._tree.size],
                 values  = self._values[: self._tree.size],
@@ -203,6 +209,10 @@ class PrioritizedReplayBuffer:
                 max_pri = np.float64(self._max_pri),
                 step    = np.int64(self._step),
             )
+<<<<<<< HEAD
+=======
+            os.replace(_tmp + ".npz", str(path))
+>>>>>>> 05d15f7 (updated npc ai)
 
     # ──────────────────────────────────────────────────────────────────
     def load(self, path: str | Path) -> bool:

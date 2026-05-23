@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 .env
+=======
+>>>>>>> 05d15f7 (updated npc ai)
 *.log
 bot.log
 
@@ -10,4 +13,11 @@ pokemonduel/__pycache__/
 *.pyc
 *.pyo
 
+<<<<<<< HEAD
 .idea/
+=======
+.idea/
+
+.venv/
+.env
+>>>>>>> 05d15f7 (updated npc ai)
