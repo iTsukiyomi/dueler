@@ -2,6 +2,8 @@ from discord.ext import commands
 import subprocess
 from typing import List
 
+# hi
+
 def git(cmd: List[str]):
     result = subprocess.run(
         ["git"] + cmd,
