@@ -168,23 +168,38 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
         return ws
 
     async def _save_workspace(self, ctx: commands.Context) -> None:
-        """Persist workspace changes back to the team in MongoDB if it is a slot selection."""
+        """Persist workspace changes back to the active party in MongoDB if it is a slot selection."""
         ws = self._workspace.get(str(ctx.author.id))
         if ws is None or ws.get("slot_idx") is None:
             return
 
         party = await self._team_svc.load_active_party(str(ctx.author.id))
-        if party is None or ws["slot_idx"] >= len(party):
+        if party is None:
+            # Fallback to legacy config
+            from ..config import EnhancedConfigManager
+            class DummyPokemonDuelCog:
+                pass
+            DummyPokemonDuelCog.__class__.__name__ = "PokemonDuel"
+            cfg = EnhancedConfigManager.get_conf(DummyPokemonDuelCog(), identifier=145519400223506432)
+            party = await cfg.member(ctx.author).party()
+            if not party:
+                return
+
+        if ws["slot_idx"] >= len(party):
             return
 
         party[ws["slot_idx"]] = ws["pokemon"]
-        profile = await self._player_svc.get_profile(str(ctx.author.id))
-        if profile and profile.get("active_party_name"):
-            await self._team_svc.update_team(
-                str(ctx.author.id),
-                profile["active_party_name"],
-                party,
-            )
+
+        # Save to database under "__active__"
+        await self._team_svc.save_active_party(str(ctx.author.id), party)
+
+        # Double-write to legacy config
+        from ..config import EnhancedConfigManager
+        class DummyPokemonDuelCog:
+            pass
+        DummyPokemonDuelCog.__class__.__name__ = "PokemonDuel"
+        cfg = EnhancedConfigManager.get_conf(DummyPokemonDuelCog(), identifier=145519400223506432)
+        await cfg.member(ctx.author).party.set(party)
 
     # -- ;select -----------------------------------------------------------
 

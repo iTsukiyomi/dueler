@@ -262,20 +262,37 @@ class TeamService:
 
     # -- Active party convenience ------------------------------------------
 
+    async def save_active_party(self, owner_id: str, pokemon: list[dict]) -> None:
+        """Save or update the current active party under the name '__active__' in the database."""
+        existing = await self._repo.get(str(owner_id), "__active__")
+        if existing is None:
+            await self._repo.create(str(owner_id), "__active__", pokemon)
+        else:
+            await self._repo.update(str(owner_id), "__active__", pokemon)
+
     async def load_active_party(self, owner_id: str) -> Optional[list[dict]]:
         """
         Load the player's currently active party data.
 
-        Returns ``None`` if no active party is set or the team doesn't exist.
+        Returns ``None`` if no active party is set.
         """
-        profile = await self._player_svc.get_profile(str(owner_id))
-        if profile is None or profile.get("active_party_name") is None:
-            return None
+        active_team = await self._repo.get(str(owner_id), "__active__")
+        if active_team is not None:
+            return active_team.get("pokemon")
 
-        team = await self._repo.get(str(owner_id), profile["active_party_name"])
-        if team is None:
-            return None
-        return team.get("pokemon")
+        # Fallback to profile's active_party_name if __active__ does not exist yet
+        profile = await self._player_svc.get_profile(str(owner_id))
+        if profile is not None and profile.get("active_party_name") is not None:
+            team_name = profile["active_party_name"]
+            if team_name != "__active__":
+                team = await self._repo.get(str(owner_id), team_name)
+                if team is not None:
+                    pokemon = team.get("pokemon")
+                    if pokemon is not None:
+                        await self.save_active_party(str(owner_id), pokemon)
+                        return pokemon
+
+        return None
 
     async def set_active(self, owner_id: str, team_name: str) -> bool:
         """
@@ -286,7 +303,21 @@ class TeamService:
         team = await self._repo.get(str(owner_id), team_name)
         if team is None:
             return False
+
+        # Copy the team's pokemon list to "__active__"
+        await self.save_active_party(str(owner_id), team["pokemon"])
+
+        # Update the active party name in player profile
         await self._player_svc.set_active_party(str(owner_id), team_name)
+
+        # Double-write to legacy config
+        from ..config import EnhancedConfigManager
+        class DummyPokemonDuelCog:
+            pass
+        DummyPokemonDuelCog.__class__.__name__ = "PokemonDuel"
+        cfg = EnhancedConfigManager.get_conf(DummyPokemonDuelCog(), identifier=145519400223506432)
+        await cfg.member(owner_id).party.set(team["pokemon"])
+
         return True
 
     # -- Indexes -----------------------------------------------------------

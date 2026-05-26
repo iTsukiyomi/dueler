@@ -397,9 +397,12 @@ class PokemonDuel(commands.Cog):
             await ctx.send("This command must be used in a server!")
             return
         channel = ctx.channel
-        party_data = await self.config.member(ctx.author).party()
+        from ..services.team_service import TeamService
+        party_data = await TeamService().load_active_party(str(ctx.author.id))
         if not party_data:
-            await ctx.send(f"You haven't setup your party yet!\nSet one with `{ctx.prefix}pokemonduel party set`.")
+            party_data = await self.config.member(ctx.author).party()
+        if not party_data:
+            await ctx.send(f"You haven't setup your party yet!\nSet one with `{ctx.prefix}party load <name>` or `{ctx.prefix}party add`.")
             return
         user_party = []
         try:
@@ -570,13 +573,17 @@ class PokemonDuel(commands.Cog):
         await view.wait()
         if not view.confirm:
             return
+        from ..services.team_service import TeamService
+        team_svc = TeamService()
         trainers = []
         for player in (ctx.author, opponent):
-            party = await self.config.member(player).party()
-            if not party:
-                await channel.send(f"{player} has not setup their party yet!\nSet one with `{ctx.prefix}pokemonduel party set`.")
+            party_data = await team_svc.load_active_party(str(player.id))
+            if not party_data:
+                party_data = await self.config.member(player).party()
+            if not party_data:
+                await channel.send(f"{player} has not setup their party yet!\nSet one with `{ctx.prefix}party load <name>` or `{ctx.prefix}party add`.")
                 return
-            party = [await create(ctx, p) for p in party]
+            party = [await create(ctx, p) for p in party_data]
             trainers.append(MemberTrainer(player, party))
         battle = Battle(ctx, channel, *trainers, inverse_battle=inverse_battle)
         preview_view = await generate_team_preview(battle)
@@ -616,13 +623,16 @@ class PokemonDuel(commands.Cog):
         """Create a party of pokemon imported from Pokecord."""
         pass
 
-    @party.command(name="list", aliases=["view"])
+    @party.command(name="list")
     # pyrefly: ignore [bad-function-definition]
     async def party_list(self, ctx, user: discord.Member = None):
         member = user or ctx.author
-        party = await self.config.member(member).party()
+        from ..services.team_service import TeamService
+        party = await TeamService().load_active_party(str(member.id))
+        if not party:
+            party = await self.config.member(member).party()
         if len(party) == 0:
-            await ctx.send(f"You haven't setup your party yet!\nSet one with `{ctx.prefix}pokemonduel party set`.")
+            await ctx.send(f"You haven't setup your party yet!\nSet one with `{ctx.prefix}party load <name>` or `{ctx.prefix}party add`.")
             return
         embed = discord.Embed(title=f"{member.display_name}'s Party")
         embed.set_thumbnail(url=member.display_avatar.url)

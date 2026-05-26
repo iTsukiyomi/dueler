@@ -52,7 +52,10 @@ class TeamRepository:
         """List all teams belonging to a user."""
         db = get_db()
         cursor = db[COLLECTION].find(
-            {"owner_id": str(owner_id)},
+            {
+                "owner_id": str(owner_id),
+                "name": {"$ne": "__active__"}
+            },
             {"name": 1, "pokemon": 1, "updated_at": 1},
         ).sort("name", 1)
         return [doc async for doc in cursor]
@@ -95,7 +98,10 @@ class TeamRepository:
         """Return how many teams a user has saved."""
         db = get_db()
         return await db[COLLECTION].count_documents(
-            {"owner_id": str(owner_id)}
+            {
+                "owner_id": str(owner_id),
+                "name": {"$ne": "__active__"}
+            }
         )
 
     # -- Indexes -----------------------------------------------------------

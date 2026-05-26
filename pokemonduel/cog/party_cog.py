@@ -207,19 +207,18 @@ class PartyCog(commands.Cog, name="Party"):
 
         profile = await self._player_svc.get_profile(str(ctx.author.id))
         active_party_name = profile.get("active_party_name") if profile else None
-        if not active_party_name:
-            await ctx.send(
-                embed=discord.Embed(
-                    title="No Active Team",
-                    description="You do not have an active team loaded. Create one with `;party create <name> <paste>` or load one with `;party load <name>` first.",
-                    color=discord.Color.red(),
-                )
-            )
-            return
 
         party = await self._team_svc.load_active_party(str(ctx.author.id))
         if party is None:
-            party = []
+            # Try to load from legacy config
+            from ..config import EnhancedConfigManager
+            class DummyPokemonDuelCog:
+                pass
+            DummyPokemonDuelCog.__class__.__name__ = "PokemonDuel"
+            cfg = EnhancedConfigManager.get_conf(DummyPokemonDuelCog(), identifier=145519400223506432)
+            party = await cfg.member(ctx.author).party()
+            if not party:
+                party = []
 
         # Pad party with default slots up to the requested slot if it's smaller
         while len(party) < slot:
@@ -246,16 +245,170 @@ class PartyCog(commands.Cog, name="Party"):
         # Overwrite the slot
         party[slot - 1] = ws["pokemon"].copy()
 
-        await self._team_svc.update_team(str(ctx.author.id), active_party_name, party)
+        # Update in database under "__active__"
+        await self._team_svc.save_active_party(str(ctx.author.id), party)
+
+        # Double-write to legacy config
+        from ..config import EnhancedConfigManager
+        class DummyPokemonDuelCog:
+            pass
+        DummyPokemonDuelCog.__class__.__name__ = "PokemonDuel"
+        cfg = EnhancedConfigManager.get_conf(DummyPokemonDuelCog(), identifier=145519400223506432)
+        await cfg.member(ctx.author).party.set(party)
 
         # Update the workspace metadata
         ws["slot_idx"] = slot - 1
-        ws["team_name"] = active_party_name
+        ws["team_name"] = active_party_name or "custom"
 
         pokemon_name = ws["pokemon"].get("pokname", "?")
+        team_display = f"team **{active_party_name}**" if active_party_name else "active party"
         embed = discord.Embed(
             title="Added to Party",
-            description=f"Added **{pokemon_name.replace('-', ' ').title()}** to slot {slot} of team **{active_party_name}**.",
+            description=f"Added **{pokemon_name.replace('-', ' ').title()}** to slot {slot} of {team_display}.",
+            color=discord.Color.green(),
+        )
+        await ctx.send(embed=embed)
+
+    @party.command(name="view")
+    async def party_view(self, ctx: commands.Context, user: discord.Member | None = None):
+        """View your currently active party in detail."""
+        member = user or ctx.author
+        await self._player_svc.ensure_profile(str(member.id), member.name)
+
+        party = await self._team_svc.load_active_party(str(member.id))
+        if party is None:
+            # Fallback to legacy config
+            from ..config import EnhancedConfigManager
+            class DummyPokemonDuelCog:
+                pass
+            DummyPokemonDuelCog.__class__.__name__ = "PokemonDuel"
+            cfg = EnhancedConfigManager.get_conf(DummyPokemonDuelCog(), identifier=145519400223506432)
+            party = await cfg.member(member).party()
+
+        if not party or len(party) == 0:
+            await ctx.send(f"You haven't setup your party yet!\nSet one with `{ctx.prefix}party load <name>` or `{ctx.prefix}party add`.")
+            return
+
+        embed = discord.Embed(title=f"{member.display_name}'s Active Party")
+        embed.set_thumbnail(url=member.display_avatar.url)
+
+        from ..core.registry import FORMS, ABILITIES, POKE_ABILITIES
+
+        for idx, pokemon in enumerate(party):
+            pokname = pokemon["pokname"]
+            poknick = pokemon["poknick"]
+            gender = pokemon["gender"]
+            if gender == "-m":
+                gender = "Male"
+            elif gender == "-f":
+                gender = "Female"
+            elif gender == "-x":
+                gender = "Genderless"
+            else:
+                gender = "Male"
+
+            moves = pokemon["moves"]
+            moves_str = "|".join([f"`{x}`" for x in moves])
+            ability_index = pokemon.get("ability_index", 0)
+
+            form_info = FORMS.get(pokname.lower())
+            ability = "Unknown"
+            if form_info:
+                ab_records = POKE_ABILITIES.by_secondary(form_info["pokemon_id"])
+                ab_ids = [record["ability_id"] for record in ab_records]
+                try:
+                    ab_id = ab_ids[ability_index]
+                except IndexError:
+                    ab_id = ab_ids[0] if ab_ids else None
+
+                if ab_id is not None:
+                    ab_data = ABILITIES.find_one({"id": ab_id})
+                    if ab_data:
+                        ability = ab_data["identifier"]
+
+            hitem = pokemon.get("hitem", "None")
+            nature = pokemon.get("nature", "Hardy").lower()
+            happiness = pokemon.get("happiness", 255)
+
+            title = f"{gender} {pokname.replace('-', ' ').title()}"
+            if poknick and poknick != "None":
+                title += f" ({poknick})"
+
+            desc = f"{moves_str}\nAbility `{ability}`"
+            if hitem and hitem != "None":
+                desc += f" | Holding `{hitem}`"
+            desc += f"\nNature `{nature}` | Happiness `{happiness}`\n"
+            desc += "`    `|` hp`|`atk`|`def`|`spa`|`spd`|`spe`\n"
+            desc += (f"`IVs:`|`{pokemon['hpiv']:3d}`|`{pokemon['atkiv']:3d}`|`{pokemon['defiv']:3d}`|"
+                     f"`{pokemon['spatkiv']:3d}`|`{pokemon['spdefiv']:3d}`|`{pokemon['speediv']:3d}`\n")
+            desc += (f"`EVs:`|`{pokemon['hpev']:3d}`|`{pokemon['atkev']:3d}`|`{pokemon['defev']:3d}`|"
+                     f"`{pokemon['spatkev']:3d}`|`{pokemon['spdefev']:3d}`|`{pokemon['speedev']:3d}`\n")
+            embed.add_field(name=title, value=desc, inline=bool(idx % 2))
+
+        await ctx.send(embed=embed)
+
+    @party.command(name="save")
+    async def party_save(self, ctx: commands.Context, *, name: str):
+        """Save your current active party as a saved team with the specified name."""
+        name = name.strip()
+        if not name:
+            await ctx.send("Please provide a name for the party.")
+            return
+
+        if name.lower() == "__active__":
+            await ctx.send("That name is reserved. Please choose a different name.")
+            return
+
+        await self._player_svc.ensure_profile(str(ctx.author.id), ctx.author.name)
+
+        # 1. Fetch current active party
+        party = await self._team_svc.load_active_party(str(ctx.author.id))
+        if party is None:
+            # Fallback to legacy config
+            from ..config import EnhancedConfigManager
+            class DummyPokemonDuelCog:
+                pass
+            DummyPokemonDuelCog.__class__.__name__ = "PokemonDuel"
+            cfg = EnhancedConfigManager.get_conf(DummyPokemonDuelCog(), identifier=145519400223506432)
+            party = await cfg.member(ctx.author).party()
+
+        if not party or len(party) == 0:
+            embed = discord.Embed(
+                title="Active Party Empty",
+                description="Your current active party is empty. Add Pokémon using `;party add` or select one with `;select` first.",
+                color=discord.Color.red(),
+            )
+            await ctx.send(embed=embed)
+            return
+
+        # 2. Check if a team with this name already exists
+        existing_team = await self._team_svc.get_team(str(ctx.author.id), name)
+        if existing_team is not None:
+            embed = discord.Embed(
+                title="Team Already Exists",
+                description=f"A team named **{name}** already exists. Please choose a different name.",
+                color=discord.Color.red(),
+            )
+            await ctx.send(embed=embed)
+            return
+
+        # 3. Save the team in db with that name
+        try:
+            await self._team_svc.create_from_raw(str(ctx.author.id), name, party)
+            # Also set this newly saved team as active (which updates active_party_name)
+            await self._player_svc.set_active_party(str(ctx.author.id), name)
+        except ValueError as exc:
+            embed = discord.Embed(
+                title="Team Save Failed",
+                description=str(exc),
+                color=discord.Color.red(),
+            )
+            await ctx.send(embed=embed)
+            return
+
+        embed = discord.Embed(
+            title="Team Saved",
+            description=f"Your active party has been saved as **{name}**.",
             color=discord.Color.green(),
         )
         await ctx.send(embed=embed)

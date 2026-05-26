@@ -33,6 +33,15 @@ class PlayerRepository:
     cache-aside pattern transparently.
     """
 
+    async def _cache_profile(self, user_id: str, doc: dict) -> None:
+        """Helper to serialize datetime fields and cache the player profile in Redis."""
+        cache_key = _CACHE_KEY.format(user_id=user_id)
+        cached_doc = doc.copy()
+        for field in ["created_at", "updated_at"]:
+            if field in cached_doc and isinstance(cached_doc[field], datetime):
+                cached_doc[field] = cached_doc[field].isoformat()
+        await cache.cache_set(cache_key, cached_doc, ttl=_CACHE_TTL)
+
     # -- Read --------------------------------------------------------------
 
     async def get(self, user_id: str) -> Optional[dict]:
@@ -56,7 +65,7 @@ class PlayerRepository:
             return None
 
         # 3. Warm cache
-        await cache.cache_set(cache_key, doc, ttl=_CACHE_TTL)
+        await self._cache_profile(user_id, doc)
         return doc
 
     async def get_or_create(self, user_id: str, username: str) -> dict:
@@ -85,7 +94,7 @@ class PlayerRepository:
         )
 
         cache_key = _CACHE_KEY.format(user_id=user_id)
-        await cache.cache_set(cache_key, doc, ttl=_CACHE_TTL)
+        await self._cache_profile(user_id, doc)
 
         # Ensure leaderboard is in sync (only if they have at least 1 win or loss)
         if doc.get("wins", 0) > 0 or doc.get("losses", 0) > 0:
@@ -127,8 +136,8 @@ class PlayerRepository:
         if doc is None:
             return None
 
-        # Invalidate cache + sync leaderboard
-        await cache.cache_delete(_CACHE_KEY.format(user_id=user_id))
+        # Update/re-cache profile immediately
+        await self._cache_profile(user_id, doc)
         if doc.get("wins", 0) > 0 or doc.get("losses", 0) > 0:
             await cache.zset_upsert(_LEADERBOARD_KEY, str(user_id), doc["elo"])
         else:
@@ -166,20 +175,22 @@ class PlayerRepository:
         )
 
         if doc is not None:
-            await cache.cache_delete(_CACHE_KEY.format(user_id=user_id))
+            await self._cache_profile(user_id, doc)
         return doc
 
     async def set_active_party(self, user_id: str, team_name: Optional[str]) -> None:
         """Update the player's active party name."""
         db = get_db()
-        await db[COLLECTION].update_one(
+        doc = await db[COLLECTION].find_one_and_update(
             {"_id": str(user_id)},
             {"$set": {
                 "active_party_name": team_name,
                 "updated_at": datetime.now(timezone.utc),
             }},
+            return_document=True,
         )
-        await cache.cache_delete(_CACHE_KEY.format(user_id=user_id))
+        if doc is not None:
+            await self._cache_profile(user_id, doc)
 
     # -- Leaderboard -------------------------------------------------------
 
