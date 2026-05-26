@@ -16,6 +16,7 @@ class Terrain(ExpiringItem):
             self.end()
         return expired
 
+    # pyrefly: ignore [bad-override-param-name]
     def set(self, item, attacker):
         """
         Set the terrain and turns until expiration.
@@ -46,15 +47,19 @@ class Terrain(ExpiringItem):
                 msg += f"{poke.name} became a {t} type using its mimicry!\n"
             if poke.held_item == "electric-seed" and item == "electric":
                 msg += poke.append_defense(1, attacker=poke, source="its electric seed")
+                # pyrefly: ignore [missing-attribute]
                 poke.held_item.use()
             if poke.held_item == "psychic-seed" and item == "psychic":
                 msg += poke.append_spdef(1, attacker=poke, source="its psychic seed")
+                # pyrefly: ignore [missing-attribute]
                 poke.held_item.use()
             if poke.held_item == "misty-seed" and item == "misty":
                 msg += poke.append_spdef(1, attacker=poke, source="its misty seed")
+                # pyrefly: ignore [missing-attribute]
                 poke.held_item.use()
             if poke.held_item == "grassy-seed" and item == "grassy":
                 msg += poke.append_defense(1, attacker=poke, source="its grassy seed")
+                # pyrefly: ignore [missing-attribute]
                 poke.held_item.use()
         return msg
 

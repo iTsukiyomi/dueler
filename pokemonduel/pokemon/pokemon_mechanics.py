@@ -9,6 +9,7 @@ class DuelPokemonMechanics:
         """Transforms this poke into otherpoke."""
         self.choice_move = None
         self._name = otherpoke._name
+        # pyrefly: ignore [missing-attribute]
         if self._nickname != "None":
             self.name = f"{self._nickname} ({self._name.replace('-', ' ')})"
         else:
@@ -50,17 +51,24 @@ class DuelPokemonMechanics:
         This changes its name and base stats, and may affect moves, abilities, and items.
         Returns True if the poke successfully reformed.
         """
+        # pyrefly: ignore [missing-attribute]
         if form not in self.base_stats:
             return False
         self._name = form
+        # pyrefly: ignore [missing-attribute]
         if self._nickname != "None":
             self.name = f"{self._nickname} ({self._name.replace('-', ' ')})"
         else:
             self.name = self._name.replace("-", " ")
+        # pyrefly: ignore [missing-attribute]
         self.attack = self.base_stats[self._name][1]
+        # pyrefly: ignore [missing-attribute]
         self.defense = self.base_stats[self._name][2]
+        # pyrefly: ignore [missing-attribute]
         self.spatk = self.base_stats[self._name][3]
+        # pyrefly: ignore [missing-attribute]
         self.spdef = self.base_stats[self._name][4]
+        # pyrefly: ignore [missing-attribute]
         self.speed = self.base_stats[self._name][5]
         self.attack_split = None
         self.spatk_split = None
@@ -80,12 +88,16 @@ class DuelPokemonMechanics:
             if move is not None and move.effect == 380 and defender_type == ElementType.WATER:
                 effectiveness *= 2
                 continue
+            # pyrefly: ignore [missing-attribute]
             if move is not None and move.effect == 373 and defender_type == ElementType.FLYING and not self.grounded(battle, attacker=attacker, move=move):
                 return 1 # Ignores secondary types if defender is flying type and not grounded
+            # pyrefly: ignore [missing-attribute]
             if self.roost and defender_type == ElementType.FLYING:
                 continue
+            # pyrefly: ignore [missing-attribute]
             if self.foresight and attacker_type in (ElementType.FIGHTING, ElementType.NORMAL) and defender_type == ElementType.GHOST:
                 continue
+            # pyrefly: ignore [missing-attribute]
             if self.miracle_eye and attacker_type == ElementType.PSYCHIC and defender_type == ElementType.DARK:
                 continue
             if (
@@ -95,6 +107,7 @@ class DuelPokemonMechanics:
                 and attacker.ability() in [Ability.SCRAPPY, Ability.MINDS_EYE]
             ):
                 continue
+            # pyrefly: ignore [missing-attribute]
             if attacker_type == ElementType.GROUND and defender_type == ElementType.FLYING and self.grounded(battle, attacker=attacker, move=move):
                 continue
             e = battle.type_effectiveness[(attacker_type, defender_type)] / 100
@@ -106,8 +119,10 @@ class DuelPokemonMechanics:
                 elif e > 1:
                     e = 0.5
             effectiveness *= e
+        # pyrefly: ignore [missing-attribute]
         if attacker_type == ElementType.FIRE and self.tar_shot:
             effectiveness *= 2
+        # pyrefly: ignore [missing-attribute]
         if effectiveness >= 1 and self.hp == self.starting_hp and self.ability(attacker=attacker, move=move) == Ability.TERA_SHELL:
             effectiveness = 0.5
         return effectiveness
@@ -119,6 +134,7 @@ class DuelPokemonMechanics:
         Dynamically modifies the weight based on the ability of this pokemon.
         """
         cur_ability = self.ability(attacker=attacker, move=move)
+        # pyrefly: ignore [missing-attribute]
         cur_weight = self.starting_weight
         if cur_ability == Ability.HEAVY_METAL:
             cur_weight *= 2
@@ -194,7 +210,9 @@ class DuelPokemonMechanics:
         This selects a random move from the pool of moves from pokes in the user's party that are eligable.
         """
         moves = []
+        # pyrefly: ignore [missing-attribute]
         for idx, poke in enumerate(self.owner.party):
+            # pyrefly: ignore [missing-attribute]
             if idx == self.owner.last_idx:
                 continue
             for move in poke.moves:

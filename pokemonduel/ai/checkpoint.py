@@ -98,6 +98,7 @@ def export_torchscript(network: torch.nn.Module, path: str | Path,
     dummy = torch.zeros(2, example_dim, dtype=torch.float32,
                         device=next(network.parameters()).device)
     traced = torch.jit.trace(network, dummy)
+    # pyrefly: ignore [missing-attribute]
     traced.save(str(path))
 
 

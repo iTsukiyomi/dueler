@@ -9,22 +9,29 @@ class MoveType:
         Calculates the element type this move will be.
         """
         # Abilities are first because those are intrinsic to the poke and would "apply" to the move first
+        # pyrefly: ignore [missing-attribute]
         if attacker.ability() == Ability.REFRIGERATE and self.type == ElementType.NORMAL:
             return ElementType.ICE
+        # pyrefly: ignore [missing-attribute]
         if attacker.ability() == Ability.PIXILATE and self.type == ElementType.NORMAL:
             return ElementType.FAIRY
+        # pyrefly: ignore [missing-attribute]
         if attacker.ability() == Ability.AERILATE and self.type == ElementType.NORMAL:
             return ElementType.FLYING
+        # pyrefly: ignore [missing-attribute]
         if attacker.ability() == Ability.GALVANIZE and self.type == ElementType.NORMAL:
             return ElementType.ELECTRIC
         if attacker.ability() == Ability.NORMALIZE:
             return ElementType.NORMAL
+        # pyrefly: ignore [missing-attribute]
         if attacker.ability() == Ability.LIQUID_VOICE and self.is_sound_based():
             return ElementType.WATER
+        # pyrefly: ignore [missing-attribute]
         if self.type == ElementType.NORMAL and (attacker.ion_deluge or defender.ion_deluge or battle.plasma_fists):
             return ElementType.ELECTRIC
         if attacker.electrify:
             return ElementType.ELECTRIC
+        # pyrefly: ignore [missing-attribute]
         if self.effect == 204:
             if battle.weather.get() == "hail":
                 return ElementType.ICE
@@ -150,6 +157,7 @@ class MoveType:
                 return ElementType.FAIRY
             if battle.terrain.item == "psychic":
                 return ElementType.PSYCHIC
+        # pyrefly: ignore [missing-attribute]
         if self.id == 873:
             if attacker._name == "Tauros-paldea":
                 return ElementType.FIGHTING
@@ -158,4 +166,5 @@ class MoveType:
             if attacker._name == "Tauros-blaze-paldea":
                 return ElementType.FIRE
         
+        # pyrefly: ignore [missing-attribute]
         return self.type

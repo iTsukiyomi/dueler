@@ -73,10 +73,14 @@ class SwapButton(discord.ui.Button):
 
     async def callback(self, interaction):
         content = f"You picked {self.poke.name}."
+        # pyrefly: ignore [missing-attribute]
         if self.view.set_move:
+            # pyrefly: ignore [missing-attribute]
             self.view.trainer.selected_action = self.view.trainer.party.index(self.poke)
             content += " Waiting for opponent."
         else:
+            # pyrefly: ignore [missing-attribute]
             self.view.trainer.switch_poke(self.view.trainer.party.index(self.poke), mid_turn=self.view.mid_turn)
+        # pyrefly: ignore [missing-attribute]
         self.view.trainer.event.set()
         await interaction.response.edit_message(content=content, view=None)

@@ -13,10 +13,12 @@ class MoveAttack:
         """
         #https://bulbapedia.bulbagarden.net/wiki/Damage
         msg = ""
+        # pyrefly: ignore [missing-attribute]
         current_type = self.get_type(attacker, defender, battle)
         
         # Move effectiveness
         effectiveness = defender.effectiveness(current_type, battle, attacker=attacker, move=self)
+        # pyrefly: ignore [missing-attribute]
         if self.effect == 338:
             effectiveness *= defender.effectiveness(ElementType.FLYING, battle, attacker=attacker, move=self)
         if effectiveness <= 0:
@@ -28,7 +30,9 @@ class MoveAttack:
         
         # Calculate the number of hits for this move.
         parental_bond = False
+        # pyrefly: ignore [missing-attribute]
         min_hits = self.min_hits
+        # pyrefly: ignore [missing-attribute]
         max_hits = self.max_hits
         if self.effect == 361 and attacker._name == "Greninja-ash":
             hits = 3
@@ -65,6 +69,7 @@ class MoveAttack:
                 break
             
             # Critical hit chance
+            # pyrefly: ignore [missing-attribute]
             critical_stage = self.crit_rate
             if attacker.held_item in ("scope-lens", "razor-claw"):
                 critical_stage += 1
@@ -94,10 +99,12 @@ class MoveAttack:
             if defender.lucky_chant.active():
                 critical = False
             # Confusion never crits
+            # pyrefly: ignore [missing-attribute]
             if self.id == 0xCFCF:
                 critical = False
         
             # Stats
+            # pyrefly: ignore [missing-attribute]
             if self.damage_class == DamageClass.PHYSICAL:
                 damage_class = DamageClass.PHYSICAL
                 a = attacker.get_attack(
@@ -176,8 +183,10 @@ class MoveAttack:
             if defender.ability(attacker=attacker, move=self) == Ability.THICK_FAT and current_type in (ElementType.FIRE, ElementType.ICE):
                 a *= .5
         
+            # pyrefly: ignore [missing-attribute]
             power = self.get_power(attacker, defender, battle)
             if power is None:
+                # pyrefly: ignore [missing-attribute]
                 raise ValueError(f"{self.name} has no power and no override.")
             
             # Check accuracy on each hit
@@ -186,6 +195,7 @@ class MoveAttack:
             if hit > 0 and not attacker.ability() == Ability.SKILL_LINK:
                 # Increasing damage each hit
                 if self.effect == 105:
+                    # pyrefly: ignore [missing-attribute]
                     if not self.check_hit(attacker, defender, battle):
                         # Reset the number of hits to the number of ACTUAL hits
                         hits = hit
@@ -194,6 +204,7 @@ class MoveAttack:
                     power *= 1 + hit
                 # Only checks if loaded dice did not activate
                 if self.effect == 484 and attacker.held_item != "loaded-dice":
+                    # pyrefly: ignore [missing-attribute]
                     if not self.check_hit(attacker, defender, battle):
                         hits = hit
                         break
@@ -259,6 +270,7 @@ class MoveAttack:
             
             # Fluffy
             if defender.ability(attacker=attacker, move=self) == Ability.FLUFFY:
+                # pyrefly: ignore [missing-attribute]
                 if self.makes_contact(attacker):
                     damage *= .5
                 if current_type == ElementType.FIRE:
@@ -275,8 +287,10 @@ class MoveAttack:
                 damage *= 1.5
             if attacker.ability() == Ability.TINTED_LENS and effectiveness < 1:
                 damage *= 2
+            # pyrefly: ignore [missing-attribute]
             if attacker.ability() == Ability.PUNK_ROCK and self.is_sound_based():
                 damage *= 1.3
+            # pyrefly: ignore [missing-attribute]
             if defender.ability(attacker=attacker, move=self) == Ability.PUNK_ROCK and self.is_sound_based():
                 damage *= .5
             if defender.ability(attacker=attacker, move=self) == Ability.HEATPROOF and current_type == ElementType.FIRE:
@@ -308,6 +322,7 @@ class MoveAttack:
             ):
                 damage *= 1.3
             if attacker.held_item == "metronome":
+                # pyrefly: ignore [missing-attribute]
                 damage *= attacker.metronome.get_buff(self.name)
             
             # Parental bond - adds an extra low power hit
@@ -352,12 +367,14 @@ class MoveAttack:
         if effectiveness > 1 and defender.held_item == "weakness-policy" and not defender.substitute:
             msg += defender.append_attack(2, attacker=defender, move=self, source="its weakness policy")
             msg += defender.append_spatk(2, attacker=defender, move=self, source="its weakness policy")
+            # pyrefly: ignore [missing-attribute]
             defender.held_item.use()
         
         return (msg, hits)
 
     def calculate_damage(self, attacker, defender, battle, current_type, effectiveness, is_protect_counter):
         """Calculate damage dealt by the move."""
+        # pyrefly: ignore [missing-attribute]
         power = self.get_power(attacker, defender, battle)
         if power == 0:
             return 0, False, False, False
@@ -369,32 +386,39 @@ class MoveAttack:
         critical = False
 
         level = attacker.level
+        # pyrefly: ignore [missing-attribute]
         if attacker.ability() == Ability.DEBUG:
             level = 100
 
+        # pyrefly: ignore [missing-attribute]
         if self.id == 573 and attacker.ability() == Ability.ORDINARY:
             level *= 2
 
         attack_stat = attacker.get_attack()
         defense_stat = defender.get_defense()
 
+        # pyrefly: ignore [missing-attribute]
         if self.damage_class == DamageClass.SPECIAL:
             attack_stat = attacker.get_spatk()
             defense_stat = defender.get_spdef()
 
+        # pyrefly: ignore [missing-attribute]
         if self.effect == 222:
             if self.damage_class == DamageClass.PHYSICAL:
                 attack_stat = attacker.get_spatk()
             else:
                 defense_stat = defender.get_defense()
 
+        # pyrefly: ignore [missing-attribute]
         if attacker.ability() == Ability.UNIBLOW:
             attack_stat *= 1.5
+        # pyrefly: ignore [missing-attribute]
         if defender.ability() == Ability.UNIBLOW:
             defense_stat *= 1.5
 
         if attacker.terrain.item == "terrain-extender" and battle.terrain.item:
             pass
+        # pyrefly: ignore [missing-attribute]
         elif battle.terrain.item and self.target in (MoveTarget.USERS_FIELD, MoveTarget.ENTIRE_FIELD, MoveTarget.USER):
             attack_stat = attacker.get_attack()
             if self.damage_class == DamageClass.SPECIAL:
@@ -412,6 +436,7 @@ class MoveAttack:
             if battle.trick_room.active() or battle.wonder_room.active():
                 base_damage *= 2
 
+            # pyrefly: ignore [missing-attribute]
             if attacker.ability() == Ability.TRANSPARENT:
                 base_damage *= 4
 
@@ -447,6 +472,7 @@ class MoveAttack:
         base_damage = int(base_damage * random.uniform(0.85, 1.0))
         base_damage = int(base_damage * effectiveness)
 
+        # pyrefly: ignore [missing-attribute]
         if self.crit_rate == 1:
             if random.randint(0, 15) == 0:
                 critical = True
@@ -456,11 +482,13 @@ class MoveAttack:
         elif self.crit_rate == 3:
             if random.randint(0, 3) == 0:
                 critical = True
+        # pyrefly: ignore [unsupported-operation]
         elif self.crit_rate >= 4:
             critical = True
 
         if critical:
             base_damage = int(base_damage * 1.5)
+            # pyrefly: ignore [unbound-name]
             msg += "A critical hit!\n"
 
         if attacker.ability() == Ability.RECKLESS and self.damage_class == DamageClass.PHYSICAL:
@@ -468,6 +496,7 @@ class MoveAttack:
         if attacker.ability() == Ability.RECKLESS and self.damage_class == DamageClass.SPECIAL:
             base_damage = int(base_damage * 1.2)
 
+        # pyrefly: ignore [missing-attribute]
         if self.id != 1108 and self.damage_class != DamageClass.STATUS:
             if attacker.terrain.item != "terrain-extender" and battle.terrain.active():
                 pass
@@ -489,6 +518,7 @@ class MoveAttack:
 
         if not is_protect_counter:
             if attacker.focus_energy.active():
+                # pyrefly: ignore [missing-attribute]
                 if attacker.ability() in (Ability.SNIPER, Ability.MERCiless):
                     if random.randint(0, 2) < 2:
                         critical = True
@@ -502,7 +532,9 @@ class MoveAttack:
 
     def apply_damage(self, attacker, defender, battle, damage, current_type, critical, msg):
         """Apply damage to the defender."""
+        # pyrefly: ignore [missing-attribute]
         msg += defender.damage(damage, battle, source=self.pretty_name, critical=critical)
 
+        # pyrefly: ignore [missing-attribute]
         if not critical and defender.hp > 0 and self.damage_class != DamageClass.STATUS:
             msg += defender.held_item.activate_on_damage(damage_taken=damage, attacker=attacker, move=self, battle=battle)

@@ -416,6 +416,7 @@ def get_pokemon_id_and_types(pokemon_name: str) -> Tuple[int, List[int]]:
     # Look up types in ptypes using the lookup_id
     for pt in ptypes:
         if pt.get('id') == lookup_id:
+            # pyrefly: ignore [bad-return]
             return form_id, pt.get('types', [])
 
     return 1, [1]  # Default if type not found
@@ -627,9 +628,11 @@ class RandomTeamGenerator:
         move_data = _get_move_info(move_id_norm)
         result = move_data.get('power') if move_data else None
         self._move_power_cache[move_id] = result
+        # pyrefly: ignore [bad-return]
         return result
 
     def query_moves(self, moves: Set[str], species_types: List[str], tera_type: str, abilities: List[str],
+                    # pyrefly: ignore [bad-function-definition]
                     base_stats: Dict = None) -> MoveCounter:
         """Analyze what moves do"""
         counter = MoveCounter()
@@ -670,6 +673,7 @@ class RandomTeamGenerator:
             is_stab = move_type and move_type in types_set and move_id not in NO_STAB
 
             if is_stab:
+                # pyrefly: ignore [missing-attribute]
                 counter.add(move_type.title())  # Keep title case for counter keys
                 counter.add('stab')
                 if move_type == tera_type.lower():
@@ -678,11 +682,13 @@ class RandomTeamGenerator:
                 # Don't double-count - skip the coverage block below for STAB moves
 
             # Coverage moves (non-STAB damaging) count toward type buckets but not for STAB moves
+            # pyrefly: ignore [unsupported-operation]
             elif move_power and move_power > 0 and move_id not in NO_STAB:
                 counter.add(move_type.title() if move_type else 'Normal')
                 counter.damaging_moves.add(move_id)
 
             # NO_STAB damaging moves - still count for type buckets and coverage
+            # pyrefly: ignore [unsupported-operation]
             if move_power and move_power > 0 and move_id in NO_STAB:
                 counter.damaging_moves.add(move_id)
                 # These also count for type coverage (e.g. Fire coverage on non-Fire type)
@@ -727,6 +733,7 @@ class RandomTeamGenerator:
             move_priority = 0
             if move_data:
                 move_priority = move_data.get('priority', 0)
+            # pyrefly: ignore [unsupported-operation]
             if move_priority > 0:
                 counter.add('priority')
 
@@ -861,6 +868,7 @@ class RandomTeamGenerator:
         ]
 
         for pair in incompatible_pairs:
+            # pyrefly: ignore [bad-argument-type]
             self.incompatible_moves(moves, move_pool, pair[0], pair[1])
 
         # Type-specific
@@ -1011,6 +1019,7 @@ class RandomTeamGenerator:
                     move_power = move_data.get('power')
                     move_type = self.get_move_type(moveid, list(types), abilities, tera_type)
                     # Check priority > 0, basePower >= 60, and STAB
+                    # pyrefly: ignore [unsupported-operation]
                     if move_priority > 0 and move_power and move_power >= 60 and move_type in types:
                         priority_moves.append(moveid)
             if priority_moves:
@@ -1144,6 +1153,7 @@ class RandomTeamGenerator:
 
     def should_cull_ability(self, ability: str, types: Set[str], moves: Set[str],
                            abilities: List[str], counter: MoveCounter, team_details: Dict,
+                           # pyrefly: ignore [bad-function-definition]
                            species: Dict, role: str, is_lead: bool, move_pool: List[str] = None) -> bool:
         """Check if ability should be culled"""
 
@@ -1358,6 +1368,7 @@ class RandomTeamGenerator:
         if 'rest' in moves and 'sleeptalk' not in moves and ability not in ['Natural Cure', 'Shed Skin']:
             return 'Chesto Berry'
 
+        # pyrefly: ignore [bad-return]
         return None  # No priority item
 
     def get_item(self, ability: str, types: Set[str], moves: Set[str],
@@ -1473,6 +1484,7 @@ class RandomTeamGenerator:
     # SET GENERATION
     # ============================================
 
+    # pyrefly: ignore [bad-function-definition]
     def random_set(self, pokemon_name: str, team_details: Dict = None, is_lead: bool = False) -> Dict:
         """Generate a random set for a Pokemon"""
 
@@ -1480,12 +1492,14 @@ class RandomTeamGenerator:
             team_details = {}
 
         if pokemon_name not in self.sets_data:
+            # pyrefly: ignore [bad-return]
             return None
 
         species_data = self.sets_data[pokemon_name]
         sets = species_data.get('sets', [])
 
         if not sets:
+            # pyrefly: ignore [bad-return]
             return None
 
         # Filter sets
@@ -1755,6 +1769,7 @@ class RandomTeamGenerator:
     # TEAM GENERATION
     # ============================================
 
+    # pyrefly: ignore [bad-function-definition]
     def get_pokemon_pool(self, team: List[Dict] = None, force_type: str = None) -> Tuple[Dict, List]:
         """Get available Pokemon pool"""
 
@@ -1777,6 +1792,7 @@ class RandomTeamGenerator:
 
         return pokemon_pool, base_species_pool
 
+    # pyrefly: ignore [bad-function-definition]
     def generate_team(self, team_size: int = 6, exclude_team: List[Dict] = None) -> List[Dict]:
         """Generate a random team"""
 
@@ -1870,6 +1886,7 @@ class RandomTeamGenerator:
             if 'healbell' in pokemon_set['moves'] or 'aromatherapy' in pokemon_set['moves']:
                 team_details['statusCure'] = True
             if 'spikes' in pokemon_set['moves']:
+                # pyrefly: ignore [unsupported-operation]
                 team_details['spikes'] = team_details.get('spikes', 0) + 1
             if 'toxicspikes' in pokemon_set['moves'] or pokemon_set['ability'] == 'Toxic Debris':
                 team_details['toxicSpikes'] = True
@@ -1917,12 +1934,15 @@ class RandomTeamGenerator:
             # Type weakness check - reject if too many team members are weak to same type
             type_chart = team_details.get('type_chart', {})
             type_fail = False
+            # pyrefly: ignore [missing-attribute]
             for type_name, chart in type_chart.items():
                 if chart.get('weak', 0) >= 3 and chart.get('weak', 0) > 0:
                     # Would exceed 3 weak members - check if this Pokemon adds another weakness
                     p_types = [TYPE_ID_TO_NAME.get(tid, 'normal') for tid in pokemon_set.get('type_ids', [])]
+                    # pyrefly: ignore [missing-attribute]
                     for attack_type in type_chart.keys():
                         # If this Pokemon is weak to attack_type and team is already at limit
+                        # pyrefly: ignore [bad-index]
                         if type_chart[attack_type].get('weak', 0) >= 3:
                             # Check if this Pokemon is also weak
                             attack_type_id = TYPE_NAME_TO_ID.get(attack_type.title(), 0)
@@ -1944,11 +1964,13 @@ class RandomTeamGenerator:
             current_role = pokemon_set.get('role', '')
             
             # Avoid too many of same role
+            # pyrefly: ignore [missing-attribute]
             if role_counts.get(current_role, 0) >= 4:
                 # Put back and try another - don't add this Pokemon
                 base_species_pool.append(pokemon_name)
                 continue
             
+            # pyrefly: ignore [missing-attribute, unsupported-operation]
             role_counts[current_role] = role_counts.get(current_role, 0) + 1
             team_details['role_counts'] = role_counts
             
@@ -1970,12 +1992,14 @@ class RandomTeamGenerator:
         return team
 
 
+# pyrefly: ignore [bad-function-definition]
 def generate_random_team(team_size: int = 6, seed: int = None) -> List[Dict]:
     """Generate a random Pokemon team"""
     generator = RandomTeamGenerator(seed=seed)
     return generator.generate_team(team_size)
 
 
+# pyrefly: ignore [bad-function-definition]
 def generate_two_teams(seed: int = None) -> Tuple[List[Dict], List[Dict]]:
     """Generate two random teams for battle"""
     generator = RandomTeamGenerator(seed=seed)

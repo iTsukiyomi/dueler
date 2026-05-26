@@ -84,6 +84,7 @@ async def keep_alive():
     async with aiohttp.ClientSession() as session:
         while True:
             try:
+                # pyrefly: ignore [bad-argument-type]
                 async with session.get(url, timeout=10) as resp:
                     logging.info(f"Keep-alive ping: {resp.status}")
             except Exception as e:
@@ -96,6 +97,7 @@ async def main():
     bot = Flame()
     asyncio.create_task(keep_alive())
     token = os.getenv("DISCORD_TOKEN")
+    # pyrefly: ignore [bad-argument-type]
     await bot.start(token)
 
 if __name__ == '__main__':

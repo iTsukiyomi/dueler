@@ -145,5 +145,6 @@ class Weather(ExpiringEffect):
                     msg += f"{poke.name} transformed into a {t} type using its forecast!\n"
 
         self._weather_type = weather
+        # pyrefly: ignore [bad-assignment]
         self._remaining_turns = turns
         return msg

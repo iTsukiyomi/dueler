@@ -10,6 +10,7 @@ class InfoButton(discord.ui.Button):
         super().__init__(style=discord.ButtonStyle.primary, label="Info", row=1)
 
     async def callback(self, interaction):
+        # pyrefly: ignore [missing-attribute]
         pokemon = self.view.trainer.current_pokemon
         item = pokemon.held_item.get() if pokemon.held_item.has_item() else "None"
 

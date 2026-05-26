@@ -51,8 +51,10 @@ class PokemonAlphaZeroNet(nn.Module):
             nn.BatchNorm1d(hidden) if use_bn else nn.Identity(),
             nn.ReLU(inplace=True),
         )
+        # pyrefly: ignore [bad-argument-type]
         nn.init.kaiming_normal_(self.stem[0].weight, nonlinearity="relu")
         if self.stem[0].bias is not None:
+            # pyrefly: ignore [bad-argument-type]
             nn.init.zeros_(self.stem[0].bias)
 
         # ── body ─────────────────────────────────────────────────────
@@ -124,6 +126,7 @@ class PokemonAlphaZeroNet(nn.Module):
                 logits = torch.where(m, logits, torch.full_like(logits, neg_inf))
             probs = Fnn.softmax(logits, dim=-1)
             if masks is not None:
+                # pyrefly: ignore [unbound-name]
                 probs = probs * m.float()
                 probs = probs / probs.sum(dim=-1, keepdim=True).clamp_min(1e-12)
             return probs.detach().cpu().numpy().astype(np.float32), value.detach().cpu().numpy().astype(np.float32)

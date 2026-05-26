@@ -9,6 +9,7 @@ from ..randoms.random_team_gen import (convert_team_to_raw_data,
                                        generate_random_team)
 
 
+# pyrefly: ignore [bad-function-definition]
 def generate_npc_team(seed: int = None):
     """Generate a random team for the NPC opponent. Uses the same
     random-team generator as ``random battles``."""
@@ -21,6 +22,7 @@ def convert_to_raw_data(team, team_name: str = "NPC Team"):
     return convert_team_to_raw_data(team, team_name)
 
 
+# pyrefly: ignore [bad-function-definition]
 async def create_npc_team(ctx, seed: int = None):
     """Create a full NPC team of ``DuelPokemon`` objects ready for battle."""
     from ...pokemon import create

@@ -8,6 +8,7 @@ class ExpiringWish(ExpiringEffect):
         super().__init__(0)
         self.hp = None
 
+    # pyrefly: ignore [bad-override]
     def next_turn(self):
         """Progresses the effect a turn."""
         expired = super().next_turn()

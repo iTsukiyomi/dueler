@@ -61,6 +61,7 @@ class HeldItem():
         The optional param only_active determines if this method should only return True if the berry is active and usable.
         """
         if only_active:
+            # pyrefly: ignore [missing-attribute]
             return self.get() is not None and self.get().endswith("-berry")
         return self.name is not None and self.name.endswith("-berry")
 

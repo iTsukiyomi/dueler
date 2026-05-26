@@ -64,6 +64,7 @@ class MatchmakingService:
 
         # Scan the queue for a compatible opponent.
         # We read the full list and find the best match by Elo proximity.
+        # pyrefly: ignore [not-async]
         raw_entries = await r.lrange(_QUEUE_KEY, 0, -1)
         best_match = None
         best_delta = float("inf")
@@ -116,6 +117,7 @@ class MatchmakingService:
         if r is None:
             return False
 
+        # pyrefly: ignore [not-async]
         raw_entries = await r.lrange(_QUEUE_KEY, 0, -1)
         for raw in raw_entries:
             try:

@@ -10,6 +10,7 @@ from ..enums import ElementType
 from ..data_gen.query import find, find_one
 
 
+# pyrefly: ignore [inconsistent-inheritance]
 class DuelPokemon(
     DuelPokemonInit,
     DuelPokemonSendOut,
@@ -50,11 +51,15 @@ async def create(ctx, raw_data: dict):
     gender = raw_data["gender"]
 
     nature = await find_one(ctx, "natures", {"identifier": nature_name.lower()})
+    # pyrefly: ignore [unsupported-operation]
     dec_stat_id = nature["decreased_stat_id"]
+    # pyrefly: ignore [unsupported-operation]
     inc_stat_id = nature["increased_stat_id"]
     dec_stat = await find_one(ctx, "stat_types", {"id": dec_stat_id})
     inc_stat = await find_one(ctx, "stat_types", {"id": inc_stat_id})
+    # pyrefly: ignore [unsupported-operation]
     dec_stat = dec_stat["identifier"].capitalize().replace("-", " ")
+    # pyrefly: ignore [unsupported-operation]
     inc_stat = inc_stat["identifier"].capitalize().replace("-", " ")
     nature_stat_deltas = {"Attack": 1, "Defense": 1, "Special attack": 1, "Special defense": 1, "Speed": 1}
     flavor_map = {
@@ -66,7 +71,9 @@ async def create(ctx, raw_data: dict):
     }
     disliked_flavor = ""
     if dec_stat != inc_stat:
+        # pyrefly: ignore [bad-typed-dict-key]
         nature_stat_deltas[dec_stat] = 0.9
+        # pyrefly: ignore [bad-typed-dict-key]
         nature_stat_deltas[inc_stat] = 1.1
         disliked_flavor = flavor_map[dec_stat]
 
@@ -208,6 +215,7 @@ async def create(ctx, raw_data: dict):
                     break
 
     #List of type ids
+    # pyrefly: ignore [unsupported-operation]
     type_ids = type_ids_entry["types"]
     
     #6 element list of stat values (int)
@@ -428,6 +436,7 @@ async def create(ctx, raw_data: dict):
         else:
             if type_override is not None:
                 move["type_id"] = type_override
+        # pyrefly: ignore [bad-unpacking]
         object_moves.append(Move(**move))
     p = DuelPokemon(
         pokemon_id=pid,

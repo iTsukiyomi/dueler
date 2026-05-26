@@ -92,6 +92,7 @@ class Trainer():
         future_sight_data = self.future_sight.item
         if self.future_sight.next_turn() and self.current_pokemon is not None:
             msg += f"{self.current_pokemon.name} took the future sight attack!\n"
+            # pyrefly: ignore [not-iterable]
             future_sight_attacker, future_sight_move = future_sight_data
             msgadd, _ = future_sight_move.attack(future_sight_attacker, self.current_pokemon, battle)
             msg += msgadd
@@ -159,43 +160,62 @@ class Trainer():
         - ("struggle", List[int]) - If the user attempts to use any move, use struggle instead (no valid moves).
         """
         # Check if they are FORCED to use a certain move
+        # pyrefly: ignore [missing-attribute]
         if self.current_pokemon.locked_move:
+            # pyrefly: ignore [missing-attribute]
             return ("forced", self.current_pokemon.locked_move.move)
         # Remove all moves not matching a restriction
         result = []
+        # pyrefly: ignore [missing-attribute]
         for idx, move in enumerate(self.current_pokemon.moves):
             if move.pp <= 0:
                 continue
+            # pyrefly: ignore [missing-attribute]
             if move.damage_class == DamageClass.STATUS and self.current_pokemon.held_item == "assault-vest":
                 continue
+            # pyrefly: ignore [missing-attribute]
             if move.damage_class == DamageClass.STATUS and self.current_pokemon.taunt.active():
                 continue
+            # pyrefly: ignore [missing-attribute]
             if move.effect == 247 and not all(m.used for m in self.current_pokemon.moves if m.effect != 247):
                 continue
+            # pyrefly: ignore [missing-attribute]
             if self.current_pokemon.disable.active() and move is self.current_pokemon.disable.item:
                 continue
+            # pyrefly: ignore [missing-attribute]
             if self.current_pokemon.held_item in ("choice-scarf", "choice-band", "choice-specs") or self.current_pokemon.ability() == Ability.GORILLA_TACTICS:
+                # pyrefly: ignore [missing-attribute]
                 if self.current_pokemon.choice_move is not None and move is not self.current_pokemon.choice_move:
                     continue
+            # pyrefly: ignore [missing-attribute]
             if self.current_pokemon.torment and self.current_pokemon.last_move is move:
                 continue
             if (
+                # pyrefly: ignore [missing-attribute]
                 self.current_pokemon.last_move is not None
+                # pyrefly: ignore [missing-attribute]
                 and self.current_pokemon.last_move.effect == 492
+                # pyrefly: ignore [missing-attribute]
                 and self.current_pokemon.last_move.id == move.id
+                # pyrefly: ignore [missing-attribute]
                 and not self.current_pokemon.last_move_failed
             ):
                 continue
             if defender is not None and defender.imprison and move.id in [x.id for x in defender.moves]:
                 continue
+            # pyrefly: ignore [missing-attribute]
             if self.current_pokemon.heal_block.active() and move.is_affected_by_heal_block():
                 continue
+            # pyrefly: ignore [missing-attribute]
             if self.current_pokemon.silenced.active() and move.is_sound_based():
                 continue
+            # pyrefly: ignore [missing-attribute]
             if move.effect == 339 and not self.current_pokemon.ate_berry:
                 continue
+            # pyrefly: ignore [missing-attribute]
             if move.effect == 453 and not self.current_pokemon.held_item.is_berry():
                 continue
+            # pyrefly: ignore [missing-attribute]
             if self.current_pokemon.encore.active() and move is not self.current_pokemon.encore.item:
                 continue
             result.append(idx)

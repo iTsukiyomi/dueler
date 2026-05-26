@@ -107,6 +107,7 @@ class ConfigManager:
     Provides the same functionality without RedBot dependency
     """
 
+    # pyrefly: ignore [bad-function-definition]
     def __init__(self, cog_name: str, identifier: int = None):
         self.cog_name = cog_name
         self.identifier = identifier
@@ -140,6 +141,7 @@ class ConfigManager:
         """
         # Handle both Member objects and IDs
         member_id = getattr(member, 'id', member)
+        # pyrefly: ignore [bad-argument-type]
         return EnhancedMemberConfig(self, member_id)
 
     def guild(self, guild):
@@ -149,6 +151,7 @@ class ConfigManager:
         """
         # Handle both Guild objects and IDs
         guild_id = getattr(guild, 'id', guild)
+        # pyrefly: ignore [bad-argument-type]
         return EnhancedGuildConfig(self, guild_id)
 
     @classmethod
@@ -202,6 +205,7 @@ class EnhancedMemberConfig(MemberConfig):
         return data.get('party', self.config_manager.member_defaults.get('party', []))
 
     @property
+    # pyrefly: ignore [bad-override]
     def party(self):
         """Return PartyAttribute for .party syntax"""
         return PartyAttribute(self)
@@ -216,6 +220,7 @@ class EnhancedGuildConfig(GuildConfig):
         return data.get('useThreads', self.config_manager.guild_defaults.get('useThreads', False))
 
     @property
+    # pyrefly: ignore [bad-override]
     def useThreads(self):
         """Return UseThreadsAttribute for .useThreads syntax"""
         return UseThreadsAttribute(self)

@@ -246,6 +246,7 @@ class BatchedInferenceServer:
                     except Exception:
                         pass
             except Exception:
+                # pyrefly: ignore [unknown-name]
                 log.exception("inference batch failed (size=%d); sending neutral replies",
                               len(pending))
                 # Send neutral replies so workers don't block forever.

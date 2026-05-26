@@ -31,8 +31,10 @@ class DuelAcceptView(discord.ui.View):
         return True
     
     async def on_timeout(self):
+        # pyrefly: ignore [missing-attribute]
         await self.message.edit(view=None)
         self.stop()
     
     async def on_error(self, interaction, error, item):
+        # pyrefly: ignore [missing-attribute]
         await self.ctx.cog.log.error("Exception in a button.", exc_info=error)

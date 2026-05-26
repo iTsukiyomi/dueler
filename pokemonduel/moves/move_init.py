@@ -31,6 +31,7 @@ class MoveInit:
         """
         msg = ""
         if self.effect == 129 and (isinstance(defender.owner.selected_action, int) or defender.owner.selected_action.effect in (128, 154, 229, 347, 493)):
+            # pyrefly: ignore [missing-attribute]
             msg += self.use(attacker, defender, battle)
         if self.effect == 171:
             msg += f"{attacker.name} is focusing on its attack!\n"
@@ -45,6 +46,7 @@ class MoveInit:
         Returns an int priority from -7 to 5.
         """
         priority = self.priority
+        # pyrefly: ignore [missing-attribute]
         current_type = self.get_type(attacker, defender, battle)
         if self.effect == 437 and attacker.grounded(battle) and battle.terrain.item == "grassy":
             priority += 1
@@ -52,6 +54,7 @@ class MoveInit:
             priority += 1
         if attacker.ability() == Ability.PRANKSTER and self.damage_class == DamageClass.STATUS:
             priority += 1
+        # pyrefly: ignore [missing-attribute]
         if attacker.ability() == Ability.TRIAGE and self.is_affected_by_heal_block():
             priority += 3
         return priority

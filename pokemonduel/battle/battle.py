@@ -89,35 +89,42 @@ class Battle():
                 
                 # Send out the pokes that were just swapped to
                 if swapped1 and swapped2:
+                    # pyrefly: ignore [missing-attribute]
                     if self.trainer1.current_pokemon.get_raw_speed() > self.trainer2.current_pokemon.get_raw_speed():
+                        # pyrefly: ignore [missing-attribute]
                         self.msg += self.trainer1.current_pokemon.send_out(self.trainer2.current_pokemon, self)
                         if not self.trainer1.has_alive_pokemon():
                             self.msg += f"{self.trainer2.name} wins!\n"
                             winner = self.trainer2
                             break
+                        # pyrefly: ignore [missing-attribute]
                         self.msg += self.trainer2.current_pokemon.send_out(self.trainer1.current_pokemon, self)
                         if not self.trainer2.has_alive_pokemon():
                             self.msg += f"{self.trainer1.name} wins!\n"
                             winner = self.trainer1
                             break
                     else:
+                        # pyrefly: ignore [missing-attribute]
                         self.msg += self.trainer2.current_pokemon.send_out(self.trainer1.current_pokemon, self)
                         if not self.trainer2.has_alive_pokemon():
                             self.msg += f"{self.trainer1.name} wins!\n"
                             winner = self.trainer1
                             break
+                        # pyrefly: ignore [missing-attribute]
                         self.msg += self.trainer1.current_pokemon.send_out(self.trainer2.current_pokemon, self)
                         if not self.trainer1.has_alive_pokemon():
                             self.msg += f"{self.trainer2.name} wins!\n"
                             winner = self.trainer2
                             break
                 elif swapped1:
+                    # pyrefly: ignore [missing-attribute]
                     self.msg += self.trainer1.current_pokemon.send_out(self.trainer2.current_pokemon, self)
                     if not self.trainer1.has_alive_pokemon():
                         self.msg += f"{self.trainer2.name} wins!\n"
                         winner = self.trainer2
                         break
                 elif swapped2:
+                    # pyrefly: ignore [missing-attribute]
                     self.msg += self.trainer2.current_pokemon.send_out(self.trainer1.current_pokemon, self)
                     if not self.trainer2.has_alive_pokemon():
                         self.msg += f"{self.trainer1.name} wins!\n"
@@ -454,6 +461,7 @@ class Battle():
             return othertrainer
 
         if swapper.is_human():
+            # pyrefly: ignore [unbound-name]
             swap_view.stop()
 
         if swapper.current_pokemon is None:

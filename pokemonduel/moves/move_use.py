@@ -27,10 +27,13 @@ class MoveUse:
             attacker.dig = False
             attacker.fly = False
             attacker.shadow_force = False
+        # pyrefly: ignore [missing-attribute]
         current_type = self.get_type(attacker, defender, battle)
+        # pyrefly: ignore [missing-attribute]
         effect_chance = self.get_effect_chance(attacker, defender, battle)
         msg = ""
 
+        # pyrefly: ignore [missing-attribute]
         if self.effect in (5, 126, 168, 254, 336, 398, 458, 500) and attacker.nv.freeze():
             attacker.nv.reset()
             msg += f"{attacker.name} thawed out!\n"
@@ -40,21 +43,25 @@ class MoveUse:
                 msg += f"{attacker.name} is no longer frozen!\n"
             else:
                 msg += f"{attacker.name} is frozen solid!\n"
+                # pyrefly: ignore [missing-attribute]
                 if self.effect == 28:
                     attacker.locked_move = None
                 return msg
         if attacker.nv.paralysis() and not random.randint(0, 3):
             msg += f"{attacker.name} is paralyzed! It can't move!\n"
+            # pyrefly: ignore [missing-attribute]
             if self.effect == 28:
                 attacker.locked_move = None
             return msg
         if attacker.infatuated is defender and not random.randint(0, 1):
             msg += f"{attacker.name} is in love with {defender.name} and can't bare to hurt them!\n"
+            # pyrefly: ignore [missing-attribute]
             if self.effect == 28:
                 attacker.locked_move = None
             return msg
         if attacker.flinched:
             msg += f"{attacker.name} flinched! It can't move!\n"
+            # pyrefly: ignore [missing-attribute]
             if self.effect == 28:
                 attacker.locked_move = None
             return msg
@@ -62,6 +69,7 @@ class MoveUse:
             if use_pp and attacker.nv.sleep_timer.next_turn():
                 attacker.nv.reset()
                 msg += f"{attacker.name} woke up!\n"
+            # pyrefly: ignore [missing-attribute]
             elif self.effect not in (93, 98) and attacker.ability() != Ability.COMATOSE and not override_sleep:
                 msg += f"{attacker.name} is fast asleep!\n"
                 if self.effect == 28:
@@ -71,27 +79,37 @@ class MoveUse:
             msg += f"{attacker.name} is no longer confused!\n"
         if attacker.confusion.active() and not random.randint(0, 2):
             msg += f"{attacker.name} hurt itself in its confusion!\n"
+            # pyrefly: ignore [missing-attribute]
             msgadd, numhits = self.confusion().attack(attacker, attacker, battle)
             msg += msgadd
+            # pyrefly: ignore [missing-attribute]
             if self.effect == 28:
                 attacker.locked_move = None
             return msg
         if attacker.ability() == Ability.TRUANT and attacker.truant_turn % 2:
             msg += f"{attacker.name} is loafing around!\n"
+            # pyrefly: ignore [missing-attribute]
             if self.effect == 28:
                 attacker.locked_move = None
             return msg
         
         if not bounced:
+            # pyrefly: ignore [missing-attribute]
             msg += f"{attacker.name} used {self.pretty_name}!\n"
+            # pyrefly: ignore [missing-attribute]
             attacker.metronome.use(self.name)
         
         # PP
         if attacker.locked_move is None and use_pp:
+            # pyrefly: ignore [missing-attribute]
             self.pp -= 1
+            # pyrefly: ignore [missing-attribute]
             if defender.ability(attacker=attacker, move=self) == Ability.PRESSURE and self.pp != 0:
+                # pyrefly: ignore [missing-attribute]
                 if self.targets_opponent() or self.effect in (113, 193, 196, 250, 267):
+                    # pyrefly: ignore [missing-attribute, unsupported-operation]
                     self.pp -= 1
+            # pyrefly: ignore [missing-attribute]
             if self.pp == 0:
                 msg += "It ran out of PP!\n"
 
@@ -104,9 +122,11 @@ class MoveUse:
 
         # Stance change
         if attacker.ability() == Ability.STANCE_CHANGE:
+            # pyrefly: ignore [missing-attribute]
             if attacker._name == "Aegislash" and self.damage_class in (DamageClass.PHYSICAL, DamageClass.SPECIAL):
                 if attacker.form("Aegislash-blade"):
                     msg += f"{attacker.name} draws its blade!\n"
+            # pyrefly: ignore [missing-attribute]
             if attacker._name == "Aegislash-blade" and self.effect == 356:
                 if attacker.form("Aegislash"):
                     msg += f"{attacker.name} readies its shield!\n"
@@ -117,14 +137,17 @@ class MoveUse:
             return msg
 
         # Snatch steal
+        # pyrefly: ignore [missing-attribute]
         if defender.snatching and self.selectable_by_snatch():
             msg += f"{defender.name} snatched the move!\n"
             msg += self.use(defender, attacker, battle, use_pp=False)
             return msg
 
         # Check Fail
+        # pyrefly: ignore [missing-attribute]
         if not self.check_executable(attacker, defender, battle):
             msg += "But it failed!\n"
+            # pyrefly: ignore [missing-attribute]
             if self.effect in (28, 118):
                 attacker.locked_move = None
             attacker.last_move_failed = True
@@ -134,9 +157,11 @@ class MoveUse:
         if attacker.locked_move is None:
             # 2 turn moves
             # During sun, this move does not need to charge
+            # pyrefly: ignore [missing-attribute]
             if self.effect == 152 and battle.weather.get() not in ("sun", "h-sun"):
                 attacker.locked_move = LockedMove(self, 2)
             # During rain, this move does not need to charge
+            # pyrefly: ignore [missing-attribute]
             if self.effect == 502:
                 if battle.weather.get() not in ("rain", "h-rain"):
                     attacker.locked_move = LockedMove(self, 2)
@@ -179,12 +204,14 @@ class MoveUse:
         
         # Early exits for moves that hit a certain turn when it is not that turn
         # Turn 1 hit moves
+        # pyrefly: ignore [missing-attribute]
         if self.effect == 81 and attacker.locked_move:
             if attacker.locked_move.turn != 0:
                 msg += "It's recharging!\n"
                 return msg
         
         # Turn 2 hit moves
+        # pyrefly: ignore [missing-attribute]
         elif self.effect in (40, 76, 146, 152, 156, 256, 257, 264, 273, 332, 333, 366, 451, 502) and attacker.locked_move:
             if attacker.locked_move.turn != 1:
                 if self.effect == 146:
@@ -204,7 +231,9 @@ class MoveUse:
                 return msg
         
         # Turn 3 hit moves
+        # pyrefly: ignore [missing-attribute]
         elif self.effect == 27:
+            # pyrefly: ignore [missing-attribute]
             if attacker.locked_move.turn != 2:
                 msg += "It's storing energy!\n"
                 return msg
@@ -229,6 +258,7 @@ class MoveUse:
                 msg += f"{attacker.name} transformed into a {t} type using its libero!\n"
         
         # Status effects reflected by magic coat or magic bounce.
+        # pyrefly: ignore [missing-attribute]
         if self.is_affected_by_magic_coat() and (defender.ability(attacker=attacker, move=self) == Ability.MAGIC_BOUNCE or defender.magic_coat) and not bounced:
             msg += f"It was reflected by {defender.name}'s magic bounce!\n"
             hm = defender.has_moved
@@ -237,6 +267,7 @@ class MoveUse:
             return msg
         
         # Check Effect
+        # pyrefly: ignore [missing-attribute]
         if not self.check_effective(attacker, defender, battle) and not bounced:
             msg += "It had no effect...\n"
             if self.effect == 120:
@@ -249,6 +280,7 @@ class MoveUse:
             return msg
         
         # Check Semi-invulnerable - treated as a miss
+        # pyrefly: ignore [missing-attribute]
         if not self.check_semi_invulnerable(attacker, defender, battle):
             msg += f"{defender.name} avoided the attack!\n"
             if self.effect == 120:
@@ -260,6 +292,7 @@ class MoveUse:
             return msg
         
         # Check Protection
+        # pyrefly: ignore [missing-attribute]
         was_hit, msgdelta = self.check_protect(attacker, defender, battle)
         if not was_hit:
             msg += f"{defender.name} was protected against the attack!\n"
@@ -273,6 +306,7 @@ class MoveUse:
             return msg
         
         # Check Hit
+        # pyrefly: ignore [missing-attribute]
         if not self.check_hit(attacker, defender, battle):
             msg += "But it missed!\n"
             if self.effect == 120:
@@ -284,6 +318,7 @@ class MoveUse:
             return msg
         
         # Absorbs
+        # pyrefly: ignore [missing-attribute]
         if self.targets_opponent() and self.effect != 459:
             # Heal
             if current_type == ElementType.ELECTRIC and defender.ability(attacker=attacker, move=self) == Ability.VOLT_ABSORB:
@@ -333,15 +368,19 @@ class MoveUse:
         if not defender.substitute:
             if current_type == ElementType.WATER and defender.held_item == "absorb-bulb":
                 msg += defender.append_spatk(1, attacker=defender, move=self, source="its absorb bulb")
+                # pyrefly: ignore [missing-attribute]
                 defender.held_item.use()
             if current_type == ElementType.ELECTRIC and defender.held_item == "cell-battery":
                 msg += defender.append_attack(1, attacker=defender, move=self, source="its cell battery")
+                # pyrefly: ignore [missing-attribute]
                 defender.held_item.use()
             if current_type == ElementType.WATER and defender.held_item == "luminous-moss":
                 msg += defender.append_spdef(1, attacker=defender, move=self, source="its luminous moss")
+                # pyrefly: ignore [missing-attribute]
                 defender.held_item.use()
             if current_type == ElementType.ICE and defender.held_item == "snowball":
                 msg += defender.append_attack(1, attacker=defender, move=self, source="its snowball")
+                # pyrefly: ignore [missing-attribute]
                 defender.held_item.use()
 
         # Metronome
@@ -443,6 +482,7 @@ class MoveUse:
                 power = 80
             else:
                 power = 120
+            # pyrefly: ignore [missing-attribute]
             m = self.present(power)
             msgadd, _ = m.attack(attacker, defender, battle)
             msg += msgadd
@@ -464,18 +504,22 @@ class MoveUse:
         # Turn 1 hit moves
         if self.effect == 81 and attacker.locked_move:
             if attacker.locked_move.turn == 0:
+                # pyrefly: ignore [missing-attribute]
                 msgadd, numhits = self.attack(attacker, defender, battle)
                 msg += msgadd
                 
         # Turn 2 hit moves
         elif self.effect in (40, 76, 146, 152, 156, 256, 257, 264, 273, 332, 333, 366, 451, 502) and attacker.locked_move:
             if attacker.locked_move.turn == 1:
+                # pyrefly: ignore [missing-attribute]
                 if self.damage_class in (DamageClass.PHYSICAL, DamageClass.SPECIAL):
+                    # pyrefly: ignore [missing-attribute]
                     msgadd, numhits = self.attack(attacker, defender, battle)
                     msg += msgadd
                 
         # Turn 3 hit moves
         elif self.effect == 27:
+            # pyrefly: ignore [missing-attribute]
             if attacker.locked_move.turn == 2:
                 msg += defender.damage(attacker.bide * 2, battle, move=self, move_type=current_type, attacker=attacker)
                 attacker.bide = None
@@ -531,6 +575,7 @@ class MoveUse:
                 if poke.hp == 0:
                     continue
                 if poke is attacker:
+                    # pyrefly: ignore [missing-attribute]
                     msgadd, nh = self.attack(attacker, defender, battle)
                     msg += msgadd
                     numhits += nh
@@ -559,7 +604,9 @@ class MoveUse:
                     numhits += nh
         
         # Other damaging moves
+        # pyrefly: ignore [missing-attribute]
         elif self.damage_class in (DamageClass.PHYSICAL, DamageClass.SPECIAL):
+            # pyrefly: ignore [missing-attribute]
             msgadd, numhits = self.attack(attacker, defender, battle)
             msg += msgadd
         
@@ -658,6 +705,7 @@ class MoveUse:
         if self.effect == 34:
             msg += defender.nv.apply_status("b-poison", battle, attacker=attacker, move=self)
         if self.effect == 2:
+            # pyrefly: ignore [missing-attribute]
             if self.id == 464 and attacker._name != "Darkrai":
                 msg += f"{attacker.name} can't use the move!\n"
             else:
@@ -897,6 +945,7 @@ class MoveUse:
                 if self.effect in (32, 76, 93, 147, 151, 159, 274, 275, 276, 425, 475, 501):
                     if random.randint(1, 100) <= effect_chance:
                         msg += defender.flinch(move=self, attacker=attacker)
+                # pyrefly: ignore [missing-attribute]
                 elif self.damage_class in (DamageClass.PHYSICAL, DamageClass.SPECIAL):
                     if attacker.ability() == Ability.STENCH:
                         if random.randint(1, 100) <= 10:
@@ -1021,7 +1070,9 @@ class MoveUse:
         if (
             attacker.held_item == "life-orb"
             and defender.owner.has_alive_pokemon()
+            # pyrefly: ignore [missing-attribute]
             and self.damage_class != DamageClass.STATUS
+            # pyrefly: ignore [missing-attribute]
             and (attacker.ability() != Ability.SHEER_FORCE or self.effect_chance is None)
             and self.effect != 149
         ):
@@ -1049,21 +1100,26 @@ class MoveUse:
                 if defender.owner.current_pokemon is not None:
                     defender.owner.current_pokemon.has_moved = True
         # A red-card forces the attacker to swap to a random poke, even if they used a switch out move
+        # pyrefly: ignore [missing-attribute]
         elif defender.held_item == "red-card" and defender.hp > 0 and self.damage_class != DamageClass.STATUS:
             swaps = attacker.owner.valid_swaps(defender, battle, check_trap=False)
             if not swaps:
                 pass
             elif attacker.ability(attacker=defender, move=self) == Ability.SUCTION_CUPS:
                 msg += f"{attacker.name}'s suction cups kept it in place from {defender.name}'s red card!\n"
+                # pyrefly: ignore [missing-attribute]
                 defender.held_item.use()
             elif attacker.ability(attacker=defender, move=self) == Ability.GUARD_DOG:
                 msg += f"{attacker.name}'s guard dog kept it in place from {defender.name}'s red card!\n"
+                # pyrefly: ignore [missing-attribute]
                 defender.held_item.use()
             elif attacker.ingrain:
                 msg += f"{attacker.name} is ingrained in the ground from {defender.name}'s red card!\n"
+                # pyrefly: ignore [missing-attribute]
                 defender.held_item.use()
             else:
                 msg += f"{defender.name} held up its red card against {attacker.name}!\n"
+                # pyrefly: ignore [missing-attribute]
                 defender.held_item.use()
                 msg += attacker.remove(battle)
                 idx = random.choice(swaps)
@@ -1252,6 +1308,7 @@ class MoveUse:
         
         # Conversion 2
         if self.effect == 94:
+            # pyrefly: ignore [missing-attribute]
             t = self.get_conversion_2(attacker, defender, battle)
             attacker.type_ids = [t]
             t = ElementType(t).name.lower()
@@ -1902,8 +1959,10 @@ class MoveUse:
                 else:
                     msg += defender.nv.apply_status("paralysis", battle, attacker=attacker, move=self)
         
+        # pyrefly: ignore [missing-attribute]
         if self.is_sound_based() and attacker.held_item == "throat-spray":
             msg += attacker.append_spatk(1, attacker=attacker, source="it's throat spray")
+            # pyrefly: ignore [missing-attribute]
             attacker.held_item.use()
         
         # Tar Shot
@@ -1931,6 +1990,7 @@ class MoveUse:
             msg += f"{defender.name} got covered in sticky candy syrup!\n"
         
         # Dancer Ability - Runs at the end of move usage
+        # pyrefly: ignore [missing-attribute]
         if defender.ability(attacker=attacker, move=self) == Ability.DANCER and self.is_dance() and use_pp:
             hm = defender.has_moved
             msg += self.use(defender, attacker, battle, use_pp=False)

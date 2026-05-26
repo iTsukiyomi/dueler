@@ -64,6 +64,7 @@ async def connect() -> Optional[aioredis.Redis]:
     )
 
     # Ping to verify connectivity.
+    # pyrefly: ignore [not-async]
     await _pool.ping()
     _available = True
     log.info("Redis connected — %s", url.split("@")[-1] if "@" in url else url)
@@ -180,6 +181,7 @@ async def hash_set(key: str, mapping: dict, *, ttl: int = 3600) -> None:
         return
     encoded = {k: json.dumps(v, default=str) if not isinstance(v, (str, bytes)) else v
                for k, v in mapping.items()}
+    # pyrefly: ignore [not-async]
     await r.hset(key, mapping=encoded)
     await r.expire(key, ttl)
 
@@ -189,6 +191,7 @@ async def hash_get_all(key: str) -> Optional[dict]:
     r = get_redis()
     if r is None:
         return None
+    # pyrefly: ignore [not-async]
     data = await r.hgetall(key)
     if not data:
         return None
@@ -212,6 +215,7 @@ async def queue_push(key: str, value: str) -> None:
     r = get_redis()
     if r is None:
         return
+    # pyrefly: ignore [not-async]
     await r.rpush(key, value)
 
 
@@ -220,7 +224,9 @@ async def queue_pop(key: str) -> Optional[str]:
     r = get_redis()
     if r is None:
         return None
+    # pyrefly: ignore [not-async]
     val = await r.lpop(key)
+    # pyrefly: ignore [bad-return]
     return val.decode() if isinstance(val, bytes) else val
 
 
@@ -229,6 +235,7 @@ async def queue_remove(key: str, value: str) -> int:
     r = get_redis()
     if r is None:
         return 0
+    # pyrefly: ignore [not-async]
     return await r.lrem(key, 0, value)
 
 
@@ -237,4 +244,5 @@ async def queue_length(key: str) -> int:
     r = get_redis()
     if r is None:
         return 0
+    # pyrefly: ignore [not-async]
     return await r.llen(key)

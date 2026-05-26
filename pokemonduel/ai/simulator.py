@@ -193,6 +193,7 @@ def _switch_in(trainer, opponent, battle) -> str:
     if not valid:
         return msg
     trainer.switch_poke(valid[0])
+    # pyrefly: ignore [missing-attribute]
     msg += trainer.current_pokemon.send_out(opponent.current_pokemon, battle)
     return msg
 

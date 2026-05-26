@@ -192,7 +192,9 @@ class TeamService:
 
             elif low.startswith("- "):
                 move_name = line[2:].strip().lower().replace(" ", "-")
+                # pyrefly: ignore [bad-argument-type]
                 if len(slot["moves"]) < 4:
+                    # pyrefly: ignore [missing-attribute]
                     slot["moves"].append(move_name)
 
             elif low.startswith("happiness:"):
@@ -202,7 +204,9 @@ class TeamService:
                     pass
 
         # Pad moves to 4 if fewer provided
+        # pyrefly: ignore [bad-argument-type]
         while len(slot["moves"]) < 4:
+            # pyrefly: ignore [missing-attribute]
             slot["moves"].append("tackle")
 
         return slot

@@ -158,6 +158,7 @@ class EconomyCog(commands.Cog, name="Economy"):
     # -- ;rank -------------------------------------------------------------
 
     @commands.command(name="rank")
+    # pyrefly: ignore [bad-function-definition]
     async def rank(self, ctx: commands.Context, member: discord.Member = None):
         """
         Show a player's rank and Elo.
@@ -192,6 +193,7 @@ class EconomyCog(commands.Cog, name="Economy"):
     # -- ;profile ----------------------------------------------------------
 
     @commands.command(name="profile", aliases=["prof"])
+    # pyrefly: ignore [bad-function-definition]
     async def profile(self, ctx: commands.Context, member: discord.Member = None):
         """
         Show a player's full profile.

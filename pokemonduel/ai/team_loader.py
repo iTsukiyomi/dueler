@@ -68,12 +68,14 @@ def build_party(raw_data_list: List[dict]) -> List:
 
 
 def random_team(seed: Optional[int] = None, team_size: int = 6) -> List:
+    # pyrefly: ignore [bad-argument-type]
     team_data = generate_random_team(team_size=team_size, seed=seed)
     raw       = convert_team_to_raw_data(team_data, "Random Team")
     return build_party(raw)
 
 
 def random_two_teams(seed: Optional[int] = None) -> Tuple[List, List]:
+    # pyrefly: ignore [bad-argument-type]
     t1, t2 = generate_two_teams(seed=seed)
     raw1   = convert_team_to_raw_data(t1, "Team 1")
     raw2   = convert_team_to_raw_data(t2, "Team 2")

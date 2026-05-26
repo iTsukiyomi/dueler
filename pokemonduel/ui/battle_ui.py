@@ -127,7 +127,9 @@ class MoveButton(discord.ui.Button):
         self.move = move
 
     async def callback(self, interaction):
+        # pyrefly: ignore [missing-attribute]
         self.view.trainer.selected_action = self.move
+        # pyrefly: ignore [missing-attribute]
         self.view.trainer.event.set()
         await interaction.response.edit_message(content=f"You picked {self.move.pretty_name}. Waiting for opponent.", view=None)
 
@@ -138,7 +140,9 @@ class SwapRequestButton(discord.ui.Button):
         super().__init__(style=discord.ButtonStyle.primary, label="Swap pokemon", disabled=disabled)
 
     async def callback(self, interaction):
+        # pyrefly: ignore [missing-attribute]
         view = SwapView(self.view.trainer, self.view.opponent, self.view.battle, set_move=True)
+        # pyrefly: ignore [missing-attribute]
         self.view.child_views.append(view)
         await interaction.response.edit_message(content="Pick a pokemon:", view=view)
 

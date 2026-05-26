@@ -302,9 +302,11 @@ class PokemonDuel(commands.Cog):
             return
         channel = ctx.channel
         npc1_team_data = await asyncio.to_thread(
+            # pyrefly: ignore [bad-argument-type]
             generate_npc_team, seed=int(ctx.message.id) if ctx.message else None)
         npc1_raw = convert_to_raw_data(npc1_team_data, "NPC Alpha")
         npc2_team_data = await asyncio.to_thread(
+            # pyrefly: ignore [bad-argument-type]
             generate_npc_team, seed=int(ctx.message.id) + 1000 if ctx.message else None)
         npc2_raw = convert_to_raw_data(npc2_team_data, "NPC Beta")
 
@@ -358,6 +360,7 @@ class PokemonDuel(commands.Cog):
             await channel.send(f"Error creating your pokemon: {e}")
             return
         npc_team_data = await asyncio.to_thread(
+            # pyrefly: ignore [bad-argument-type]
             generate_npc_team, seed=int(ctx.message.id) if ctx.message else None)
         npc_raw = convert_to_raw_data(npc_team_data, "NPC Team")
         npc_party = []
@@ -395,6 +398,7 @@ class PokemonDuel(commands.Cog):
             return
         channel = ctx.channel
         team1_data, _ = await asyncio.to_thread(
+            # pyrefly: ignore [bad-argument-type]
             generate_two_teams, seed=int(ctx.message.id) if ctx.message else None)
         raw_party1 = convert_team_to_raw_data(team1_data, "Your Random Team")
         user_party = []
@@ -404,6 +408,7 @@ class PokemonDuel(commands.Cog):
         except Exception as e:
             await channel.send(f"Error creating your Pokemon: {e}")
             return
+        # pyrefly: ignore [bad-argument-type]
         npc_team_data = generate_npc_team(seed=None)
         npc_raw = convert_to_raw_data(npc_team_data, "NPC Team")
         npc_party = []
@@ -441,6 +446,7 @@ class PokemonDuel(commands.Cog):
             await ctx.send("You cannot duel a bot!")
             return
         channel = ctx.channel
+        # pyrefly: ignore [bad-argument-type]
         team1_data, team2_data = generate_two_teams(seed=int(ctx.message.id) if ctx.message else None)
         raw_party1 = convert_team_to_raw_data(team1_data, "Player Team")
         raw_party2 = convert_team_to_raw_data(team2_data, "Random Team")
@@ -461,6 +467,7 @@ class PokemonDuel(commands.Cog):
         initial_message = await ctx.send(
             f"{opponent.mention} You have been challenged to a Random Battle by {ctx.author.name}!\n",
             view=view)
+        # pyrefly: ignore [missing-attribute]
         view.message = initial_message
         if (await self.config.guild(ctx.guild).useThreads()
                 and ctx.channel.permissions_for(ctx.guild.me).create_public_threads
@@ -499,6 +506,7 @@ class PokemonDuel(commands.Cog):
         initial_message = await ctx.send(
             f"{opponent.mention} You have been challenged to {battle_type} by {ctx.author.name}!\n",
             view=view)
+        # pyrefly: ignore [missing-attribute]
         view.message = initial_message
         channel = ctx.channel
         if (await self.config.guild(ctx.guild).useThreads()
@@ -560,6 +568,7 @@ class PokemonDuel(commands.Cog):
         pass
 
     @party.command(name="list", aliases=["view"])
+    # pyrefly: ignore [bad-function-definition]
     async def party_list(self, ctx, user: discord.Member = None):
         member = user or ctx.author
         party = await self.config.member(member).party()
@@ -584,12 +593,14 @@ class PokemonDuel(commands.Cog):
             ability_index = pokemon["ability_index"]
             form_info = await find_one(ctx, "forms", {"identifier": pokname.lower()})
             ab_ids = [record["ability_id"] for record in
+                      # pyrefly: ignore [unsupported-operation]
                       await find(ctx, "poke_abilities", {"pokemon_id": form_info["pokemon_id"]})]
             try:
                 ab_id = ab_ids[ability_index]
             except IndexError:
                 ab_id = ab_ids[0]
             ability = await find_one(ctx, "abilities", {"id": ab_id})
+            # pyrefly: ignore [unsupported-operation]
             ability = ability["identifier"]
             hitem = pokemon["hitem"]; nature = pokemon["nature"].lower()
             happiness = pokemon["happiness"]
@@ -620,6 +631,7 @@ class PokemonDuel(commands.Cog):
         await ctx.send(f"```py\n{msg}```")
 
     @pokemonduelset.command()
+    # pyrefly: ignore [bad-function-definition]
     async def thread(self, ctx, value: bool = None):
         if value is None:
             v = await self.config.guild(ctx.guild).useThreads()
@@ -643,6 +655,7 @@ class PokemonDuel(commands.Cog):
         if not sprite.exists():
             return await ctx.send(f"no sprite for ``{name}`` add it yourself bruv id is ``{poke_id}``")
         poke = await find_one(ctx, "pokemon_stats", {"pokemon_id": poke_id})
+        # pyrefly: ignore [unsupported-operation]
         stats = poke["stats"]
         e = discord.Embed(description=f"hp: `{stats[0]}` | atk: `{stats[1]}` | def: `{stats[2]}`\n"
                                        f"spatk: `{stats[3]}` | spdef: `{stats[4]}` | speed: `{stats[5]}`")

@@ -37,9 +37,12 @@ class ForfeitButton(discord.ui.Button):
         super().__init__(style=discord.ButtonStyle.danger, label="Forfeit duel", row=row)
 
     async def callback(self, interaction):
+        # pyrefly: ignore [missing-attribute]
         view = DuelForfeitView(self.view.trainer)
+        # pyrefly: ignore [missing-attribute]
         self.view.child_views.append(view)
         await interaction.response.send_message(content="Are you sure you want to forfeit?", view=view, ephemeral=True)
         await view.wait()
         if view.confirm:
+            # pyrefly: ignore [missing-attribute]
             self.view.trainer.event.set()

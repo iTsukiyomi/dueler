@@ -89,12 +89,18 @@ class BattleRenderer:
         except Exception:
             # Fallbacks
             default = ImageFont.load_default()
+            # pyrefly: ignore [unsupported-operation]
             fonts["title"] = default
+            # pyrefly: ignore [unsupported-operation]
             fonts["body"] = default
+            # pyrefly: ignore [unsupported-operation]
             fonts["body_bold"] = default
+            # pyrefly: ignore [unsupported-operation]
             fonts["small"] = default
+            # pyrefly: ignore [unsupported-operation]
             fonts["small_bold"] = default
             
+        # pyrefly: ignore [bad-return]
         return fonts
 
     def _load_sprite(self, poke_id: Optional[int], size: Tuple[int, int]) -> Optional[Image.Image]:
@@ -387,6 +393,7 @@ class BattleRenderer:
             from ..core.registry import FORMS, POKEMON_STATS
             norm = identifier.lower().replace('-', '').replace(' ', '')
             form = None
+            # pyrefly: ignore [missing-attribute]
             for k, f in FORMS.items():
                 if k.lower().replace('-', '').replace(' ', '') == norm:
                     form = f

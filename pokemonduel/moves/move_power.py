@@ -7,8 +7,10 @@ class MovePower:
 
     def get_power(self, attacker, defender, battle):
         """Get the power of this move."""
+        # pyrefly: ignore [missing-attribute]
         current_type = self.get_type(attacker, defender, battle)
         # Inflicts damage equal to the user's level.
+        # pyrefly: ignore [missing-attribute]
         if self.effect == 88:
             power = attacker.level
         # Inflicts damage between 50% and 150% of the user's level.
@@ -82,6 +84,7 @@ class MovePower:
                 power = 20
         # Power increases when this move has less PP, up to a maximum of 200.
         elif self.effect == 236:
+            # pyrefly: ignore [missing-attribute]
             if self.pp == 0:
                 power = 200
             elif self.pp == 1:
@@ -136,6 +139,7 @@ class MovePower:
             attacker.fury_cutter = min(4, attacker.fury_cutter + 1)
         # Power doubles every turn this move is used in succession after the first, resetting after five turns.
         elif self.effect == 118:
+            # pyrefly: ignore [missing-attribute]
             power = (2 ** attacker.locked_move.turn) * self.power
         # Power varies randomly from 10 to 150.
         elif self.effect == 127:
@@ -179,10 +183,12 @@ class MovePower:
         elif self.effect == 361 and attacker._name == "Greninja-ash":
             power = 20
         # Power is based on the user's base attack. Only applies when not explicitly overridden.
+        # pyrefly: ignore [missing-attribute]
         elif self.effect == 155 and self.power is None:
             power = (attacker.get_raw_attack() // 10) + 5
         # No special changes to power, return its raw value.
         else:
+            # pyrefly: ignore [missing-attribute]
             power = self.power
         
         if power is None:
@@ -191,6 +197,7 @@ class MovePower:
         #NOTE: this needs to be first as it only applies to raw power
         if attacker.ability() == Ability.TECHNICIAN and power <= 60:
             power *= 1.5
+        # pyrefly: ignore [missing-attribute]
         if attacker.ability() == Ability.TOUGH_CLAWS and self.makes_contact(attacker):
             power *= 1.3
         if attacker.ability() == Ability.RIVALRY and "-x" not in (attacker.gender, defender.gender):
@@ -198,24 +205,32 @@ class MovePower:
                 power *= 1.25
             else:
                 power *= .75
+        # pyrefly: ignore [missing-attribute]
         if attacker.ability() == Ability.IRON_FIST and self.is_punching():
             power *= 1.2
+        # pyrefly: ignore [missing-attribute]
         if attacker.ability() == Ability.STRONG_JAW and self.is_biting():
             power *= 1.5
+        # pyrefly: ignore [missing-attribute]
         if attacker.ability() == Ability.MEGA_LAUNCHER and self.is_aura_or_pulse():
             power *= 1.5
+        # pyrefly: ignore [missing-attribute]
         if attacker.ability() == Ability.SHARPNESS and self.is_slicing():
             power *= 1.5
         if attacker.ability() == Ability.RECKLESS and self.effect in (46, 49, 199, 254, 263, 270):
             power *= 1.2
+        # pyrefly: ignore [missing-attribute]
         if attacker.ability() == Ability.TOXIC_BOOST and self.damage_class == DamageClass.PHYSICAL and attacker.nv.poison():
             power *= 1.5
+        # pyrefly: ignore [missing-attribute]
         if attacker.ability() == Ability.FLARE_BOOST and self.damage_class == DamageClass.SPECIAL and attacker.nv.burn():
             power *= 1.5
         if attacker.ability() == Ability.ANALYTIC and defender.has_moved:
             power *= 1.3
+        # pyrefly: ignore [missing-attribute]
         if attacker.ability() == Ability.BATTERY and self.damage_class == DamageClass.SPECIAL:
             power *= 1.3
+        # pyrefly: ignore [missing-attribute]
         if attacker.ability() == Ability.SHEER_FORCE and self.effect_chance is not None: # Not *perfect* but good enough
             power *= 1.3
         if attacker.ability() == Ability.STAKEOUT and defender.swapped_in:
@@ -226,12 +241,16 @@ class MovePower:
                 power *= (10 + fainted) / 10
         
         # Type buffing abilities - Some use naive type because the type is changed.
+        # pyrefly: ignore [missing-attribute]
         if attacker.ability() == Ability.AERILATE and self.type == ElementType.NORMAL:
             power *= 1.2
+        # pyrefly: ignore [missing-attribute]
         if attacker.ability() == Ability.PIXILATE and self.type == ElementType.NORMAL:
             power *= 1.2
+        # pyrefly: ignore [missing-attribute]
         if attacker.ability() == Ability.GALVANIZE and self.type == ElementType.NORMAL:
             power *= 1.2
+        # pyrefly: ignore [missing-attribute]
         if attacker.ability() == Ability.REFRIGERATE and self.type == ElementType.NORMAL:
             power *= 1.2
         if attacker.ability() == Ability.DRAGONS_MAW and current_type == ElementType.DRAGON:
@@ -328,8 +347,10 @@ class MovePower:
             power *= 1.2
         
         # Damage class buffing items
+        # pyrefly: ignore [missing-attribute]
         if attacker.held_item == "wise-glasses" and self.damage_class == DamageClass.SPECIAL:
             power *= 1.1
+        # pyrefly: ignore [missing-attribute]
         if attacker.held_item == "muscle-band" and self.damage_class == DamageClass.PHYSICAL:
             power *= 1.1
 
@@ -449,6 +470,7 @@ class MovePower:
             power *= 1.3
         if battle.terrain.item == "grassy" and attacker.grounded(battle) and current_type == ElementType.GRASS:
             power *= 1.3
+        # pyrefly: ignore [missing-attribute]
         if battle.terrain.item == "grassy" and defender.grounded(battle, attacker=attacker, move=self) and self.id in (89, 222, 523):
             power *= 0.5
         if battle.terrain.item == "electric" and attacker.grounded(battle) and current_type == ElementType.ELECTRIC:

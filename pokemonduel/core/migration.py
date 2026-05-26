@@ -121,7 +121,6 @@ async def migrate() -> dict:
         len(summary["errors"]),
     )
 
-    await close()
     return summary
 
 
@@ -132,6 +131,8 @@ async def _main() -> None:
     )
     load_dotenv()
     result = await migrate()
+    from .database import close as db_close
+    await db_close()
     print("\n=== Migration Summary ===")
     print(f"  Players created/updated: {result['players_created']}")
     print(f"  Teams created:           {result['teams_created']}")

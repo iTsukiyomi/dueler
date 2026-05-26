@@ -132,6 +132,7 @@ def get_sprite_url(identifier, pokemon_id, use_home):
     # Final fallback: look up by Pokémon name via PokeAPI
     poke_data = fetch_json(f"{API_BASE}/pokemon/{identifier}")
     if poke_data:
+        # pyrefly: ignore [missing-attribute]
         sprites = poke_data.get("sprites", {})
         if use_home:
             home_url = (sprites.get("other") or {}).get("home", {}).get("front_default")
@@ -150,6 +151,7 @@ def save_sprite(sprite_url, filepath):
         return True
     data = fetch_bytes(sprite_url)
     if png_valid(data):
+        # pyrefly: ignore [bad-argument-type]
         Path(filepath).write_bytes(data)
         return True
     return False
@@ -239,6 +241,7 @@ def download_all(output_dir, forms_path, use_home=True, skip_existing=True, dry_
     if dry_run:
         print("DRY RUN — files that would be downloaded:")
         for item in plan:
+            # pyrefly: ignore [unsupported-operation]
             exists = (out / item["filename"]).exists()
             status = "EXISTS   " if (exists and skip_existing) else "DOWNLOAD "
             print(f"  [{status}]  {item['filename']:<15}  {item['identifier']}"
@@ -260,6 +263,7 @@ def download_all(output_dir, forms_path, use_home=True, skip_existing=True, dry_
     pbar = tqdm(plan, desc="Sprites", unit="sprite", ncols=85)
 
     for item in pbar:
+        # pyrefly: ignore [unsupported-operation]
         filepath = out / item["filename"]
         pbar.set_postfix({"file": item["filename"], "ok": success, "fail": len(failed)})
 

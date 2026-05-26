@@ -68,6 +68,8 @@ class LeadButton(discord.ui.Button):
 
     async def callback(self, interaction):
         content = f"You will lead with {self.poke.name}. Waiting for opponent."
+        # pyrefly: ignore [missing-attribute]
         self.view.trainer.switch_poke(self.view.trainer.party.index(self.poke))
+        # pyrefly: ignore [missing-attribute]
         self.view.trainer.event.set()
         await interaction.response.edit_message(content=content, view=None)

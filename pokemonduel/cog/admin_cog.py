@@ -164,6 +164,7 @@ class AdminCog(commands.Cog, name="Admin"):
         try:
             from ..repositories.guild_repository import GuildRepository
             repo = GuildRepository()
+            # pyrefly: ignore [missing-attribute]
             await repo.update(str(ctx.guild.id), prefix=new_prefix)
             await ctx.send(f"✅ Prefix changed to `{new_prefix}`")
         except Exception as exc:

@@ -51,6 +51,7 @@ class NPCTrainer(Trainer):
             elif status_code == "struggle":
                 self.selected_action = Move.struggle()
             else:
+                # pyrefly: ignore [missing-attribute]
                 self.selected_action = self.current_pokemon.moves[random.choice(movedata)]
         self.event.set()
 

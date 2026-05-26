@@ -276,7 +276,9 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
         ws["pokemon"]["nature"] = norm.capitalize()
         await self._save_workspace(ctx)
 
+        # pyrefly: ignore [missing-attribute]
         inc = nature_data.get("increased_stat_id", "?")
+        # pyrefly: ignore [missing-attribute]
         dec = nature_data.get("decreased_stat_id", "?")
         await ctx.send(
             embed=discord.Embed(

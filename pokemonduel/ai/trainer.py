@@ -114,6 +114,7 @@ class Trainer:
         self.elo = EloState.load(self.elo_path)
 
         # ── tensorboard ──
+        # pyrefly: ignore [not-callable]
         self.writer = SummaryWriter(str(self.tb_dir)) if _HAS_TB else None
 
         # ── inference snapshots used by evaluation ──
@@ -179,6 +180,7 @@ class Trainer:
             )
             loss = (per_sample * w).mean()
 
+        # pyrefly: ignore [missing-attribute]
         self.scaler.scale(loss).backward()
         self.scaler.unscale_(self.optimizer)
         torch.nn.utils.clip_grad_norm_(self.net.parameters(), C.OPT_GRAD_CLIP)
