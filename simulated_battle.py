@@ -7,7 +7,7 @@ stubbed out. Two ``NPCTrainer`` objects (each driven by the AlphaZero
 for training runs ("python simulated_battle.py --battles 1000") and for
 end-to-end sanity testing of the engine.
 
-Usage
+Usage 
 -----
 
     python simulated_battle.py                       # 50 battles, default sims

@@ -68,10 +68,16 @@ class PlayerRepository:
         """
         db = get_db()
         now = datetime.now(timezone.utc)
+        
+        insert_doc = PlayerSchema.create(user_id, username)
+        insert_doc.pop("_id", None)
+        insert_doc.pop("username", None)
+        insert_doc.pop("updated_at", None)
+
         doc = await db[COLLECTION].find_one_and_update(
             {"_id": str(user_id)},
             {
-                "$setOnInsert": PlayerSchema.create(user_id, username),
+                "$setOnInsert": insert_doc,
                 "$set": {"username": username, "updated_at": now},
             },
             upsert=True,

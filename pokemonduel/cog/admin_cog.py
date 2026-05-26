@@ -74,9 +74,20 @@ class AdminCog(commands.Cog, name="Admin"):
         )
 
         if result["errors"]:
-            error_text = "\n".join(result["errors"][:5])
-            if len(result["errors"]) > 5:
-                error_text += f"\n... and {len(result['errors']) - 5} more"
+            truncated_errors = []
+            for err in result["errors"][:3]:
+                if len(err) > 200:
+                    truncated_errors.append(err[:197] + "...")
+                else:
+                    truncated_errors.append(err)
+            
+            error_text = "\n".join(truncated_errors)
+            if len(result["errors"]) > 3:
+                error_text += f"\n... and {len(result['errors']) - 3} more"
+                
+            if len(error_text) > 1000:
+                error_text = error_text[:997] + "..."
+                
             embed.add_field(name="Error Details", value=error_text, inline=False)
 
         await msg.edit(content=None, embed=embed)

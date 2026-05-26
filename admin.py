@@ -2,7 +2,6 @@ from discord.ext import commands
 import subprocess
 from typing import List
 
-# hi
 
 def git(cmd: List[str]):
     result = subprocess.run(
@@ -16,7 +15,7 @@ def git(cmd: List[str]):
 
 
 
-class Admin(commands.Cog):
+class Admin(commands.Cog, name="DevAdmin"):
     def __init__(self, bot):
         self.bot = bot
 
