@@ -1,38 +1,34 @@
-import json
-from pathlib import Path
+"""
+pokemonduel.data_gen.query
+==========================
+Backwards-compatible query interface that delegates to the global
+in-memory registries instead of opening JSON files on every call.
+
+The ``ctx`` parameter is kept in the function signatures for API
+compatibility with existing callers, but it is no longer used —
+all data comes from :mod:`pokemonduel.core.registry`.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+from ..core.registry import get_registry
 
 
-async def find(ctx, db, filter):
-    """Fetch all matching rows from a data file."""
-    # Get the directory where your data files are located
-    # ctx parameter is kept for compatibility, but we'll use a fixed path
-    data_dir = Path(__file__).parent.parent / "data"
-    path = data_dir / f"{db}.json"
+async def find(ctx, db: str, filter_dict: dict[str, Any]) -> list[dict]:
+    """Fetch all matching rows from the named registry.
 
-    with open(path, 'r', encoding='utf-8') as f:
-        data = json.load(f)
-
-    results = []
-    for item in data:
-        success = True
-        for key, value in filter.items():
-            if isinstance(value, dict):
-                if "$nin" in value:
-                    if item[key] in value["$nin"]:
-                        success = False
-                        break
-            else:
-                if item[key] != value:
-                    success = False
-                    break
-        if success:
-            results.append(item)
-    return results
+    Replaces the old implementation that opened and scanned a JSON
+    file on every call.  Now delegates to ``_Registry.find()`` which
+    uses indexed lookups when possible and falls back to a linear
+    scan only for complex multi-field filters.
+    """
+    registry = get_registry(db)
+    return registry.find(filter_dict)
 
 
-async def find_one(ctx, db, filter):
-    """Fetch the first matching row from a data file."""
-    results = await find(ctx, db, filter)
-    if results:
-        return results[0]
-    return None
+async def find_one(ctx, db: str, filter_dict: dict[str, Any]) -> dict | None:
+    """Fetch the first matching row from the named registry."""
+    registry = get_registry(db)
+    return registry.find_one(filter_dict)

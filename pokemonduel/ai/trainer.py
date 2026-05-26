@@ -253,12 +253,6 @@ class Trainer:
     def run(self, max_steps: int = C.OPT_TRAIN_STEPS, *,
             min_buffer: int = C.OPT_MIN_BUFFER) -> None:
         log.info("Waiting for buffer to fill (>= %d) ...", min_buffer)
-<<<<<<< HEAD
-        while len(self.buffer) < min_buffer:
-            time.sleep(2.0)
-        log.info("Starting training for %d steps", max_steps)
-        t0 = time.time()
-=======
         wait_t0  = time.time()
         last_sz  = len(self.buffer)
         last_log = wait_t0
@@ -283,21 +277,12 @@ class Trainer:
         t0 = time.time()
         last_log_t = t0
         last_log_step = 0
->>>>>>> 05d15f7 (updated npc ai)
         while self.step < max_steps:
             stats = self.train_step()
             self.maybe_log(stats)
             if self.step % C.OPT_SAVE_EVERY == 0:
                 self.save_latest()
             self.maybe_evaluate()
-<<<<<<< HEAD
-            if self.step % 200 == 0:
-                dt = time.time() - t0
-                rate = self.step / max(1e-6, dt)
-                log.info("step=%d loss=%.3f pol=%.3f val=%.3f lr=%.2e buf=%d  (%.1f steps/s)",
-                         self.step, stats["loss"], stats["policy_loss"],
-                         stats["value_loss"], stats["lr"], stats["buffer"], rate)
-=======
             now = time.time()
             # Log every 200 steps OR every 2 wall-clock seconds (whichever
             # comes first) so progress is visible even when steps are slow.
@@ -312,7 +297,6 @@ class Trainer:
                          rate_recent, rate_overall)
                 last_log_t = now
                 last_log_step = self.step
->>>>>>> 05d15f7 (updated npc ai)
         self.save_latest()
         self.save_best()
         log.info("Training done.")

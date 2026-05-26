@@ -70,11 +70,7 @@ VALUE_HIDDEN       = 384
 # MCTS
 # ─────────────────────────────────────────────────────────────────────────────
 MCTS_SIMULATIONS   = 96           # per move in self-play
-<<<<<<< HEAD
-MCTS_EVAL_SIMS     = 256          # per move in evaluation / live play
-=======
 MCTS_EVAL_SIMS     = 32          # per move in evaluation / live play
->>>>>>> 05d15f7 (updated npc ai)
 MCTS_C_PUCT        = 1.8
 MCTS_DIRICHLET_A   = 0.30         # noise alpha for root exploration
 MCTS_DIRICHLET_E   = 0.25         # mixture weight
@@ -84,67 +80,57 @@ MCTS_TEMP_HIGH     = 1.0          # turns 1..MCTS_TEMP_DROP_TURN → sample soft
 MCTS_TEMP_LOW      = 0.05         # afterwards → near-greedy
 MCTS_TEMP_DROP_T   = 12
 MCTS_MAX_DEPTH     = 4            # how many real-engine turns to look ahead
+MCTS_TIME_BUDGET_S = 5.0          # wall-clock budget per MCTS search
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SELF-PLAY
 # ─────────────────────────────────────────────────────────────────────────────
-SELFPLAY_WORKERS       = max(1, (os.cpu_count() or 4) - 1)
-SELFPLAY_BATTLES_PER_W = 10_000                # before worker recycles
-SELFPLAY_MAX_TURNS     = 120
-<<<<<<< HEAD
-=======
-SELFPLAY_GAME_TIMEOUT_S = 300
->>>>>>> 05d15f7 (updated npc ai)
-SELFPLAY_RESIGN_V      = -0.97
-SELFPLAY_RESIGN_TURNS  = 5
+SELFPLAY_WORKERS        = max(1, (os.cpu_count() or 4) - 1)
+SELFPLAY_BATTLES_PER_W  = 10_000               # before worker recycles
+SELFPLAY_MAX_TURNS      = 120
+SELFPLAY_GAME_TIMEOUT_S = 90.0                  # wall-clock timeout per game
+SELFPLAY_RESIGN_TURNS   = 200                   # forfeit if game exceeds this
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# REPLAY
+# REPLAY BUFFER
 # ─────────────────────────────────────────────────────────────────────────────
 REPLAY_CAPACITY    = 500_000
-REPLAY_ALPHA       = 0.6          # prioritised replay exponent
+REPLAY_MIN_SIZE    = 2_048        # don't train until we have at least this many
+REPLAY_ALPHA       = 0.6          # prioritised-experience-replay exponent
 REPLAY_BETA_START  = 0.4
 REPLAY_BETA_END    = 1.0
-REPLAY_BETA_STEPS  = 1_000_000
-REPLAY_EPS         = 1e-6
+REPLAY_BETA_STEPS  = 200_000
+REPLAY_EPS         = 1e-6         # small constant to avoid zero priorities
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# OPTIMISER
+# TRAINING / OPTIMISER
 # ─────────────────────────────────────────────────────────────────────────────
+OPT_BATCH_SIZE     = 256
 OPT_LR             = 1e-3
-OPT_LR_MIN         = 5e-5
+OPT_LR_MIN         = 1e-5
 OPT_WEIGHT_DECAY   = 1e-4
-OPT_BATCH_SIZE     = 1024
 OPT_GRAD_CLIP      = 1.0
-OPT_VALUE_COEF     = 1.0
-OPT_POLICY_COEF    = 1.0
-OPT_ENTROPY_COEF   = 0.001
-OPT_TRAIN_STEPS    = 5_000_000
-OPT_WARMUP_STEPS   = 2_000
-OPT_COSINE_PERIOD  = 200_000      # cosine restart period (in steps)
-OPT_MIN_BUFFER     = 4_096        # minimum samples before training begins
-OPT_LOG_EVERY      = 50
-<<<<<<< HEAD
-OPT_SAVE_EVERY     = 2_000
-OPT_EVAL_EVERY     = 5_000
-=======
+OPT_TRAIN_STEPS    = 1_000_000
 OPT_SAVE_EVERY     = 10
 OPT_EVAL_EVERY     = 500
->>>>>>> 05d15f7 (updated npc ai)
+OPT_LOG_EVERY      = 50
 OPT_MIXED_PREC     = True         # set False to force fp32
+OPT_WARMUP_STEPS   = 1_000
+OPT_COSINE_PERIOD  = 50_000       # cosine annealing cycle length
+OPT_MIN_BUFFER     = REPLAY_MIN_SIZE
+OPT_POLICY_COEF    = 1.0          # loss weight: policy cross-entropy
+OPT_VALUE_COEF     = 1.0          # loss weight: value MSE
+OPT_ENTROPY_COEF   = 0.01         # loss weight: entropy bonus
+LIVE_BUFFER_POLL_S = 30.0         # seconds between live-buffer file checks
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # EVALUATION
 # ─────────────────────────────────────────────────────────────────────────────
-<<<<<<< HEAD
-EVAL_MATCHES       = 60
-=======
 EVAL_MATCHES       = 10
->>>>>>> 05d15f7 (updated npc ai)
 EVAL_PROMOTE_WR    = 0.55         # candidate must win ≥ 55% to replace best
 ELO_K              = 16.0
 ELO_INIT           = 1200.0
@@ -160,3 +146,4 @@ def torch_device():
     if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
         return torch.device("mps")
     return torch.device("cpu")
+

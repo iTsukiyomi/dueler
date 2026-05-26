@@ -65,11 +65,7 @@ def load_checkpoint(path: str | Path,
     path = Path(path)
     if not path.exists():
         return {"step": 0, "extra": {}}
-<<<<<<< HEAD
-    payload = torch.load(path, map_location=map_location or "cpu")
-=======
     payload = torch.load(path, map_location=map_location or "cpu", weights_only=False)
->>>>>>> 05d15f7 (updated npc ai)
     network.load_state_dict(payload["network"], strict=strict)
     if optimizer is not None and payload.get("optimizer") is not None:
         optimizer.load_state_dict(payload["optimizer"])

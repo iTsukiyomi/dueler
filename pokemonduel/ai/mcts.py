@@ -1,27 +1,6 @@
 """
 ai/mcts.py — PUCT Monte-Carlo Tree Search for Pokémon battles.
 
-<<<<<<< HEAD
-We use the standard AlphaZero PUCT formulation but adapt it to the
-imperfect-information, stochastic nature of Pokémon:
-
-* **Determinisation at root** – the hidden-info tracker samples a
-  single plausible opponent set at the root; the search then treats the
-  resulting state as fully observable. This is fast and robust.
-
-* **Chance nodes are folded into transitions** – damage rolls, crits and
-  misses are sampled stochastically during the engine step; we simply
-  *resample* them on every visit, which means the same parent/child pair
-  may produce different next-states. Storing per-child Q averages this
-  out the way Monte-Carlo originally intended.
-
-* **Virtual loss** keeps multiple search threads from racing into the same
-  branch when using leaf batching.
-
-The class is fully *stateless across calls* – ``MCTS.search(battle)`` only
-mutates an internal ``Node`` tree which is discarded when the method
-returns. Cloning of the underlying ``Battle`` is performed lazily.
-=======
 This is the *fast* version of the search. Algorithmically it is the
 standard AlphaZero PUCT pattern; the key engineering decisions that
 make it fast on a Pokémon engine are:
@@ -47,21 +26,14 @@ make it fast on a Pokémon engine are:
 What the trainer learns is unchanged: it still gets visit-count policy
 targets and an end-of-game ±1 value target. Only the *cost* of
 producing them is reduced.
->>>>>>> 05d15f7 (updated npc ai)
 """
 from __future__ import annotations
 
 import math
 import random
-<<<<<<< HEAD
-from typing import Dict, List, Optional, Tuple
-
-import copy
-=======
 import time
 from typing import Dict, List, Optional, Tuple
 
->>>>>>> 05d15f7 (updated npc ai)
 import numpy as np
 
 from . import config as C
@@ -69,9 +41,6 @@ from . import features as F
 from .action_mask import legal_action_mask, apply_action
 from .encoder import BattleEncoder
 from .hidden_info import HiddenInfoTracker
-<<<<<<< HEAD
-from .simulator import run_turn
-=======
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -80,7 +49,6 @@ from .simulator import run_turn
 # ``C.MCTS_TIME_BUDGET_S`` in ``ai/config.py``.
 # ─────────────────────────────────────────────────────────────────────────────
 _DEFAULT_TIME_BUDGET_S = float(getattr(C, "MCTS_TIME_BUDGET_S", 8.0))
->>>>>>> 05d15f7 (updated npc ai)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -179,19 +147,6 @@ class MCTS:
                  max_depth: int = C.MCTS_MAX_DEPTH,
                  batch_size: int = C.MCTS_BATCH_SIZE,
                  add_root_noise: bool = True,
-<<<<<<< HEAD
-                 encoder: Optional[BattleEncoder] = None) -> None:
-        self.inference  = inference
-        self.simulations = simulations
-        self.c_puct      = c_puct
-        self.dir_a       = dirichlet_alpha
-        self.dir_eps     = dirichlet_eps
-        self.virtual_loss = virtual_loss
-        self.max_depth   = max_depth
-        self.batch_size  = max(1, int(batch_size))
-        self.add_root_noise = add_root_noise
-        self.encoder = encoder or BattleEncoder()
-=======
                  encoder: Optional[BattleEncoder] = None,
                  time_budget_s: float = _DEFAULT_TIME_BUDGET_S) -> None:
         self.inference     = inference
@@ -208,23 +163,12 @@ class MCTS:
         # Per-search leaf-evaluation cache. Cleared at the start of every
         # ``search`` call. Keyed by the encoded state bytes.
         self._leaf_cache: Dict[bytes, Tuple[np.ndarray, float, np.ndarray]] = {}
->>>>>>> 05d15f7 (updated npc ai)
 
     # ------------------------------------------------------------------
     def _evaluate(self, battle, perspective_trainer, opponent_trainer
                   ) -> Tuple[np.ndarray, float, np.ndarray]:
         """Run the network on the state from ``perspective_trainer``'s POV.
 
-<<<<<<< HEAD
-        Returns ``(policy, value, mask)``.
-        """
-        state = self.encoder.encode(battle, perspective_trainer, opponent_trainer)
-        mask  = legal_action_mask(battle, perspective_trainer, opponent_trainer)
-        policy_batch, value_batch = self.inference.predict_batch(
-            state[np.newaxis], mask[np.newaxis]
-        )
-        return policy_batch[0], float(value_batch[0]), mask
-=======
         Returns ``(policy, value, mask)``. Memoised per-search by encoded
         state.
         """
@@ -241,19 +185,10 @@ class MCTS:
         v = float(value_batch[0])
         self._leaf_cache[key] = (p, v, mask)
         return p, v, mask
->>>>>>> 05d15f7 (updated npc ai)
 
     # ------------------------------------------------------------------
     def search(self, battle, *, our_side: int = 1,
                temperature: float = C.MCTS_TEMP_HIGH) -> Tuple[np.ndarray, int]:
-<<<<<<< HEAD
-        """Run ``simulations`` rollouts and return the visit-count policy
-        and the chosen action.
-
-        ``our_side`` is ``1`` if we are ``battle.trainer1`` and ``2`` if we
-        are ``battle.trainer2``; that drives perspective in the encoder.
-        """
-=======
         """Run rollouts at the root and return the visit-count policy
         and the chosen action.
 
@@ -274,20 +209,15 @@ class MCTS:
         self._leaf_cache.clear()
         deadline = time.monotonic() + self.time_budget_s
 
->>>>>>> 05d15f7 (updated npc ai)
         us, them = self._sides(battle, our_side)
         root = Node(prior=1.0, to_play=our_side)
 
         # ── root expansion ──
-<<<<<<< HEAD
-        priors, value, mask = self._evaluate(battle, us, them)
-=======
         priors, root_value, mask = self._evaluate(battle, us, them)
         if not mask.any():
             # No legal actions. Return a uniform-zero policy and slot 0.
             return np.zeros(C.N_ACTIONS, dtype=np.float32), 0
 
->>>>>>> 05d15f7 (updated npc ai)
         if self.add_root_noise and mask.sum() > 1:
             noise = np.random.dirichlet([self.dir_a] * int(mask.sum()))
             legal = np.where(mask)[0]
@@ -301,70 +231,6 @@ class MCTS:
             priors = priors / s
         root.expand(priors, mask, next_to_play=3 - our_side)
 
-<<<<<<< HEAD
-        # ── iterations ──
-        for _ in range(self.simulations):
-            # 1) Clone the engine state — deepcopy is heavy but the only
-            #    correct option for a stateful engine.
-            sim_battle = copy.deepcopy(battle)
-            sim_us, sim_them = self._sides(sim_battle, our_side)
-
-            # 2) Traverse the tree to a leaf, taking actions along the way.
-            node = root
-            path = [(node, None)]
-            depth = 0
-            terminal_winner = None
-            while node.expanded and not node.is_terminal and depth < self.max_depth:
-                action, child = node.select_child(self.c_puct)
-                # Apply the action for *our* trainer; for the opponent, ask
-                # the network to score the same way and pick its best
-                # currently-explored child. In single-agent search this is a
-                # standard "self-play vs self" approximation.
-                sim_us_local, sim_them_local = self._sides(sim_battle, node.to_play)
-                apply_action(action, sim_us_local, sim_them_local, sim_battle)
-
-                # Opponent moves with a quick heuristic – use the network's
-                # greedy choice for *their* side this turn.
-                self._opponent_move(sim_battle, our_side=node.to_play)
-
-                # Resolve a full turn.
-                _msg, winner = run_turn(sim_battle)
-                if winner is not None:
-                    terminal_winner = winner
-                    child.is_terminal = True
-                    child.value = (
-                        1.0 if (winner is sim_battle.trainer1 and our_side == 1)
-                              or (winner is sim_battle.trainer2 and our_side == 2)
-                        else -1.0
-                    )
-                    path.append((child, action))
-                    break
-
-                path.append((child, action))
-                node = child
-                depth += 1
-
-            # 3) Expand leaf
-            if terminal_winner is None and (not node.expanded or depth >= self.max_depth):
-                if not node.is_terminal:
-                    sim_us_local, sim_them_local = self._sides(sim_battle, node.to_play)
-                    leaf_priors, leaf_value, leaf_mask = self._evaluate(
-                        sim_battle, sim_us_local, sim_them_local
-                    )
-                    s = leaf_priors[leaf_mask].sum()
-                    if s > 0:
-                        leaf_priors = leaf_priors / s
-                    node.expand(leaf_priors, leaf_mask, next_to_play=3 - node.to_play)
-                    node.value = leaf_value
-                value = node.value if node.is_terminal else leaf_value
-            else:
-                value = node.value
-
-            # 4) Backup along the path. Values flip sign with perspective.
-            for n, _a in reversed(path):
-                v = value if n.to_play == our_side else -value
-                n.backup(v)
-=======
         # Pre-seed every child with the root value (1 visit each) so that
         # PUCT's exploitation term starts from a sensible Q rather than 0.
         # This gives the search a much better initial policy concentration
@@ -393,7 +259,6 @@ class MCTS:
             child.backup(float(v))
             root.backup(float(v))
             n_done += 1
->>>>>>> 05d15f7 (updated npc ai)
 
         # ── pick action ──
         visits = np.zeros(C.N_ACTIONS, dtype=np.float64)
@@ -415,8 +280,6 @@ class MCTS:
             return policy, best
 
         policy = (adj / denom).astype(np.float32)
-<<<<<<< HEAD
-=======
         # Mask illegal moves before sampling (defensive — temperature
         # softening of legal-only visits should already keep illegals at 0).
         policy = np.where(mask, policy, 0.0)
@@ -427,28 +290,10 @@ class MCTS:
             policy[best] = 1.0
             return policy, best
         policy = (policy / s).astype(np.float32)
->>>>>>> 05d15f7 (updated npc ai)
         choice = int(np.random.choice(len(policy), p=policy))
         return policy, choice
 
     # ------------------------------------------------------------------
-<<<<<<< HEAD
-    def _opponent_move(self, sim_battle, our_side: int) -> None:
-        opp_side = 3 - our_side
-        opp_us, opp_them = self._sides(sim_battle, opp_side)
-        if opp_us is None or opp_us.current_pokemon is None:
-            return
-        state = self.encoder.encode(sim_battle, opp_us, opp_them)
-        mask  = legal_action_mask(sim_battle, opp_us, opp_them)
-        if not mask.any():
-            return
-        policy, _value = self.inference.predict_batch(state[np.newaxis], mask[np.newaxis])
-        action = int(np.argmax(policy[0]))
-        apply_action(action, opp_us, opp_them, sim_battle)
-
-    # ------------------------------------------------------------------
-=======
->>>>>>> 05d15f7 (updated npc ai)
     @staticmethod
     def _sides(battle, our_side: int):
         if our_side == 1:

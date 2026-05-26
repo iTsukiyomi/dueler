@@ -13,7 +13,7 @@ from ..pokemon import DuelPokemon, create
 from ..data_gen import generate_team_preview, find, find_one
 from ..trainers import MemberTrainer
 from ..trainers.npc_trainer import NPCTrainer
-from ..ai import NPCTeamAI, reload_network
+from ..ai.npc_bridge import NPCTeamAI, reload_network
 from ..ai import config as AI_CONFIG
 
 

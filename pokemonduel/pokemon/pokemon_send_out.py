@@ -441,13 +441,6 @@ class DuelPokemonSendOut:
             self.owner.current_pokemon = None
         if battle.weather.recheck_ability_weather():
             msg += "The weather cleared!\n"
-<<<<<<< HEAD
-        self.attack = self.base_stats[self._name][1]
-        self.defense = self.base_stats[self._name][2]
-        self.spatk = self.base_stats[self._name][3]
-        self.spdef = self.base_stats[self._name][4]
-        self.speed = self.base_stats[self._name][5]
-=======
         # Look up base stats for the current form name. If the form is
         # missing from the table (e.g. a rare regional/mega variant whose
         # key differs from the engine's ``_name``), fall back to the
@@ -476,7 +469,6 @@ class DuelPokemonSendOut:
                 )
             except Exception:
                 pass
->>>>>>> 05d15f7 (updated npc ai)
         self.hpiv = self.starting_hpiv
         self.atkiv = self.starting_atkiv
         self.defiv = self.starting_defiv
