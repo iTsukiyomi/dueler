@@ -10,7 +10,6 @@ Boot sequence:
 
 import logging
 
-from .cog.commands import PokemonDuel
 from .core.registry import load_all
 
 log = logging.getLogger("dueler.init")
@@ -45,7 +44,23 @@ async def setup(bot):
         log.error("Database initialisation failed: %s", exc, exc_info=True)
 
     # 4. Load cogs
-    try:
-        await bot.add_cog(PokemonDuel(bot))
-    except Exception as exc:
-        log.error("Failed to load PokemonDuel cog: %s", exc, exc_info=True)
+    from .cog.commands import PokemonDuel
+    from .cog.party_cog import PartyCog
+    from .cog.teambuilder_cog import TeambuilderCog
+    from .cog.economy_cog import EconomyCog
+    from .cog.admin_cog import AdminCog
+
+    cogs = [
+        PokemonDuel(bot),
+        PartyCog(bot),
+        TeambuilderCog(bot),
+        EconomyCog(bot),
+        AdminCog(bot),
+    ]
+
+    for cog in cogs:
+        try:
+            await bot.add_cog(cog)
+            log.info("Loaded cog: %s", cog.qualified_name)
+        except Exception as exc:
+            log.error("Failed to load cog %s: %s", type(cog).__name__, exc, exc_info=True)
