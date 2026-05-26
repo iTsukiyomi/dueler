@@ -517,14 +517,39 @@ class BattleRenderer:
         self._draw_glass_panel(draw, 15, 15, width - 15, height - 15, border_color=(255, 255, 255, 50))
 
         # Extract values depending on whether input is dict or object
+        from ..core.registry import FORMS, POKE_ABILITIES, ABILITIES
         if isinstance(poke, dict):
-            poke_id = poke.get("pokid", poke.get("pokemon_id", poke.get("id", None)))
+            # Resolve pokemon_id from FORMS name
+            pokname = poke.get("pokname", "")
+            poke_id = None
+            if pokname:
+                form_info = FORMS.get(pokname.lower())
+                if form_info:
+                    poke_id = form_info.get("pokemon_id")
+            if not poke_id:
+                poke_id = poke.get("pokid", poke.get("pokemon_id", poke.get("id", None)))
+
             name_text = poke.get("pokname", "?").replace('-', ' ').title()
             nick_text = poke.get("nickname") or poke.get("_nickname")
             display_name = nick_text if nick_text and nick_text != "None" else name_text
             
             nature_val = poke.get("nature", "Serious")
+            
+            # Resolve ability dynamically from ability_index
             ability_val = poke.get("ability", "None")
+            if (ability_val == "None" or not ability_val) and "ability_index" in poke:
+                pn = poke.get("pokname", "").lower()
+                form_info = FORMS.get(pn)
+                if form_info:
+                    pokemon_id = form_info["pokemon_id"]
+                    records = POKE_ABILITIES.by_secondary(pokemon_id)
+                    curr_idx = poke.get("ability_index", 0)
+                    if records and 0 <= curr_idx < len(records):
+                        ab_id = records[curr_idx]["ability_id"]
+                        ab_data = ABILITIES.find_one({"id": ab_id})
+                        if ab_data:
+                            ability_val = ab_data.get("identifier", "None")
+            
             item_val = poke.get("hitem", "None")
             
             base_stats = self._get_base_stats(poke.get("pokname", ""))
@@ -547,13 +572,37 @@ class BattleRenderer:
             }
             moves = poke.get("moves", [])
         else:
-            poke_id = getattr(poke, 'pokemon_id', getattr(poke, 'id', None))
-            name_text = poke._name.replace('-', ' ').title()
+            # Resolve pokemon_id from FORMS name
+            raw_name = getattr(poke, '_name', '').lower()
+            poke_id = None
+            if raw_name:
+                form_info = FORMS.get(raw_name)
+                if form_info:
+                    poke_id = form_info.get("pokemon_id")
+            if not poke_id:
+                poke_id = getattr(poke, 'pokemon_id', getattr(poke, 'id', None))
+
+            name_text = getattr(poke, '_name', '').replace('-', ' ').title()
             nick_text = getattr(poke, '_nickname', None)
             display_name = nick_text if nick_text and nick_text != "None" else name_text
             
             nature_val = getattr(poke, 'nature', 'Serious')
+            
+            # Resolve ability dynamically from ability_index
             ability_val = getattr(poke, 'ability', 'None')
+            if (ability_val == "None" or not ability_val) and hasattr(poke, "ability_index"):
+                pn = getattr(poke, '_name', "").lower()
+                form_info = FORMS.get(pn)
+                if form_info:
+                    pokemon_id = form_info["pokemon_id"]
+                    records = POKE_ABILITIES.by_secondary(pokemon_id)
+                    curr_idx = getattr(poke, "ability_index", 0)
+                    if records and 0 <= curr_idx < len(records):
+                        ab_id = records[curr_idx]["ability_id"]
+                        ab_data = ABILITIES.find_one({"id": ab_id})
+                        if ab_data:
+                            ability_val = ab_data.get("identifier", "None")
+
             item_val = getattr(poke, 'item', 'None')
             
             base_stats = getattr(poke, 'base_stats', {})

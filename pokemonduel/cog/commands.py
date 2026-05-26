@@ -216,18 +216,16 @@ class PokemonDuel(commands.Cog):
                 del self.games[int(battle.ctx.message.id)]
 
             # ── Elo & Economy hook ────────────────────────────────
-            # Only update stats for PvP matches (both trainers human).
             if winner is not None:
                 loser = (
                     battle.trainer2 if winner is battle.trainer1
                     else battle.trainer1
                 )
-                if (
-                    hasattr(winner, "member")
-                    and hasattr(loser, "member")
-                    and winner.is_human()
-                    and loser.is_human()
-                ):
+                is_w_human = winner.is_human() if hasattr(winner, "is_human") else False
+                is_l_human = loser.is_human() if hasattr(loser, "is_human") else False
+
+                if is_w_human and is_l_human:
+                    # PvP Match
                     try:
                         from ..services.player_service import PlayerService
                         svc = PlayerService()
@@ -250,6 +248,57 @@ class PokemonDuel(commands.Cog):
                     except Exception as exc:
                         self.log.warning(
                             "Failed to update Elo/economy after match: %s", exc
+                        )
+                elif is_w_human and not is_l_human:
+                    # PvE Match - Human won
+                    try:
+                        from ..services.player_service import PlayerService
+                        svc = PlayerService()
+                        new_elo = await svc.record_npc_match_result(
+                            str(winner.id),
+                            winner.name,
+                            won=True,
+                            money_reward=100,
+                        )
+                        import discord as _dc
+                        embed = _dc.Embed(
+                            title="NPC Match Recorded",
+                            description=(
+                                f"**{winner.name}** won against the NPC!\n"
+                                f"Elo: **{new_elo}** (No Change)\n"
+                                f"**{winner.name}** earned ¥100."
+                            ),
+                            color=_dc.Color.gold(),
+                        )
+                        await battle.channel.send(embed=embed)
+                    except Exception as exc:
+                        self.log.warning(
+                            "Failed to update PvE economy after match: %s", exc
+                        )
+                elif not is_w_human and is_l_human:
+                    # PvE Match - Human lost
+                    try:
+                        from ..services.player_service import PlayerService
+                        svc = PlayerService()
+                        new_elo = await svc.record_npc_match_result(
+                            str(loser.id),
+                            loser.name,
+                            won=False,
+                            money_reward=0,
+                        )
+                        import discord as _dc
+                        embed = _dc.Embed(
+                            title="NPC Match Recorded",
+                            description=(
+                                f"**{loser.name}** lost against the NPC!\n"
+                                f"Elo: **{new_elo}** (No Change)"
+                            ),
+                            color=_dc.Color.red(),
+                        )
+                        await battle.channel.send(embed=embed)
+                    except Exception as exc:
+                        self.log.warning(
+                            "Failed to update PvE economy after match: %s", exc
                         )
             # ── End Elo hook ──────────────────────────────────────
 
@@ -539,7 +588,7 @@ class PokemonDuel(commands.Cog):
     # ──────────────────────────────────────────────────────────────────
     #  Party management
     # ──────────────────────────────────────────────────────────────────
-    @commands.group("party")
+    @commands.group("old_party")
     async def party(self, ctx):
         """Manage your party of pokemon."""
         pass

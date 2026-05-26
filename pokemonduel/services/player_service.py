@@ -113,6 +113,41 @@ class PlayerService:
         )
         return new_w, new_l
 
+    async def record_npc_match_result(
+        self,
+        player_id: str,
+        username: str,
+        *,
+        won: bool,
+        money_reward: int = 0,
+    ) -> int:
+        """
+        Record a match against an NPC: increment wins/losses, award money, no Elo change.
+
+        Returns the player's current Elo.
+        """
+        await self.ensure_profile(str(player_id), username)
+        player = await self._repo.get(str(player_id))
+        if player is None:
+            log.warning("Cannot record NPC match — missing profile for player %s", player_id)
+            return 1000
+
+        w_elo = player.get("elo", 1000)
+
+        if won:
+            player_doc = await self._repo.update_stats(
+                str(player_id), wins_delta=1, elo_delta=0,
+            )
+            if money_reward > 0:
+                await self._repo.update_wallet(str(player_id), wallet_delta=money_reward)
+        else:
+            player_doc = await self._repo.update_stats(
+                str(player_id), losses_delta=1, elo_delta=0,
+            )
+
+        return player_doc["elo"] if player_doc else w_elo
+
+
     # -- Economy -----------------------------------------------------------
 
     async def get_balance(self, user_id: str) -> dict:
