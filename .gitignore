@@ -1,7 +1,4 @@
-<<<<<<< HEAD
 .env
-=======
->>>>>>> 05d15f7 (updated npc ai)
 *.log
 bot.log
 
@@ -10,14 +7,14 @@ __pycache__/
 *.pyo
 
 pokemonduel/__pycache__/
-*.pyc
-*.pyo
 
-<<<<<<< HEAD
 .idea/
-=======
-.idea/
-
 .venv/
-.env
->>>>>>> 05d15f7 (updated npc ai)
+
+# Canvas rendering temp files
+battle_msg.png
+team_preview.png
+
+# OS artifacts
+.DS_Store
+Thumbs.db

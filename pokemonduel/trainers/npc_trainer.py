@@ -1,16 +1,10 @@
-<<<<<<< HEAD
-=======
 import logging
->>>>>>> 05d15f7 (updated npc ai)
 import random
 from ..moves import Move
 from .trainer_base import Trainer
 
-<<<<<<< HEAD
-=======
 log = logging.getLogger("dueler.npc_trainer")
 
->>>>>>> 05d15f7 (updated npc ai)
 
 class NPCTrainer(Trainer):
     """
@@ -30,11 +24,6 @@ class NPCTrainer(Trainer):
             self.ai.set_battle(battle)
             chosen_move, switch_idx = self.ai.choose_move()
             if switch_idx is not None:
-<<<<<<< HEAD
-                # Switch instead of attacking
-                self.switch_poke(switch_idx)
-            else:
-=======
                 # Queue the switch as an integer selected_action so the battle
                 # loop handles it at the correct time (same as a human swap).
                 # Previously this called self.switch_poke() directly, which
@@ -53,7 +42,6 @@ class NPCTrainer(Trainer):
                     self.name,
                     getattr(chosen_move, "name", repr(chosen_move)),
                 )
->>>>>>> 05d15f7 (updated npc ai)
                 self.selected_action = chosen_move
         else:
             # Fallback to random if no AI set
@@ -85,8 +73,4 @@ class NPCTrainer(Trainer):
 
     def is_human(self):
         """Returns True if this trainer is a human player, False if it is an AI."""
-<<<<<<< HEAD
         return False
-=======
-        return False
->>>>>>> 05d15f7 (updated npc ai)
