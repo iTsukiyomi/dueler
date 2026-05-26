@@ -214,6 +214,45 @@ class PokemonDuel(commands.Cog):
         else:
             if int(battle.ctx.message.id) in self.games:
                 del self.games[int(battle.ctx.message.id)]
+
+            # ── Elo & Economy hook ────────────────────────────────
+            # Only update stats for PvP matches (both trainers human).
+            if winner is not None:
+                loser = (
+                    battle.trainer2 if winner is battle.trainer1
+                    else battle.trainer1
+                )
+                if (
+                    hasattr(winner, "member")
+                    and hasattr(loser, "member")
+                    and winner.is_human()
+                    and loser.is_human()
+                ):
+                    try:
+                        from ..services.player_service import PlayerService
+                        svc = PlayerService()
+                        w_elo, l_elo = await svc.record_match_result(
+                            str(winner.id),
+                            str(loser.id),
+                            money_reward=100,
+                        )
+                        import discord as _dc
+                        embed = _dc.Embed(
+                            title="Match Recorded",
+                            description=(
+                                f"**{winner.name}** Elo: **{w_elo}** (+↑)  |  "
+                                f"**{loser.name}** Elo: **{l_elo}** (−↓)\n"
+                                f"**{winner.name}** earned ¥100."
+                            ),
+                            color=_dc.Color.gold(),
+                        )
+                        await battle.channel.send(embed=embed)
+                    except Exception as exc:
+                        self.log.warning(
+                            "Failed to update Elo/economy after match: %s", exc
+                        )
+            # ── End Elo hook ──────────────────────────────────────
+
             return winner
 
     # ──────────────────────────────────────────────────────────────────
