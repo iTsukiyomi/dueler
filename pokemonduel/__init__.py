@@ -1,16 +1,51 @@
+"""
+pokemonduel — PokemonDuel Discord bot package.
+
+Boot sequence:
+1. Load static game data into in-memory registries
+2. Connect to MongoDB (persistence) and Redis (caching)
+3. Ensure database indexes exist
+4. Load all cogs
+"""
+
+import logging
+
 from .cog.commands import PokemonDuel
 from .core.registry import load_all
+
+log = logging.getLogger("dueler.init")
 
 guildowner = 1234
 
 
 async def setup(bot):
-    # Load all static game data into memory before any cog tries to
-    # query forms, moves, abilities, etc.  This replaces the per-call
-    # json.load() pattern with O(1) hash-table lookups.
+    # 1. Load all static game data into memory before any cog tries to
+    #    query forms, moves, abilities, etc.
     load_all()
+    log.info("Static registries loaded.")
 
+    # 2. Connect to MongoDB and Redis (non-blocking, tolerant of missing Redis)
+    try:
+        from .core.database import connect as db_connect
+        from .core.cache import connect as cache_connect
+
+        await db_connect()
+        await cache_connect()
+
+        # 3. Ensure database indexes exist
+        from .services.player_service import PlayerService
+        from .services.team_service import TeamService
+        await PlayerService().ensure_indexes()
+        await TeamService().ensure_indexes()
+        log.info("Database layer initialised.")
+    except RuntimeError as exc:
+        # MONGO_URI not set — bot runs in degraded mode (JSON fallback)
+        log.warning("Database not available: %s — running in degraded mode.", exc)
+    except Exception as exc:
+        log.error("Database initialisation failed: %s", exc, exc_info=True)
+
+    # 4. Load cogs
     try:
         await bot.add_cog(PokemonDuel(bot))
-    except Exception as e:
-        print(f"Error occurred while setting up PokemonDuel: {e}")
+    except Exception as exc:
+        log.error("Failed to load PokemonDuel cog: %s", exc, exc_info=True)
