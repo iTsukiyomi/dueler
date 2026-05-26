@@ -37,7 +37,7 @@ class EconomyCog(commands.Cog, name="Economy"):
     @commands.command(name="balance", aliases=["bal"])
     async def balance(self, ctx: commands.Context):
         """
-        Check your wallet and bank balance.
+        Check your wallet balance.
 
         Usage: ;balance
         """
@@ -49,64 +49,6 @@ class EconomyCog(commands.Cog, name="Economy"):
             color=discord.Color.gold(),
         )
         embed.add_field(name="💰 Wallet", value=f"¥{bal['wallet']:,}", inline=True)
-        embed.add_field(name="🏦 Bank", value=f"¥{bal['bank']:,}", inline=True)
-        embed.add_field(
-            name="Total",
-            value=f"¥{bal['wallet'] + bal['bank']:,}",
-            inline=True,
-        )
-        await ctx.send(embed=embed)
-
-    # -- ;deposit ----------------------------------------------------------
-
-    @commands.command(name="deposit", aliases=["dep"])
-    async def deposit(self, ctx: commands.Context, amount: int):
-        """
-        Transfer funds from your wallet to the bank.
-
-        Usage: ;deposit <amount>
-        """
-        if amount <= 0:
-            await ctx.send("Amount must be positive.")
-            return
-
-        result = await self._svc.deposit(str(ctx.author.id), amount)
-        if result is None:
-            await ctx.send("Insufficient wallet balance.")
-            return
-
-        embed = discord.Embed(
-            description=f"Deposited **¥{amount:,}** into your bank.",
-            color=discord.Color.green(),
-        )
-        embed.add_field(name="Wallet", value=f"¥{result['wallet']:,}", inline=True)
-        embed.add_field(name="Bank", value=f"¥{result['bank']:,}", inline=True)
-        await ctx.send(embed=embed)
-
-    # -- ;withdraw ---------------------------------------------------------
-
-    @commands.command(name="withdraw", aliases=["with"])
-    async def withdraw(self, ctx: commands.Context, amount: int):
-        """
-        Transfer funds from the bank to your wallet.
-
-        Usage: ;withdraw <amount>
-        """
-        if amount <= 0:
-            await ctx.send("Amount must be positive.")
-            return
-
-        result = await self._svc.withdraw(str(ctx.author.id), amount)
-        if result is None:
-            await ctx.send("Insufficient bank balance.")
-            return
-
-        embed = discord.Embed(
-            description=f"Withdrew **¥{amount:,}** from your bank.",
-            color=discord.Color.green(),
-        )
-        embed.add_field(name="Wallet", value=f"¥{result['wallet']:,}", inline=True)
-        embed.add_field(name="Bank", value=f"¥{result['bank']:,}", inline=True)
         await ctx.send(embed=embed)
 
     # -- ;leaderboard ------------------------------------------------------
@@ -130,7 +72,19 @@ class EconomyCog(commands.Cog, name="Economy"):
         lines = []
         for i, entry in enumerate(entries):
             rank = offset + i + 1
-            name = entry.get("username", "Unknown")
+            user_id = entry.get("_id")
+            
+            resolved_name = entry.get("username", "Unknown")
+            if user_id:
+                try:
+                    user = self.bot.get_user(int(user_id))
+                    if user is None:
+                        user = await self.bot.fetch_user(int(user_id))
+                    if user:
+                        resolved_name = user.name
+                except Exception:
+                    pass
+
             elo = entry.get("elo", 1000)
             wins = entry.get("wins", 0)
             losses = entry.get("losses", 0)
@@ -144,7 +98,7 @@ class EconomyCog(commands.Cog, name="Economy"):
                 medal = "🥉 "
 
             lines.append(
-                f"{medal}**#{rank}** {name} — Elo: **{elo}** ({wins}W/{losses}L)"
+                f"{medal}**#{rank}** {resolved_name} — Elo: **{elo}** ({wins}W/{losses}L)"
             )
 
         embed = discord.Embed(
@@ -214,7 +168,6 @@ class EconomyCog(commands.Cog, name="Economy"):
         wins = profile.get("wins", 0)
         losses = profile.get("losses", 0)
         wallet = profile.get("wallet", 0)
-        bank = profile.get("bank", 0)
         active_team = profile.get("active_party_name") or "None"
         total = wins + losses
         win_rate = f"{(wins / total * 100):.1f}%" if total > 0 else "N/A"
@@ -228,7 +181,6 @@ class EconomyCog(commands.Cog, name="Economy"):
         embed.add_field(name="Elo", value=str(elo), inline=True)
         embed.add_field(name="Record", value=f"{wins}W / {losses}L ({win_rate})", inline=True)
         embed.add_field(name="💰 Wallet", value=f"¥{wallet:,}", inline=True)
-        embed.add_field(name="🏦 Bank", value=f"¥{bank:,}", inline=True)
         embed.add_field(name="Active Team", value=active_team, inline=True)
         await ctx.send(embed=embed)
 

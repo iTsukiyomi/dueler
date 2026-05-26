@@ -116,30 +116,13 @@ class PlayerService:
     # -- Economy -----------------------------------------------------------
 
     async def get_balance(self, user_id: str) -> dict:
-        """Return ``{wallet, bank}`` for a player."""
+        """Return ``{wallet}`` for a player."""
         profile = await self._repo.get(str(user_id))
         if profile is None:
-            return {"wallet": 0, "bank": 0}
+            return {"wallet": 0}
         return {
             "wallet": profile.get("wallet", 0),
-            "bank": profile.get("bank", 0),
         }
-
-    async def deposit(self, user_id: str, amount: int) -> Optional[dict]:
-        """Transfer funds from wallet to bank."""
-        if amount <= 0:
-            return None
-        return await self._repo.update_wallet(
-            str(user_id), wallet_delta=-amount, bank_delta=amount,
-        )
-
-    async def withdraw(self, user_id: str, amount: int) -> Optional[dict]:
-        """Transfer funds from bank to wallet."""
-        if amount <= 0:
-            return None
-        return await self._repo.update_wallet(
-            str(user_id), wallet_delta=amount, bank_delta=-amount,
-        )
 
     # -- Leaderboard / Rank ------------------------------------------------
 

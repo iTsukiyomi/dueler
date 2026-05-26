@@ -253,6 +253,7 @@ TYPE_EFFECTIVENESS: _Registry = _Registry("type_effectiveness", "damage_type_id"
 PFILE:             _Registry = _Registry("pfile",             "id")
 STAT_TYPES:        _Registry = _Registry("stat_types",        "id")
 SETS:              _Registry = _Registry("sets",              "identifier")
+LEARNSETS:         _Registry = _Registry("learnsets",         "identifier")
 
 # Mapping from the legacy "db name" strings used in query.find(ctx, "forms", ...)
 # to the corresponding registry instance.
@@ -269,6 +270,7 @@ _REGISTRY_MAP: dict[str, _Registry] = {
     "pfile":              PFILE,
     "stat_types":         STAT_TYPES,
     "sets":               SETS,
+    "learnsets":          LEARNSETS,
 }
 
 
@@ -321,6 +323,11 @@ def load_all(data_dir: Path | str | None = None) -> None:
     sets_path = base / "sets.json"
     if sets_path.exists():
         SETS.load(sets_path)
+
+    # learnsets.json holds global Pokémon movepools
+    learnsets_path = base / "learnsets.json"
+    if learnsets_path.exists():
+        LEARNSETS.load(learnsets_path)
 
     _loaded = True
     log.info("All static registries loaded — %d total files indexed.", len(_REGISTRY_MAP))

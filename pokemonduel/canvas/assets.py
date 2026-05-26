@@ -29,32 +29,69 @@ class AssetLoader:
             except Exception:
                 pass
 
-        # Procedural fallback: Deep space cyber battle arena gradient
+        if name == "trick_room":
+            # Procedural fallback: Dark violet/magenta grid space for Trick Room
+            fallback = Image.new("RGBA", (width, height))
+            from PIL import ImageDraw
+            draw = ImageDraw.Draw(fallback)
+            
+            for y in range(height):
+                f = y / height
+                r = int(30 * (1 - f) + 10 * f)
+                g = int(10 * (1 - f) + 5 * f)
+                b = int(60 * (1 - f) + 30 * f)
+                draw.line([(0, y), (width, y)], fill=(r, g, b, 255))
+                
+            horizon_y = height // 2
+            for y in range(0, height, 20):
+                opacity = int(70 * (abs(y - horizon_y) / horizon_y))
+                draw.line([(0, y), (width, y)], fill=(255, 0, 255, opacity))
+                
+            center_x = width // 2
+            for x in range(-width, 2 * width, 100):
+                opacity = 50
+                draw.line([(center_x, horizon_y), (x, 0)], fill=(255, 0, 255, opacity))
+                draw.line([(center_x, horizon_y), (x, height)], fill=(255, 0, 255, opacity))
+                
+            self.cache[cache_key] = fallback
+            return fallback
+
+        # Procedural fallback: Classic grass background (old pokemon games style)
         fallback = Image.new("RGBA", (width, height))
-        # Draw a beautiful horizontal gradient with a subtle grid
         from PIL import ImageDraw
         draw = ImageDraw.Draw(fallback)
         
-        # Draw sky gradient (dark blue to purple-gray)
-        for y in range(height):
-            # Calculate gradient factor
-            f = y / height
-            r = int(10 * (1 - f) + 24 * f)
-            g = int(14 * (1 - f) + 28 * f)
-            b = int(28 * (1 - f) + 48 * f)
+        # Draw sky gradient (light blue to cyan-white at horizon)
+        horizon_y = int(height * 0.5)
+        for y in range(horizon_y):
+            f = y / horizon_y
+            r = int(135 * (1 - f) + 224 * f)
+            g = int(206 * (1 - f) + 242 * f)
+            b = int(250 * (1 - f) + 253 * f)
             draw.line([(0, y), (width, y)], fill=(r, g, b, 255))
             
-        # Draw subtle grid lines on the bottom half (the battlefield plane)
-        battle_start_y = int(height * 0.45)
-        for y in range(battle_start_y, height, 15):
-            opacity = int(40 * ((y - battle_start_y) / (height - battle_start_y)))
-            draw.line([(0, y), (width, y)], fill=(0, 240, 255, opacity))
+        # Draw soft green battlefield plane (from light yellowish green to darker forest green)
+        for y in range(horizon_y, height):
+            f = (y - horizon_y) / (height - horizon_y)
+            r = int(152 * (1 - f) + 46 * f)
+            g = int(223 * (1 - f) + 125 * f)
+            b = int(138 * (1 - f) + 50 * f)
+            draw.line([(0, y), (width, y)], fill=(r, g, b, 255))
             
-        # Perspective grid lines meeting at the horizon (center, battle_start_y)
-        horizon_x = width // 2
-        for x in range(-width, 2 * width, 80):
-            opacity = 35
-            draw.line([(horizon_x, battle_start_y), (x, height)], fill=(0, 240, 255, opacity))
+        # Draw a horizontal line at the horizon (darker green grass boundary)
+        draw.line([(0, horizon_y), (width, horizon_y)], fill=(34, 110, 34, 255), width=2)
+        
+        # Add some simple retro grass tufts / patterns on the green battlefield plane
+        import random
+        # Seed it so it's deterministic for the background
+        rnd = random.Random(42)
+        for _ in range(30):
+            gx = rnd.randint(20, width - 40)
+            gy = rnd.randint(horizon_y + 10, height - 20)
+            # Draw a tiny 3-stroke retro grass tuft
+            draw.line([(gx, gy), (gx - 3, gy - 6)], fill=(34, 110, 34, 160), width=1)
+            draw.line([(gx, gy), (gx, gy - 8)], fill=(34, 110, 34, 180), width=1)
+            draw.line([(gx, gy), (gx + 3, gy - 6)], fill=(34, 110, 34, 160), width=1)
 
         self.cache[cache_key] = fallback
         return fallback

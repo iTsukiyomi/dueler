@@ -87,8 +87,11 @@ class PlayerRepository:
         cache_key = _CACHE_KEY.format(user_id=user_id)
         await cache.cache_set(cache_key, doc, ttl=_CACHE_TTL)
 
-        # Ensure leaderboard is in sync
-        await cache.zset_upsert(_LEADERBOARD_KEY, str(user_id), doc.get("elo", 1000))
+        # Ensure leaderboard is in sync (only if they have at least 1 win or loss)
+        if doc.get("wins", 0) > 0 or doc.get("losses", 0) > 0:
+            await cache.zset_upsert(_LEADERBOARD_KEY, str(user_id), doc.get("elo", 1000))
+        else:
+            await cache.zset_remove(_LEADERBOARD_KEY, str(user_id))
 
         return doc
 
@@ -126,7 +129,10 @@ class PlayerRepository:
 
         # Invalidate cache + sync leaderboard
         await cache.cache_delete(_CACHE_KEY.format(user_id=user_id))
-        await cache.zset_upsert(_LEADERBOARD_KEY, str(user_id), doc["elo"])
+        if doc.get("wins", 0) > 0 or doc.get("losses", 0) > 0:
+            await cache.zset_upsert(_LEADERBOARD_KEY, str(user_id), doc["elo"])
+        else:
+            await cache.zset_remove(_LEADERBOARD_KEY, str(user_id))
         return doc
 
     async def update_wallet(
@@ -134,10 +140,9 @@ class PlayerRepository:
         user_id: str,
         *,
         wallet_delta: int = 0,
-        bank_delta: int = 0,
     ) -> Optional[dict]:
         """
-        Atomically adjust wallet/bank balances.
+        Atomically adjust wallet balance.
 
         Includes a guard to prevent negative wallet balance via a
         conditional update (the ``$inc`` only applies if the result
@@ -150,13 +155,11 @@ class PlayerRepository:
         filter_doc: dict[str, Any] = {"_id": str(user_id)}
         if wallet_delta < 0:
             filter_doc["wallet"] = {"$gte": abs(wallet_delta)}
-        if bank_delta < 0:
-            filter_doc["bank"] = {"$gte": abs(bank_delta)}
 
         doc = await db[COLLECTION].find_one_and_update(
             filter_doc,
             {
-                "$inc": {"wallet": wallet_delta, "bank": bank_delta},
+                "$inc": {"wallet": wallet_delta},
                 "$set": {"updated_at": now},
             },
             return_document=True,
@@ -199,7 +202,9 @@ class PlayerRepository:
 
         # Fallback: MongoDB sort
         db = get_db()
-        cursor = db[COLLECTION].find().sort("elo", -1).skip(offset).limit(limit)
+        cursor = db[COLLECTION].find({
+            "$or": [{"wins": {"$gt": 0}}, {"losses": {"$gt": 0}}]
+        }).sort("elo", -1).skip(offset).limit(limit)
         results = []
         async for doc in cursor:
             results.append(doc)
@@ -211,10 +216,22 @@ class PlayerRepository:
 
     async def get_rank(self, user_id: str) -> Optional[int]:
         """Return the 1-based rank of a player on the Elo leaderboard."""
+        # 1. Try Redis
         rank = await cache.zset_rank(_LEADERBOARD_KEY, str(user_id))
         if rank is not None:
             return rank + 1  # 0-based → 1-based
-        return None
+
+        # 2. Fallback to MongoDB count
+        db = get_db()
+        player = await self.get(str(user_id))
+        if player is None or (player.get("wins", 0) == 0 and player.get("losses", 0) == 0):
+            return None
+
+        better_players_count = await db[COLLECTION].count_documents({
+            "elo": {"$gt": player.get("elo", 1000)},
+            "$or": [{"wins": {"$gt": 0}}, {"losses": {"$gt": 0}}]
+        })
+        return better_players_count + 1
 
     # -- Indexes -----------------------------------------------------------
 

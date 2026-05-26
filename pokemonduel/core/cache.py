@@ -172,6 +172,14 @@ async def zset_score(key: str, member: str) -> Optional[float]:
     return await r.zscore(key, member)
 
 
+async def zset_remove(key: str, member: str) -> None:
+    """Remove a member from a sorted set."""
+    r = get_redis()
+    if r is None:
+        return
+    await r.zrem(key, member)
+
+
 # -- Hashes (battle state) -------------------------------------------------
 
 async def hash_set(key: str, mapping: dict, *, ttl: int = 3600) -> None:

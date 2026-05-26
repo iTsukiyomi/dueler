@@ -243,10 +243,99 @@ class BattleRenderer:
             stages_text = " ".join(stages_info[:3]) # Limit to 3 to avoid overflow
             draw.text((start_x, curr_y + 2), stages_text, fill=(255, 255, 255, 160), font=self.fonts["small"])
 
+    def _draw_terrain_overlay(self, draw: ImageDraw.ImageDraw, terrain: str, width: int, height: int) -> None:
+        """Renders glowing terrain rings and highlights around platforms."""
+        terrain_low = terrain.lower().strip()
+        if terrain_low == "normal" or terrain_low == "clear":
+            return
+            
+        # Draw on bottom half of the screen
+        if "electric" in terrain_low:
+            draw.ellipse([95, 355, 365, 425], outline=(248, 208, 48, 200), width=2)
+            draw.ellipse([595, 355, 865, 425], outline=(248, 208, 48, 200), width=2)
+            draw.line([(230, 390), (250, 430), (220, 470)], fill=(248, 208, 48, 150), width=2)
+            draw.line([(730, 390), (710, 430), (740, 470)], fill=(248, 208, 48, 150), width=2)
+            
+        elif "grassy" in terrain_low:
+            draw.ellipse([95, 355, 365, 425], outline=(120, 200, 80, 220), width=2)
+            draw.ellipse([595, 355, 865, 425], outline=(120, 200, 80, 220), width=2)
+            for cx, cy in [(180, 450), (280, 430), (650, 440), (800, 455)]:
+                draw.polygon([(cx, cy), (cx - 4, cy - 8), (cx + 4, cy - 8)], fill=(46, 204, 113, 140))
+                
+        elif "misty" in terrain_low:
+            draw.ellipse([95, 355, 365, 425], outline=(214, 158, 214, 180), width=2)
+            draw.ellipse([595, 355, 865, 425], outline=(214, 158, 214, 180), width=2)
+            for y in range(height - 60, height, 6):
+                opacity = int(40 * ((y - (height - 60)) / 60))
+                draw.line([(0, y), (width, y)], fill=(255, 200, 255, opacity), width=4)
+                
+        elif "psychic" in terrain_low:
+            draw.ellipse([95, 355, 365, 425], outline=(248, 88, 136, 220), width=2)
+            draw.ellipse([595, 355, 865, 425], outline=(248, 88, 136, 220), width=2)
+            draw.ellipse([80, 350, 380, 430], outline=(248, 88, 136, 80), width=1)
+            draw.ellipse([580, 350, 880, 430], outline=(248, 88, 136, 80), width=1)
+
+    def _apply_weather_overlay(self, canvas: Image.Image, weather: str) -> None:
+        """Applies diagonal weather particle overlays and ambient color shading."""
+        weather_low = weather.lower().strip()
+        if weather_low == "clear" or weather_low == "none":
+            return
+            
+        width, height = canvas.size
+        overlay = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(overlay)
+        
+        import random
+        rnd = random.Random(42)
+        
+        if "sun" in weather_low or "sunny" in weather_low:
+            draw.rectangle([0, 0, width, height], fill=(255, 200, 0, 20))
+            for angle in range(120, 210, 10):
+                import math
+                rad = math.radians(angle)
+                ex = 900 + 1000 * math.cos(rad)
+                ey = 0 + 1000 * math.sin(rad)
+                draw.line([(900, 0), (ex, ey)], fill=(255, 255, 200, 30), width=15)
+                
+        elif "rain" in weather_low:
+            draw.rectangle([0, 0, width, height], fill=(0, 50, 150, 25))
+            for _ in range(80):
+                rx = rnd.randint(0, width)
+                ry = rnd.randint(0, height)
+                length = rnd.randint(15, 30)
+                draw.line([(rx, ry), (rx - length // 2, ry + length)], fill=(174, 219, 240, 150), width=1)
+                
+        elif "sandstorm" in weather_low:
+            draw.rectangle([0, 0, width, height], fill=(210, 180, 140, 40))
+            for _ in range(120):
+                rx = rnd.randint(0, width)
+                ry = rnd.randint(0, height)
+                length = rnd.randint(10, 25)
+                draw.line([(rx, ry), (rx + length, ry + length // 3)], fill=(180, 150, 100, 100), width=1)
+                
+        elif "hail" in weather_low or "snow" in weather_low:
+            draw.rectangle([0, 0, width, height], fill=(0, 200, 255, 20))
+            for _ in range(60):
+                rx = rnd.randint(0, width)
+                ry = rnd.randint(0, height)
+                radius = rnd.randint(1, 4)
+                draw.ellipse([rx - radius, ry - radius, rx + radius, ry + radius], fill=(255, 255, 255, 180))
+                
+        canvas.alpha_composite(overlay)
+
     def render_battle_screen(self, battle) -> io.BytesIO:
         """Generates a high-fidelity image representing the active battle state."""
         width, height = 960, 540
-        canvas = self.asset_loader.get_background("stadium_cyber", width, height).copy()
+        
+        # Check active weather, terrain, and Trick Room
+        weather = getattr(battle.weather, "_weather_type", "clear") or "clear"
+        terrain = getattr(battle.terrain, "item", "normal") or "normal"
+        trick_room_active = False
+        if hasattr(battle, "trick_room") and battle.trick_room.active():
+            trick_room_active = True
+            
+        bg_name = "trick_room" if trick_room_active else "stadium_cyber"
+        canvas = self.asset_loader.get_background(bg_name, width, height).copy()
         draw = ImageDraw.Draw(canvas)
 
         # 1. Draw Platform bases (cyber platform ellipses)
@@ -257,6 +346,9 @@ class BattleRenderer:
         # Right (Trainer 2)
         draw.ellipse([600, 360, 860, 420], fill=(255, 105, 180, 30), outline=(255, 105, 180, 100), width=2)
         draw.ellipse([610, 368, 850, 412], fill=(255, 105, 180, 10), outline=(255, 105, 180, 60), width=1)
+
+        # Draw terrain overlays
+        self._draw_terrain_overlay(draw, terrain, width, height)
 
         # 2. Draw Active Pokémon Sprites
         t1_poke = battle.trainer1.current_pokemon
@@ -288,6 +380,9 @@ class BattleRenderer:
             draw.rectangle([660, 240, 800, 380], fill=(255, 105, 180, 40), outline=(255, 105, 180, 120))
             draw.text((715, 300), "?", fill=(255, 105, 180, 200), font=self.fonts["title"])
 
+        # Draw weather overlay (covers the field and sprites)
+        self._apply_weather_overlay(canvas, weather)
+
         # 3. Draw HUD Cards (glassmorphic overlays)
         self._draw_hud(draw, 40, 40, t1_poke, is_left=True)
         self._draw_hud(draw, 590, 40, t2_poke, is_left=False)
@@ -305,9 +400,6 @@ class BattleRenderer:
         draw.text((info_x + (info_w - (tb[2] - tb[0])) // 2, info_y + 8), turn_text, fill=(255, 255, 255, 255), font=self.fonts["body_bold"])
 
         # Weather / Terrain Subtitles
-        weather = battle.weather._weather_type or "clear"
-        terrain = battle.terrain.item or "normal"
-        
         cond_text = f"☀ {weather.upper()}" if weather != "clear" else "☀ CLEAR"
         terr_text = f"⬡ {terrain.upper()}" if terrain != "normal" else "⬡ NORMAL"
         

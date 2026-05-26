@@ -19,7 +19,6 @@ DEFAULT_ELO = 1000
 
 # Default starting balance.
 DEFAULT_WALLET = 0
-DEFAULT_BANK = 0
 
 # Collection name in MongoDB.
 COLLECTION = "players"
@@ -38,7 +37,6 @@ class PlayerSchema:
             "losses":            0,
             "elo":               1000,
             "wallet":            0,
-            "bank":              0,
             "active_party_name": null,
             "created_at":        ISODate("..."),
             "updated_at":        ISODate("..."),
@@ -56,7 +54,6 @@ class PlayerSchema:
             "losses": 0,
             "elo": DEFAULT_ELO,
             "wallet": DEFAULT_WALLET,
-            "bank": DEFAULT_BANK,
             "active_party_name": None,
             "created_at": now,
             "updated_at": now,
