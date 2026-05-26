@@ -387,6 +387,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "discord-py" },
     { name = "motor" },
+    { name = "numpy" },
     { name = "pillow" },
     { name = "pynacl" },
     { name = "python-dotenv" },
@@ -401,6 +402,7 @@ dependencies = [
 requires-dist = [
     { name = "discord-py", specifier = ">=2.6.2" },
     { name = "motor", specifier = ">=3.7.0" },
+    { name = "numpy", specifier = ">=2.4.5" },
     { name = "pillow", specifier = ">=11.3.0" },
     { name = "pynacl", specifier = ">=1.5.0" },
     { name = "python-dotenv", specifier = ">=1.1.1" },

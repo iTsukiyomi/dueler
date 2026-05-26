@@ -1,6 +1,36 @@
 """
 ai/distributed.py — Multiprocessing self-play coordinator.
 
+Architecture
+------------
+
+                ┌────────────────────────┐
+                │  Trainer (main proc)   │
+                │  • PokemonAlphaZeroNet │
+                │  • PrioritizedReplay   │
+                │  • InferenceServer ────┼──► request_q ◄─┐
+                │                        │                │
+                │  ◄── sample_q ─────────┼─────────┐      │
+                └────────────────────────┘         │      │
+                                                   │      │
+   ┌───────────────────────────────────────────────┴──────┴──┐
+   │ Self-play worker (N copies)                              │
+   │  • RemoteInferenceClient(request_q, response_q_i)        │
+   │  • play_one_game(...) → TrajectoryBatch                  │
+   │  • puts (states, policies, values, masks) on sample_q    │
+   └─────────────────────────────────────────────────────────┘
+
+The trainer process pulls finished trajectories from ``sample_q`` and
+inserts them into the replay buffer; meanwhile a background thread
+inside the trainer runs the inference server so workers always get
+batched evaluations.
+
+Run from the project root with:
+
+    python -m pokemonduel.ai.distributed --workers 6 --device cuda
+
+Stops cleanly on SIGINT.
+
 Robustness features
 ~~~~~~~~~~~~~~~~~~~
 * **Per-game wall-clock timeout.** Workers that hang on pathological
@@ -18,6 +48,13 @@ from __future__ import annotations
 
 import argparse
 import logging
+import multiprocessing as mp
+import os
+import queue
+import signal
+import sys
+import threading
+import time
 from multiprocessing import Process, Queue, Value
 from pathlib import Path
 from typing import Optional
@@ -35,7 +72,67 @@ from .trainer import Trainer
 
 log = logging.getLogger("dueler.ai.distributed")
 
+_GAME_TIMEOUT_S      = float(getattr(C, "SELFPLAY_GAME_TIMEOUT_S", 90.0))
+_LIVE_BUFFER_POLL_S  = float(getattr(C, "LIVE_BUFFER_POLL_S", 60.0))
 
+# Paths to the two on-disk buffers.
+_SELFPLAY_BUFFER_PATH = C.REPLAY_DIR / "buffer.npz"
+_LIVE_BUFFER_PATH     = C.REPLAY_DIR / "live_buffer.npz"
+
+# ─────────────────────────────────────────────────────────────────────────────
+def _merge_buffer_from_disk(target: PrioritizedReplayBuffer,
+                            path: Path) -> int:
+    """Load samples from ``path`` and ``push_many`` them into ``target``.
+
+    Returns the number of samples merged (0 if the file doesn't exist or
+    can't be read). Uses ``push_many`` instead of ``load`` so the
+    existing samples in ``target`` are preserved.
+    """
+    if not path.exists():
+        return 0
+    try:
+        data = np.load(path, allow_pickle=False)
+        n = int(data["size"])
+        if n <= 0:
+            return 0
+        states   = data["states"][:n]
+        policies = data["policy"][:n]
+        values   = data["values"][:n]
+        masks    = data["masks"][:n]
+        target.push_many(states, policies, values, masks)
+        return n
+    except Exception:
+        log.exception("Failed to merge buffer from %s", path)
+        return 0
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Shared progress counters (one set per WorkerStats namespace)
+# ─────────────────────────────────────────────────────────────────────────────
+class WorkerStats:
+    __slots__ = ("games_done", "games_crashed", "games_skipped",
+                 "games_timed_out",
+                 "turns_total", "sims_total", "last_heartbeat",
+                 "alive")
+
+    def __init__(self) -> None:
+        self.games_done      = Value("i", 0)
+        self.games_crashed   = Value("i", 0)
+        self.games_skipped   = Value("i", 0)
+        self.games_timed_out = Value("i", 0)
+        self.turns_total     = Value("i", 0)
+        self.sims_total      = Value("q", 0)
+        self.last_heartbeat  = Value("d", 0.0)
+        self.alive           = Value("i", 1)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Worker process entry point
+# ─────────────────────────────────────────────────────────────────────────────
+def _worker_main(worker_id: int,
+                 request_q: Queue,
+                 response_q: Queue,
+                 sample_q: Queue,
+                 stop_flag,
+                 games_per_worker: int,
                  simulations: int,
                  stats: WorkerStats) -> None:
     logging.basicConfig(level=logging.INFO,
@@ -101,7 +198,6 @@ log = logging.getLogger("dueler.ai.distributed")
     with stats.alive.get_lock():
         stats.alive.value = 0
 
-
 def _play_one_game_with_timeout(client, simulations: int,
                                 stats: "WorkerStats",
                                 timeout_s: float):
@@ -127,13 +223,11 @@ def _play_one_game_with_timeout(client, simulations: int,
         raise box["exc"]
     return box.get("result")
 
-
 def _worker_progress(stats: WorkerStats, turn: int, simulations: int) -> None:
     with stats.sims_total.get_lock():
         stats.sims_total.value += 2 * simulations
     with stats.last_heartbeat.get_lock():
         stats.last_heartbeat.value = time.time()
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Coordinator
@@ -295,6 +389,69 @@ class DistributedTrainer:
                 return
             states, policies, values, masks = batch
             self.buffer.push_many(states, policies, values, masks)
+            self._batches_drained += 1
+            self._samples_drained += len(states)
+
+    # ------------------------------------------------------------------
+    def _heartbeat_loop(self) -> None:
+        last_games = 0
+        last_sims  = 0
+        last_buf   = 0
+        last_t     = time.time()
+        while not self._stop.is_set():
+            time.sleep(self.heartbeat_period)
+            now = time.time()
+            dt = max(1e-6, now - last_t)
+
+            games_done   = sum(s.games_done.value      for s in self.worker_stats)
+            games_crash  = sum(s.games_crashed.value   for s in self.worker_stats)
+            games_skip   = sum(s.games_skipped.value   for s in self.worker_stats)
+            games_tout   = sum(s.games_timed_out.value for s in self.worker_stats)
+            sims_total   = sum(s.sims_total.value      for s in self.worker_stats)
+            turns_total  = sum(s.turns_total.value     for s in self.worker_stats)
+            alive_count  = sum(int(s.alive.value)      for s in self.worker_stats)
+
+            stuck = []
+            for wid, s in enumerate(self.worker_stats):
+                if not s.alive.value:
+                    continue
+                age = now - s.last_heartbeat.value
+                if age > 15.0:
+                    stuck.append(f"w{wid}:{age:.0f}s")
+
+            buf_size = len(self.buffer)
+            req_q_sz = _qsize(self.request_q)
+            sam_q_sz = _qsize(self.sample_q)
+
+            gps = (games_done - last_games) / dt
+            sps = (sims_total  - last_sims)  / dt
+            bps = (buf_size    - last_buf)   / dt
+
+            inf_t = self._inference_thread
+            inf_alive = bool(inf_t and inf_t.is_alive())
+
+            log.info(
+                "[hb] buf=%d (+%.0f/s) games=%d (+%.2f/s, ✗%d skip%d ⌛%d) "
+                "turns=%d sims=%d (%.0f/s) workers=%d/%d alive "
+                "inf=%s(r%d) req_q=%d samp_q=%d drained=%d batches/%d samples "
+                "live=%d%s",
+                buf_size, bps,
+                games_done, gps, games_crash, games_skip, games_tout,
+                turns_total, sims_total, sps,
+                alive_count, self.workers,
+                "up" if inf_alive else "DOWN", self._inference_restarts,
+                req_q_sz, sam_q_sz,
+                self._batches_drained, self._samples_drained,
+                self._live_buffer_ingested,
+                f" stuck={','.join(stuck)}" if stuck else "",
+            )
+
+            last_games, last_sims, last_buf, last_t = games_done, sims_total, buf_size, now
+
+    # ------------------------------------------------------------------
+    def run(self, max_steps: int = C.OPT_TRAIN_STEPS) -> None:
+        self._start_inference_server()
+        self._start_workers()
 
         threading.Thread(target=self._drain_sample_q,
                          daemon=True, name="sample-drain").start()
@@ -350,7 +507,22 @@ class DistributedTrainer:
             except Exception:
                 log.exception("final buffer save failed")
 
+def _qsize(q) -> int:
+    try:
+        return q.qsize()
+    except (NotImplementedError, Exception):
+        return -1
 
+# ─────────────────────────────────────────────────────────────────────────────
+# CLI
+# ─────────────────────────────────────────────────────────────────────────────
+def main() -> None:
+    ap = argparse.ArgumentParser(description="Distributed AlphaZero self-play & training")
+    ap.add_argument("--workers", type=int, default=C.SELFPLAY_WORKERS)
+    ap.add_argument("--games-per-worker", type=int, default=C.SELFPLAY_BATTLES_PER_W)
+    ap.add_argument("--simulations",      type=int, default=C.MCTS_SIMULATIONS)
+    ap.add_argument("--steps",            type=int, default=C.OPT_TRAIN_STEPS)
+    ap.add_argument("--device",           type=str, default=None)
     ap.add_argument("--heartbeat",        type=float, default=2.0)
     ap.add_argument("--run-dir",          type=str, default=None,
                     help="Override DUELER_RUN_DIR (sets where checkpoints land).")
@@ -373,10 +545,8 @@ class DistributedTrainer:
     )
     dt.run(max_steps=args.steps)
 
-
 if __name__ == "__main__":
     mp.set_start_method("fork")
     main()
-
 
 __all__ = ["DistributedTrainer", "main"]

@@ -328,48 +328,27 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
             return
 
         poke = ws["pokemon"]
-        name = poke.get("pokname", "?")
-        nature = poke.get("nature", "?")
-        item = poke.get("hitem", "None") or "None"
-        level = poke.get("pokelevel", 100)
-        moves = poke.get("moves", [])
-        shiny = "✨ " if poke.get("shiny") else ""
+        from ..canvas import BattleRenderer
+        from pathlib import Path
 
-        iv_str = (
-            f"HP:{poke.get('hpiv', 31)} Atk:{poke.get('atkiv', 31)} "
-            f"Def:{poke.get('defiv', 31)} SpA:{poke.get('spatkiv', 31)} "
-            f"SpD:{poke.get('spdefiv', 31)} Spe:{poke.get('speediv', 31)}"
-        )
-        ev_str = (
-            f"HP:{poke.get('hpev', 0)} Atk:{poke.get('atkev', 0)} "
-            f"Def:{poke.get('defev', 0)} SpA:{poke.get('spatkev', 0)} "
-            f"SpD:{poke.get('spdefev', 0)} Spe:{poke.get('speedev', 0)}"
-        )
-        ev_total = sum(poke.get(k, 0) for k in _STAT_KEYS.values())
+        data_dir = Path(__file__).parent.parent / "data"
+        renderer = BattleRenderer(data_dir)
 
-        move_lines = []
-        for i, m in enumerate(moves[:4]):
-            move_data = MOVES.get(m)
-            if move_data:
-                power = move_data.get("power", "—")
-                acc = move_data.get("accuracy", "—")
-                move_lines.append(f"**{i+1}.** {m}  (Pow: {power}, Acc: {acc})")
-            else:
-                move_lines.append(f"**{i+1}.** {m}")
+        try:
+            img_buf = renderer.render_pokemon_card(poke)
+            file = discord.File(fp=img_buf, filename="pokemon_card.png")
 
-        embed = discord.Embed(
-            title=f"{shiny}{name}",
-            color=discord.Color.gold(),
-        )
-        embed.add_field(name="Level", value=str(level), inline=True)
-        embed.add_field(name="Nature", value=nature, inline=True)
-        embed.add_field(name="Item", value=item, inline=True)
-        embed.add_field(name="IVs", value=iv_str, inline=False)
-        embed.add_field(name="EVs", value=f"{ev_str}\n(Total: {ev_total}/510)", inline=False)
-        embed.add_field(name="Moves", value="\n".join(move_lines) or "None", inline=False)
-        embed.set_footer(text=f"Team: {ws['team_name']} | Slot: {ws['slot_idx'] + 1}")
+            embed = discord.Embed(
+                title=f"{poke.get('pokname', '?').replace('-', ' ').title()}",
+                color=discord.Color.teal(),
+            )
+            embed.set_image(url="attachment://pokemon_card.png")
+            embed.set_footer(text=f"Team: {ws['team_name']} | Slot: {ws['slot_idx'] + 1}")
 
-        await ctx.send(embed=embed)
+            await ctx.send(embed=embed, file=file)
+        except Exception as e:
+            log.exception("Failed to render pokemon card for ;qi")
+            await ctx.send(f"Error rendering card: {e}")
 
 
 async def setup(bot: commands.Bot) -> None:
