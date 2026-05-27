@@ -53,16 +53,15 @@ _TYPE_ID_TO_NAME = {
     16: "Dragon", 17: "Dark", 18: "Fairy",
 }
 
-from .themes import DEFAULT_PALETTE, ThemePalette
+from .themes.palette import DEFAULT_PALETTE, ThemePalette
 
 
 class BattleRenderer:
     """Classic Pokémon-style canvas rendering pipeline for battle screens, teams, and profiles."""
 
-    def __init__(self, data_dir: Path, palette: ThemePalette = DEFAULT_PALETTE, gen: int = 5, theme: str = "light") -> None:
+    def __init__(self, data_dir: Path, palette: ThemePalette = DEFAULT_PALETTE, theme: str = "firered") -> None:
         self.palette = palette
         self.data_dir = data_dir
-        self.gen = gen
         self.theme = theme.lower()
         self.sprite_dir = data_dir / "img"
         self.asset_loader = AssetLoader(data_dir / "canvas_assets")
@@ -179,11 +178,11 @@ class BattleRenderer:
         fill = fill or self.palette.panel_bg
         border = border or self.palette.frame_dark
         
-        if self.gen in (1, 2):
+        if self.theme in ("firered", "black"):
             radius = 0
 
-        if self.gen == 1:
-            # GameBoy border: thick outline, 1px space, thin inner line
+        if self.theme == "firered":
+            # FireRed GameBoy Advance style double border
             draw.rectangle([x1, y1, x2, y2], fill=(*fill, 255) if len(fill) == 3 else fill)
             draw.rectangle([x1, y1, x2, y2], outline=(*border, 255) if len(border) == 3 else border, width=2)
             draw.rectangle([x1 + 3, y1 + 3, x2 - 3, y2 - 3], outline=(*border, 255) if len(border) == 3 else border, width=1)
@@ -197,9 +196,9 @@ class BattleRenderer:
                          text: str = "", *, bg=None) -> None:
         """Draw a classic dark header bar with white text (Gen 3/5 style)."""
         bg = bg or self.palette.header_bg
-        radius = 0 if self.gen in (1, 2) else 4
+        radius = 0 if self.theme in ("firered", "black") else 4
         
-        if self.gen == 1:
+        if self.theme == "firered":
             draw.rectangle([x1, y1, x2, y1 + height], fill=(*bg, 255) if len(bg) == 3 else bg)
             draw.rectangle([x1, y1, x2, y1 + height], outline=self.palette.frame_dark, width=1)
         else:
@@ -216,7 +215,8 @@ class BattleRenderer:
                          x: float, y: float, type_name: str,
                          *, width: int = 60, height: int = 18) -> Tuple[float, float]:
         """Draw a classic Gen 3/5 style type rectangle badge."""
-        if self.gen == 1:
+        if self.theme == "firered":
+            # FireRed GBA monochrome type badge look: outline box, no fill color
             font = self.fonts["small_bold"]
             label = type_name.upper()
             draw.rectangle([x, y, x + width, y + height], fill=self.palette.panel_bg, outline=self.palette.frame_dark, width=1)
@@ -646,397 +646,21 @@ class BattleRenderer:
 
     def render_pokemon_card(self, poke, player_name: str = "Trainer", type_names: list[str] | None = None) -> io.BytesIO:
         """Generates a classic Pokémon summary screen-style card."""
-        width, height = 500, 310
-        canvas = self.asset_loader.get_background("card_bg", width, height, gen=self.gen, theme=self.theme).copy()
-        draw = ImageDraw.Draw(canvas)
-
-        # Extract values depending on whether input is dict or object
-        from ..core.registry import FORMS, POKE_ABILITIES, ABILITIES
-        if isinstance(poke, dict):
-            pokname = poke.get("pokname", "")
-            poke_id = None
-            if pokname:
-                form_info = FORMS.get(pokname.lower())
-                if form_info:
-                    poke_id = form_info.get("pokemon_id")
-            if not poke_id:
-                poke_id = poke.get("pokid", poke.get("pokemon_id", poke.get("id", None)))
-
-            name_text = poke.get("pokname", "?").replace('-', ' ').title()
-            nick_text = poke.get("nickname") or poke.get("_nickname")
-            display_name = nick_text if nick_text and nick_text != "None" else name_text
-
-            nature_val = poke.get("nature", "Serious")
-
-            # Resolve ability dynamically
-            ability_val = poke.get("ability", "None")
-            if (ability_val == "None" or not ability_val) and "ability_index" in poke:
-                pn = poke.get("pokname", "").lower()
-                form_info = FORMS.get(pn)
-                if form_info:
-                    pokemon_id = form_info["pokemon_id"]
-                    records = POKE_ABILITIES.by_secondary(pokemon_id)
-                    curr_idx = poke.get("ability_index", 0)
-                    if records and 0 <= curr_idx < len(records):
-                        ab_id = records[curr_idx]["ability_id"]
-                        ab_data = ABILITIES.find_one({"id": ab_id})
-                        if ab_data:
-                            ability_val = ab_data.get("identifier", "None")
-
-            item_val = poke.get("hitem", "None")
-            base_stats = self._get_base_stats(poke.get("pokname", ""))
-
-            # Resolve types if not passed
-            if type_names is None:
-                type_names = self._get_type_names(poke.get("pokname", ""))
-
-            ivs = {
-                "hp": poke.get("hpiv", 31), "atk": poke.get("atkiv", 31),
-                "def": poke.get("defiv", 31), "spa": poke.get("spatkiv", 31),
-                "spd": poke.get("spdefiv", 31), "spe": poke.get("speediv", 31)
-            }
-            evs = {
-                "hp": poke.get("hpev", 0), "atk": poke.get("atkev", 0),
-                "def": poke.get("defev", 0), "spa": poke.get("spatkev", 0),
-                "spd": poke.get("spdefev", 0), "spe": poke.get("speedev", 0)
-            }
-            moves = poke.get("moves", [])
-        else:
-            raw_name = getattr(poke, '_name', '').lower()
-            poke_id = None
-            if raw_name:
-                form_info = FORMS.get(raw_name)
-                if form_info:
-                    poke_id = form_info.get("pokemon_id")
-            if not poke_id:
-                poke_id = getattr(poke, 'pokemon_id', getattr(poke, 'id', None))
-
-            name_text = getattr(poke, '_name', '').replace('-', ' ').title()
-            nick_text = getattr(poke, '_nickname', None)
-            display_name = nick_text if nick_text and nick_text != "None" else name_text
-
-            nature_val = getattr(poke, 'nature', 'Serious')
-
-            ability_val = getattr(poke, 'ability', 'None')
-            if (ability_val == "None" or not ability_val) and hasattr(poke, "ability_index"):
-                pn = getattr(poke, '_name', "").lower()
-                form_info = FORMS.get(pn)
-                if form_info:
-                    pokemon_id = form_info["pokemon_id"]
-                    records = POKE_ABILITIES.by_secondary(pokemon_id)
-                    curr_idx = getattr(poke, "ability_index", 0)
-                    if records and 0 <= curr_idx < len(records):
-                        ab_id = records[curr_idx]["ability_id"]
-                        ab_data = ABILITIES.find_one({"id": ab_id})
-                        if ab_data:
-                            ability_val = ab_data.get("identifier", "None")
-
-            item_val = getattr(poke, 'item', 'None')
-
-            # Base stats from object
-            bs = getattr(poke, 'base_stats', {})
-            raw_name_obj = getattr(poke, '_name', '').lower()
-            if raw_name_obj in bs:
-                bs_raw = bs[raw_name_obj]
-            elif name_text.lower() in bs:
-                bs_raw = bs[name_text.lower()]
-            else:
-                bs_raw = bs
-            if isinstance(bs_raw, list):
-                base_stats = {
-                    "hp": bs_raw[0] if len(bs_raw) > 0 else 50,
-                    "atk": bs_raw[1] if len(bs_raw) > 1 else 50,
-                    "def": bs_raw[2] if len(bs_raw) > 2 else 50,
-                    "spa": bs_raw[3] if len(bs_raw) > 3 else 50,
-                    "spd": bs_raw[4] if len(bs_raw) > 4 else 50,
-                    "spe": bs_raw[5] if len(bs_raw) > 5 else 50,
-                }
-            elif isinstance(bs_raw, dict):
-                base_stats = bs_raw
-            else:
-                base_stats = self._get_base_stats(getattr(poke, '_name', ''))
-
-            # Resolve types
-            if type_names is None:
-                type_names = self._get_type_names(getattr(poke, '_name', ''))
-
-            ivs = {
-                "hp": getattr(poke, "hpiv", 31), "atk": getattr(poke, "atkiv", 31),
-                "def": getattr(poke, "defiv", 31), "spa": getattr(poke, "spatkiv", 31),
-                "spd": getattr(poke, "spdefiv", 31), "spe": getattr(poke, "speediv", 31)
-            }
-            evs = {
-                "hp": getattr(poke, "hpev", 0), "atk": getattr(poke, "atkev", 0),
-                "def": getattr(poke, "defev", 0), "spa": getattr(poke, "spatkev", 0),
-                "spd": getattr(poke, "spdefev", 0), "spe": getattr(poke, "speedev", 0)
-            }
-            moves = getattr(poke, 'moves', [])
-
-        # ── Layout: Classic Pokémon Summary Screen ──
-
-        # Header bar with Pokémon name
-        self._draw_header_bar(draw, 4, 8, width - 4, 26, text=display_name, bg=None)
-
-        # Type badges (right of header or below)
-        if type_names:
-            badge_x = width - 10
-            for tn in reversed(type_names):
-                bw = 58
-                badge_x -= bw + 4
-                self._draw_type_badge(draw, badge_x, 10, tn, width=bw, height=22)
-
-        # Sprite panel (left side)
-        sprite_panel_x, sprite_panel_y = 14, 44
-        sprite_panel_w, sprite_panel_h = 150, 150
-        self._draw_classic_panel(draw, sprite_panel_x, sprite_panel_y,
-                                 sprite_panel_x + sprite_panel_w, sprite_panel_y + sprite_panel_h,
-                                 fill=self.palette.panel_bg_dark, border=None)
-
-        poke_name = poke.get("pokname", "") if isinstance(poke, dict) else getattr(poke, "_name", "")
-        sprite = self._load_sprite(poke_id, (140, 140), name=poke_name)
-        if sprite:
-            canvas.paste(sprite, (sprite_panel_x + 5, sprite_panel_y + 5), sprite)
-        else:
-            draw.text((sprite_panel_x + 65, sprite_panel_y + 65), "?",
-                      fill=self.palette.text_light, font=self.fonts["title"])
-
-        # Info section (right of sprite)
-        info_x = sprite_panel_x + sprite_panel_w + 12
-        info_y = 48
-
-        if not item_val or item_val == "None":
-            item_val = "None"
-
-        info_lines = [
-            ("Nature:", str(nature_val).title()),
-            ("Ability:", str(ability_val).replace('-', ' ').title()),
-            ("Item:", str(item_val).replace('-', ' ').title()),
-        ]
-
-        for i, (label, value) in enumerate(info_lines):
-            ly = info_y + i * 20
-            draw.text((info_x, ly), label, fill=self.palette.text_mid, font=self.fonts["small_bold"])
-            draw.text((info_x + 80 if self.gen == 1 else info_x + 65, ly), value, fill=self.palette.text_dark, font=self.fonts["small"])
-
-        # ── Stats Table (below info, classic grid) ──
-        stats_y = info_y + 68
-        stat_header = "STAT   BASE   IV   EV"
-        draw.text((info_x, stats_y), stat_header, fill=self.palette.header_bg, font=self.fonts["small_bold"])
-
-        # Horizontal rule under header
-        draw.line([(info_x, stats_y + 14), (width - 16, stats_y + 14)], fill=self.palette.frame_mid, width=1)
-
-        stats_keys = ["hp", "atk", "def", "spa", "spd", "spe"]
-        stats_labels = ["HP ", "ATK", "DEF", "SPA", "SPD", "SPE"]
-
-        iv_color = self.palette.text_dark if self.gen == 1 else ((80, 120, 200) if self.theme == "light" else (140, 180, 255))
-        ev_color = self.palette.text_dark if self.gen == 1 else ((200, 120, 60) if self.theme == "light" else (255, 160, 100))
-
-        for idx, key in enumerate(stats_keys):
-            y_offset = stats_y + 18 + (idx * 15)
-            lbl = stats_labels[idx]
-
-            bs_v = base_stats.get(key, 0)
-            iv_v = ivs.get(key, 31)
-            ev_v = evs.get(key, 0)
-
-            # Label with slightly different color per stat
-            draw.text((info_x, y_offset), f"{lbl:<5}", fill=self.palette.text_dark, font=self.fonts["small_bold"])
-            draw.text((info_x + 48, y_offset), f"{bs_v:<5}", fill=self.palette.text_dark, font=self.fonts["small"])
-            draw.text((info_x + 100, y_offset), f"{iv_v:<4}", fill=iv_color, font=self.fonts["small"])
-            draw.text((info_x + 140, y_offset), f"{ev_v:<4}", fill=ev_color, font=self.fonts["small"])
-
-        # ── Moveset section (bottom-left, below sprite) ──
-        moves_y = sprite_panel_y + sprite_panel_h + 10
-        self._draw_classic_panel(draw, 14, moves_y, sprite_panel_x + sprite_panel_w, height - 10,
-                                 fill=self.palette.panel_bg_dark, border=self.palette.frame_mid, border_width=1)
-
-        draw.text((20, moves_y + 4), "MOVES", fill=self.palette.header_bg, font=self.fonts["small_bold"])
-        draw.line([(20, moves_y + 18), (sprite_panel_x + sprite_panel_w - 6, moves_y + 18)],
-                  fill=self.palette.frame_mid, width=1)
-
-        for idx, move in enumerate(moves[:4]):
-            m_y = moves_y + 22 + (idx * 14)
-            if isinstance(move, str):
-                m_name = move.replace('-', ' ').title()
-            else:
-                m_name = getattr(move, 'pretty_name', str(move))
-            draw.text((24, m_y), f"• {m_name}", fill=self.palette.text_dark, font=self.fonts["small"])
-
-        # Outer frame
-        draw.rectangle([0, 0, width - 1, height - 1], outline=self.palette.frame_dark, width=2)
-
-        buf = io.BytesIO()
-        canvas.save(buf, format="PNG")
-        buf.seek(0)
-        return buf
+        from .themes import get_theme_renderer
+        theme_renderer = get_theme_renderer(self.theme, self)
+        return theme_renderer.render_pokemon_card(poke, player_name, type_names)
 
     def render_trainer_card(self, username: str, player_id: str, rank: Optional[int | str],
                             elo: int, wins: int, losses: int, wallet: int,
                             active_team: str, avatar_bytes: Optional[bytes] = None,
                             party_pokemon: Optional[list[dict]] = None) -> io.BytesIO:
         """Generates a classic trainer card image."""
-        width, height = 480, 280
-        canvas = self.asset_loader.get_background("trainer_card_bg", width, height, gen=self.gen, theme=self.theme).copy()
-        draw = ImageDraw.Draw(canvas)
+        from .themes import get_theme_renderer
+        theme_renderer = get_theme_renderer(self.theme, self)
+        return theme_renderer.render_trainer_card(username, player_id, rank, elo, wins, losses, wallet, active_team, avatar_bytes, party_pokemon)
 
-        # 1. Header Title: "TRAINER CARD" centered in the header banner
-        title_text = "TRAINER CARD"
-        bbox = draw.textbbox((0, 0), title_text, font=self.fonts["title"])
-        tx = (width - (bbox[2] - bbox[0])) // 2
-        ty = 6 + (30 - (bbox[3] - bbox[1])) // 2
-        
-        title_color = self.palette.header_text if self.gen in (1, 2, 4, 5, 9) else (255, 203, 5, 255)
-        draw.text((tx, ty), title_text, fill=title_color, font=self.fonts["title"])
-
-        # 2. Main Details Panel (left column)
-        self._draw_classic_panel(draw, 14, 48, 332, 188, fill=self.palette.panel_bg, border=None, border_width=2)
-
-        # Draw Name
-        draw.text((24, 56), "NAME:", fill=self.palette.frame_mid, font=self.fonts["small_bold"])
-        draw.text((80 if self.gen == 1 else 65, 54), username, fill=self.palette.text_dark, font=self.fonts["body_bold"])
-
-        # Draw ID No. (last 5 digits of discord id)
-        id_no = str(player_id)[-5:] if player_id else "00000"
-        draw.text((240 if self.gen == 1 else 230, 56), f"IDNo. {id_no}", fill=self.palette.text_dark, font=self.fonts["small_bold"])
-
-        # Separator Line
-        draw.line([(20, 76), (326, 76)], fill=self.palette.frame_mid, width=1)
-
-        # Detail lines
-        total = wins + losses
-        win_rate = f"{(wins / total * 100):.1f}%" if total > 0 else "N/A"
-        rank_val = f"#{rank}" if rank else "Unranked"
-
-        info_items = [
-            ("MONEY", f"¥{wallet:,}"),
-            ("ELO RATING", f"{elo}"),
-            ("RANK", rank_val),
-            ("RECORD", f"{wins}W / {losses}L ({win_rate})"),
-            ("ACTIVE TEAM", f"{active_team}"),
-        ]
-
-        dy = 82
-        for label, val in info_items:
-            # Draw label
-            draw.text((24, dy), label, fill=self.palette.frame_mid, font=self.fonts["small_bold"])
-            # Draw value aligned to the right (x=320)
-            val_bbox = draw.textbbox((0, 0), val, font=self.fonts["small_bold"])
-            val_w = val_bbox[2] - val_bbox[0]
-            draw.text((320 - val_w, dy), val, fill=self.palette.text_dark, font=self.fonts["small_bold"])
-            dy += 20
-
-        # 3. Avatar Panel
-        self._draw_classic_panel(draw, 346, 48, 466, 168, fill=self.palette.panel_bg_dark, border=None, border_width=2)
-
-        # Draw Avatar Image if available
-        avatar_loaded = False
-        if avatar_bytes:
-            try:
-                avatar_img = Image.open(io.BytesIO(avatar_bytes)).convert("RGBA")
-                # Center avatar inside the frame
-                avatar_img = avatar_img.resize((112, 112), Image.Resampling.LANCZOS)
-                canvas.paste(avatar_img, (350, 52), avatar_img)
-                avatar_loaded = True
-            except Exception:
-                pass
-
-        if not avatar_loaded:
-            cx, cy = 346 + 60, 48 + 60
-            r = 35
-            ball_fill = (224, 220, 208) if self.gen != 1 else self.palette.panel_bg
-            center_fill = (240, 240, 232) if self.gen != 1 else self.palette.panel_bg_dark
-            draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=ball_fill, outline=self.palette.frame_mid, width=2)
-            draw.line([cx - r, cy, cx + r, cy], fill=self.palette.frame_mid, width=2)
-            draw.ellipse([cx - 10, cy - 10, cx + 10, cy + 10], fill=center_fill, outline=self.palette.frame_mid, width=2)
-
-        # 4. Active Team Section (6 slots)
-        self._draw_classic_panel(draw, 14, 198, width - 14, 268, fill=self.palette.panel_bg_dark, border=None, border_width=2)
-
-        slot_w, slot_h = 56, 56
-        gap = 12
-        sx_start = 42
-        sy = 203
-
-        from ..core.registry import FORMS
-        for idx in range(6):
-            sx = sx_start + idx * (slot_w + gap)
-            # Draw slot border
-            self._draw_classic_panel(draw, sx, sy, sx + slot_w, sy + slot_h, fill=self.palette.panel_bg, border=self.palette.frame_mid, border_width=1, radius=3)
-
-            poke_id = None
-            poke_name = None
-            if party_pokemon and idx < len(party_pokemon):
-                poke = party_pokemon[idx]
-                pokname = poke.get("pokname", "")
-                if pokname:
-                    poke_name = pokname
-                    form_info = FORMS.get(pokname.lower())
-                    if form_info:
-                        poke_id = form_info.get("pokemon_id")
-
-            sprite = None
-            if poke_id:
-                sprite = self._load_sprite(poke_id, (48, 48), name=poke_name)
-
-            if sprite:
-                canvas.paste(sprite, (sx + 4, sy + 4), sprite)
-            elif poke_id:
-                cx, cy = sx + 28, sy + 28
-                draw.text((cx - 4, cy - 8), "?", fill=self.palette.text_light, font=self.fonts["small_bold"])
-            else:
-                # Draw a tiny faint Pokéball silhouette for empty slots
-                cx, cy = sx + 28, sy + 28
-                r = 12
-                faint_outline = self.palette.frame_mid
-                faint_fill = self.palette.panel_bg
-                draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=faint_fill, outline=faint_outline, width=1)
-                draw.line([cx - r, cy, cx + r, cy], fill=faint_outline, width=1)
-                draw.ellipse([cx - 4, cy - 4, cx + 4, cy + 4], fill=faint_fill, outline=faint_outline, width=1)
-
-        # Output to buffer
-        buf = io.BytesIO()
-        canvas.save(buf, format="PNG")
-        buf.seek(0)
-        return buf
-
-    def render_settings_menu(self, current_theme: str, current_gen: int) -> io.BytesIO:
-        """Render a classic Pokémon-style settings menu image."""
-        width, height = 480, 240
-        
-        canvas = Image.new("RGBA", (width, height), self.palette.frame_mid)
-        draw = ImageDraw.Draw(canvas)
-        
-        # Draw main background
-        self._draw_classic_panel(draw, 4, 4, width - 4, height - 4, fill=self.palette.panel_bg_dark, border=self.palette.frame_dark, border_width=4, radius=6)
-        
-        # Draw header
-        self._draw_header_bar(draw, 12, 12, width - 12, 30, text="OPTIONS", bg=self.palette.header_bg)
-        
-        # Draw options container
-        self._draw_classic_panel(draw, 12, 50, width - 12, height - 12, fill=self.palette.panel_bg, border=self.palette.frame_dark, border_width=2, radius=4)
-        
-        # Draw settings entries
-        font = self.fonts["body_bold"]
-        font_sm = self.fonts["small"]
-        
-        # Theme Option
-        draw.text((24, 64), "THEME", fill=self.palette.frame_mid, font=font)
-        # Highlight box for value
-        self._draw_classic_panel(draw, 220, 60, 440, 90, fill=self.palette.panel_bg_dark, border=self.palette.frame_mid, border_width=1, radius=2)
-        draw.text((230, 64), current_theme.upper(), fill=self.palette.text_dark, font=font)
-        
-        # Gen Option
-        draw.text((24, 114), "GENERATION", fill=self.palette.frame_mid, font=font)
-        # Highlight box for value
-        self._draw_classic_panel(draw, 220, 110, 440, 140, fill=self.palette.panel_bg_dark, border=self.palette.frame_mid, border_width=1, radius=2)
-        draw.text((230, 114), f"GEN {current_gen}", fill=self.palette.text_dark, font=font)
-
-        # Help Text
-        help_txt = "Use the dropdowns below to change settings."
-        draw.text((24, 180), help_txt, fill=self.palette.text_light, font=font_sm)
-        
-        buf = io.BytesIO()
-        canvas.save(buf, format="PNG")
-        buf.seek(0)
-        return buf
+    def render_settings_menu(self, current_theme: str) -> io.BytesIO:
+        """Render a classic settings menu image."""
+        from .themes import get_theme_renderer
+        theme_renderer = get_theme_renderer(self.theme, self)
+        return theme_renderer.render_settings_menu(current_theme)
