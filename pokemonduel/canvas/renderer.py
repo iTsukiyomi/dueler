@@ -120,22 +120,52 @@ class BattleRenderer:
         # pyrefly: ignore [bad-return]
         return fonts
 
-    def _load_sprite(self, poke_id: Optional[int], size: Tuple[int, int]) -> Optional[Image.Image]:
-        """Safely loads and scales a Pokémon sprite from disk."""
-        if poke_id is None:
-            return None
-        for ext in ("png", "gif", "jpg"):
-            path = self.sprite_dir / f"{poke_id}.{ext}"
-            if path.exists():
-                try:
-                    img = Image.open(path).convert("RGBA")
-                    if getattr(img, "is_animated", False):
-                        img.seek(0)
-                        img = img.convert("RGBA")
-                    img = img.resize(size, Image.Resampling.LANCZOS)
-                    return img
-                except Exception:
-                    continue
+    def _load_sprite(self, poke_id: Optional[int], size: Tuple[int, int], name: Optional[str] = None) -> Optional[Image.Image]:
+        """Safely loads and scales a Pokémon sprite from disk.
+
+        Attempts to load in order:
+        1. Specific form ID (form_info['id'])
+        2. Form variety ID (form_info['pokemon_id'])
+        3. Base species ID (form_info['base_id'])
+        4. Fallback passed poke_id
+        """
+        candidates = []
+        if name:
+            try:
+                from ..core.registry import FORMS
+                form_info = FORMS.get(name.lower())
+                if form_info:
+                    # 1. Form ID (e.g. 10081 or 10091)
+                    fid = form_info.get("id")
+                    if fid and fid not in candidates:
+                        candidates.append(fid)
+                    # 2. Variety ID (e.g. 10021 or 666)
+                    pid = form_info.get("pokemon_id")
+                    if pid and pid not in candidates:
+                        candidates.append(pid)
+                    # 3. Base ID (e.g. 645 or 666)
+                    bid = form_info.get("base_id")
+                    if bid and bid not in candidates:
+                        candidates.append(bid)
+            except Exception:
+                pass
+
+        if poke_id and poke_id not in candidates:
+            candidates.append(poke_id)
+
+        for cid in candidates:
+            for ext in ("png", "gif", "jpg"):
+                path = self.sprite_dir / f"{cid}.{ext}"
+                if path.exists():
+                    try:
+                        img = Image.open(path).convert("RGBA")
+                        if getattr(img, "is_animated", False):
+                            img.seek(0)
+                            img = img.convert("RGBA")
+                        img = img.resize(size, Image.Resampling.LANCZOS)
+                        return img
+                    except Exception:
+                        continue
         return None
 
     # ── Classic UI Drawing Primitives ──
@@ -400,11 +430,13 @@ class BattleRenderer:
 
         t1_id = getattr(t1_poke, 'pokemon_id', getattr(t1_poke, 'id', None))
         t2_id = getattr(t2_poke, 'pokemon_id', getattr(t2_poke, 'id', None))
+        t1_name = getattr(t1_poke, '_name', getattr(t1_poke, 'name', None)) if t1_poke else None
+        t2_name = getattr(t2_poke, '_name', getattr(t2_poke, 'name', None)) if t2_poke else None
 
         sprite_w, sprite_h = 200, 200
 
         # Left Pokémon (player's — larger, lower on screen)
-        sprite_left = self._load_sprite(t1_id, (sprite_w, sprite_h))
+        sprite_left = self._load_sprite(t1_id, (sprite_w, sprite_h), name=t1_name)
         if sprite_left:
             canvas.paste(sprite_left, (130, 230), sprite_left)
         else:
@@ -412,7 +444,7 @@ class BattleRenderer:
             draw.text((215, 310), "?", fill=_TEXT_MID, font=self.fonts["title"])
 
         # Right Pokémon (opponent's — slightly smaller, higher)
-        sprite_right = self._load_sprite(t2_id, (sprite_w - 10, sprite_h - 10))
+        sprite_right = self._load_sprite(t2_id, (sprite_w - 10, sprite_h - 10), name=t2_name)
         if sprite_right:
             sprite_right = sprite_right.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
             canvas.paste(sprite_right, (635, 210), sprite_right)
@@ -495,8 +527,15 @@ class BattleRenderer:
                 self._draw_classic_panel(draw, px, start_y, px + poke_w, start_y + poke_h,
                                          fill=(40, 56, 96), border=(72, 88, 136), border_width=2)
 
-                poke_id = getattr(poke, 'pokemon_id', getattr(poke, 'id', None))
-                sprite = self._load_sprite(poke_id, (76, 76))
+                poke_id = None
+                poke_name = None
+                if isinstance(poke, dict):
+                    poke_id = poke.get("pokemon_id") or poke.get("id") or poke.get("pokid")
+                    poke_name = poke.get("pokname") or poke.get("name")
+                else:
+                    poke_id = getattr(poke, 'pokemon_id', getattr(poke, 'id', None))
+                    poke_name = getattr(poke, '_name', getattr(poke, 'name', None))
+                sprite = self._load_sprite(poke_id, (76, 76), name=poke_name)
                 if sprite:
                     canvas.paste(sprite, (int(px + 4), int(start_y + 4)), sprite)
                 else:
@@ -720,7 +759,8 @@ class BattleRenderer:
                                  sprite_panel_x + sprite_panel_w, sprite_panel_y + sprite_panel_h,
                                  fill=(232, 232, 224), border=_FRAME_DARK)
 
-        sprite = self._load_sprite(poke_id, (140, 140))
+        poke_name = poke.get("pokname", "") if isinstance(poke, dict) else getattr(poke, "_name", "")
+        sprite = self._load_sprite(poke_id, (140, 140), name=poke_name)
         if sprite:
             canvas.paste(sprite, (sprite_panel_x + 5, sprite_panel_y + 5), sprite)
         else:
@@ -886,18 +926,25 @@ class BattleRenderer:
             self._draw_classic_panel(draw, sx, sy, sx + slot_w, sy + slot_h, fill=(248, 248, 240), border=_FRAME_MID, border_width=1, radius=3)
 
             poke_id = None
+            poke_name = None
             if party_pokemon and idx < len(party_pokemon):
                 poke = party_pokemon[idx]
                 pokname = poke.get("pokname", "")
                 if pokname:
+                    poke_name = pokname
                     form_info = FORMS.get(pokname.lower())
                     if form_info:
                         poke_id = form_info.get("pokemon_id")
 
+            sprite = None
             if poke_id:
-                sprite = self._load_sprite(poke_id, (48, 48))
-                if sprite:
-                    canvas.paste(sprite, (sx + 4, sy + 4), sprite)
+                sprite = self._load_sprite(poke_id, (48, 48), name=poke_name)
+
+            if sprite:
+                canvas.paste(sprite, (sx + 4, sy + 4), sprite)
+            elif poke_id:
+                cx, cy = sx + 28, sy + 28
+                draw.text((cx - 4, cy - 8), "?", fill=_TEXT_LIGHT, font=self.fonts["small_bold"])
             else:
                 # Draw a tiny faint Pokéball silhouette for empty slots
                 cx, cy = sx + 28, sy + 28
