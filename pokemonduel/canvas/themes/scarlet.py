@@ -143,9 +143,10 @@ class ScarletRenderer(BaseThemeRenderer):
         if sprite:
             canvas.paste(sprite, (40, 50), sprite)
 
-        # Nature and OT details
+        # OT / Nature / Held Item
         draw.text((20, 170), f"TRAINER: {player_name.upper()}", fill=(160, 64, 80), font=self.fonts["tiny"])
         draw.text((20, 184), f"NATURE: {str(data['nature']).upper()}", fill=self.palette.text_dark, font=self.fonts["small_bold"])
+        draw.text((20, 198), f"ITEM: {str(data['item']).replace('-', ' ').upper()}", fill=(160, 64, 80), font=self.fonts["tiny"])
 
         # Type badges (Rotom App chip pill badge style)
         if data["type_names"]:
@@ -195,7 +196,7 @@ class ScarletRenderer(BaseThemeRenderer):
         moves_y = 238
         self.renderer._draw_classic_panel(draw, 196, moves_y, 484, 292, fill=(255, 245, 245), border=(220, 40, 60), border_width=1, radius=6)
         move_names = []
-        for move in data["moves"][:3]:
+        for move in data["moves"][:4]:
             name = move.replace('-', ' ').upper() if isinstance(move, str) else getattr(move, 'pretty_name', str(move)).upper()
             move_names.append(name)
         draw.text((202, moves_y + 4), "MOVES: " + " │ ".join(move_names), fill=self.palette.text_dark, font=self.fonts["tiny"])

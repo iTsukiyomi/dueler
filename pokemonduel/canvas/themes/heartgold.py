@@ -191,7 +191,7 @@ class HeartGoldRenderer(BaseThemeRenderer):
         self.renderer._draw_classic_panel(draw, 196, moves_y, 484, 292, fill=(250, 248, 240), border=(200, 160, 80), border_width=1, radius=2)
         
         move_names = []
-        for move in data["moves"][:3]:
+        for move in data["moves"][:4]:
             name = move.replace('-', ' ').upper() if isinstance(move, str) else getattr(move, 'pretty_name', str(move)).upper()
             move_names.append(name)
         

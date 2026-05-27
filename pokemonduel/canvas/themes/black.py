@@ -127,9 +127,10 @@ class BlackRenderer(BaseThemeRenderer):
         if sprite:
             canvas.paste(sprite, (40, 50), sprite)
 
-        # Level / Nature
+        # Level / Nature / Held Item
         draw.text((20, 170), f"OT: {player_name.upper()}", fill=(180, 180, 180), font=self.fonts["tiny"])
         draw.text((20, 184), f"NATURE: {str(data['nature']).upper()}", fill=(255, 255, 255), font=self.fonts["small_bold"])
+        draw.text((20, 198), f"ITEM: {str(data['item']).replace('-', ' ').upper()}", fill=(180, 180, 180), font=self.fonts["tiny"])
 
         # Type badges
         if data["type_names"]:
@@ -177,7 +178,7 @@ class BlackRenderer(BaseThemeRenderer):
         moves_y = 238
         self.renderer._draw_classic_panel(draw, 196, moves_y, 484, 292, fill=(16, 16, 16), border=(255, 255, 255), border_width=1, radius=2)
         move_names = []
-        for move in data["moves"][:3]:
+        for move in data["moves"][:4]:
             name = move.replace('-', ' ').upper() if isinstance(move, str) else getattr(move, 'pretty_name', str(move)).upper()
             move_names.append(name)
         draw.text((202, moves_y + 4), "MOVES: " + " │ ".join(move_names), fill=(255, 255, 255), font=self.fonts["tiny"])
