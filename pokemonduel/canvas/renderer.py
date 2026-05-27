@@ -794,3 +794,122 @@ class BattleRenderer:
         canvas.save(buf, format="PNG")
         buf.seek(0)
         return buf
+
+    def render_trainer_card(self, username: str, player_id: str, rank: Optional[int | str],
+                            elo: int, wins: int, losses: int, wallet: int,
+                            active_team: str, avatar_bytes: Optional[bytes] = None,
+                            party_pokemon: Optional[list[dict]] = None) -> io.BytesIO:
+        """Generates a classic Fire Red/BW2 style trainer card image."""
+        width, height = 480, 280
+        canvas = self.asset_loader.get_background("trainer_card_bg", width, height).copy()
+        draw = ImageDraw.Draw(canvas)
+
+        # 1. Header Title: "TRAINER CARD" centered in the blue header banner (y: 6 to 42)
+        title_text = "TRAINER CARD"
+        bbox = draw.textbbox((0, 0), title_text, font=self.fonts["title"])
+        tx = (width - (bbox[2] - bbox[0])) // 2
+        ty = 6 + (30 - (bbox[3] - bbox[1])) // 2
+        draw.text((tx, ty), title_text, fill=(255, 203, 5, 255), font=self.fonts["title"])  # Pokemon Yellow
+
+        # 2. Main Details Panel (left column)
+        self._draw_classic_panel(draw, 14, 48, 332, 188, fill=(248, 248, 240), border=_FRAME_DARK, border_width=2)
+
+        # Draw Name
+        draw.text((24, 56), "NAME:", fill=_FRAME_MID, font=self.fonts["small_bold"])
+        draw.text((65, 54), username, fill=_TEXT_DARK, font=self.fonts["body_bold"])
+
+        # Draw ID No. (last 5 digits of discord id)
+        id_no = str(player_id)[-5:] if player_id else "00000"
+        draw.text((240, 56), f"IDNo. {id_no}", fill=_TEXT_DARK, font=self.fonts["small_bold"])
+
+        # Separator Line
+        draw.line([(20, 76), (326, 76)], fill=_FRAME_MID, width=1)
+
+        # Detail lines
+        total = wins + losses
+        win_rate = f"{(wins / total * 100):.1f}%" if total > 0 else "N/A"
+        rank_val = f"#{rank}" if rank else "Unranked"
+
+        info_items = [
+            ("MONEY", f"¥{wallet:,}"),
+            ("ELO RATING", f"{elo}"),
+            ("RANK", rank_val),
+            ("RECORD", f"{wins}W / {losses}L ({win_rate})"),
+            ("ACTIVE TEAM", f"{active_team}"),
+        ]
+
+        dy = 82
+        for label, val in info_items:
+            # Draw label
+            draw.text((24, dy), label, fill=_FRAME_MID, font=self.fonts["small_bold"])
+            # Draw value aligned to the right (x=320)
+            val_bbox = draw.textbbox((0, 0), val, font=self.fonts["small_bold"])
+            val_w = val_bbox[2] - val_bbox[0]
+            draw.text((320 - val_w, dy), val, fill=_TEXT_DARK, font=self.fonts["small_bold"])
+            dy += 20
+
+        # 3. Avatar Panel
+        self._draw_classic_panel(draw, 346, 48, 466, 168, fill=(240, 240, 232), border=_FRAME_DARK, border_width=2)
+
+        # Draw Avatar Image if available
+        avatar_loaded = False
+        if avatar_bytes:
+            try:
+                avatar_img = Image.open(io.BytesIO(avatar_bytes)).convert("RGBA")
+                # Center avatar inside the frame
+                avatar_img = avatar_img.resize((112, 112), Image.Resampling.LANCZOS)
+                canvas.paste(avatar_img, (350, 52), avatar_img)
+                avatar_loaded = True
+            except Exception:
+                pass
+
+        if not avatar_loaded:
+            # Draw a classic retro Pokéball silhouette in the avatar frame as fallback
+            cx, cy = 346 + 60, 48 + 60
+            r = 35
+            draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(224, 220, 208), outline=_FRAME_MID, width=2)
+            draw.line([cx - r, cy, cx + r, cy], fill=_FRAME_MID, width=2)
+            draw.ellipse([cx - 10, cy - 10, cx + 10, cy + 10], fill=(240, 240, 232), outline=_FRAME_MID, width=2)
+
+        # 4. Active Team Section (6 slots)
+        self._draw_classic_panel(draw, 14, 198, width - 14, 268, fill=(240, 240, 232), border=_FRAME_DARK, border_width=2)
+
+        slot_w, slot_h = 56, 56
+        gap = 12
+        sx_start = 42
+        sy = 203
+
+        from ..core.registry import FORMS
+        for idx in range(6):
+            sx = sx_start + idx * (slot_w + gap)
+            # Draw slot border
+            self._draw_classic_panel(draw, sx, sy, sx + slot_w, sy + slot_h, fill=(248, 248, 240), border=_FRAME_MID, border_width=1, radius=3)
+
+            poke_id = None
+            if party_pokemon and idx < len(party_pokemon):
+                poke = party_pokemon[idx]
+                pokname = poke.get("pokname", "")
+                if pokname:
+                    form_info = FORMS.get(pokname.lower())
+                    if form_info:
+                        poke_id = form_info.get("pokemon_id")
+
+            if poke_id:
+                sprite = self._load_sprite(poke_id, (48, 48))
+                if sprite:
+                    canvas.paste(sprite, (sx + 4, sy + 4), sprite)
+            else:
+                # Draw a tiny faint Pokéball silhouette for empty slots
+                cx, cy = sx + 28, sy + 28
+                r = 12
+                faint_outline = (200, 200, 200, 255)
+                faint_fill = (248, 248, 240, 255)
+                draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=faint_fill, outline=faint_outline, width=1)
+                draw.line([cx - r, cy, cx + r, cy], fill=faint_outline, width=1)
+                draw.ellipse([cx - 4, cy - 4, cx + 4, cy + 4], fill=faint_fill, outline=faint_outline, width=1)
+
+        # Output to buffer
+        buf = io.BytesIO()
+        canvas.save(buf, format="PNG")
+        buf.seek(0)
+        return buf

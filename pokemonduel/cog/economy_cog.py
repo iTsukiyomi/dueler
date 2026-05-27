@@ -21,6 +21,7 @@ import discord
 from discord.ext import commands
 
 from ..services.player_service import PlayerService
+from ..services.team_service import TeamService
 
 log = logging.getLogger("dueler.cog.economy")
 
@@ -31,6 +32,7 @@ class EconomyCog(commands.Cog, name="Economy"):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self._svc = PlayerService()
+        self._team_svc = TeamService()
 
     # -- ;balance ----------------------------------------------------------
 
@@ -144,13 +146,11 @@ class EconomyCog(commands.Cog, name="Economy"):
         embed.add_field(name="Record", value=f"{wins}W / {losses}L ({win_rate})", inline=True)
         await ctx.send(embed=embed)
 
-    # -- ;profile ----------------------------------------------------------
-
     @commands.command(name="profile", aliases=["prof"])
     # pyrefly: ignore [bad-function-definition]
     async def profile(self, ctx: commands.Context, member: discord.Member = None):
         """
-        Show a player's full profile.
+        Show a player's full profile as a trainer card image.
 
         Usage: ;profile [user]
         """
@@ -169,20 +169,48 @@ class EconomyCog(commands.Cog, name="Economy"):
         losses = profile.get("losses", 0)
         wallet = profile.get("wallet", 0)
         active_team = profile.get("active_party_name") or "None"
-        total = wins + losses
-        win_rate = f"{(wins / total * 100):.1f}%" if total > 0 else "N/A"
 
+        # Load active party pokemon
+        party_pokemon = await self._team_svc.load_active_party(str(target.id))
+
+        # Download avatar bytes asynchronously
+        avatar_bytes = None
+        try:
+            avatar_bytes = await target.display_avatar.read()
+        except Exception as e:
+            log.warning(f"Failed to read avatar for {target.id}: {e}")
+
+        # Render the trainer card
+        from ..canvas import BattleRenderer
+        from pathlib import Path
+        
+        data_dir = Path(__file__).parent.parent / "data"
+        renderer = BattleRenderer(data_dir)
+
+        import asyncio
+        loop = asyncio.get_running_loop()
+        img_buf = await loop.run_in_executor(
+            None,
+            renderer.render_trainer_card,
+            target.name,
+            str(target.id),
+            rank,
+            elo,
+            wins,
+            losses,
+            wallet,
+            active_team,
+            avatar_bytes,
+            party_pokemon
+        )
+
+        file = discord.File(fp=img_buf, filename="trainer_card.png")
         embed = discord.Embed(
-            title=f"{target.name}'s Profile",
+            title=f"{target.name}'s Trainer Card",
             color=0x3B4CCA,  # Pokémon blue
         )
-        embed.set_thumbnail(url=target.display_avatar.url)
-        embed.add_field(name="Rank", value=f"#{rank}" if rank else "Unranked", inline=True)
-        embed.add_field(name="Elo", value=str(elo), inline=True)
-        embed.add_field(name="Record", value=f"{wins}W / {losses}L ({win_rate})", inline=True)
-        embed.add_field(name="💰 Wallet", value=f"¥{wallet:,}", inline=True)
-        embed.add_field(name="Active Team", value=active_team, inline=True)
-        await ctx.send(embed=embed)
+        embed.set_image(url="attachment://trainer_card.png")
+        await ctx.send(file=file, embed=embed)
 
 
 async def setup(bot: commands.Bot) -> None:

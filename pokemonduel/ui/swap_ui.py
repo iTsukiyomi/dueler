@@ -68,8 +68,7 @@ class SwapView(discord.ui.View):
 class SwapButton(discord.ui.Button):
     """A button that swaps to that pokemon when pressed."""
     def __init__(self, poke, *, disabled=False):
-        hp_pct = int((poke.hp / poke.starting_hp * 100) if poke.starting_hp > 0 else 0)
-        super().__init__(style=discord.ButtonStyle.secondary, label=f"{poke._name} | {hp_pct}% HP", disabled=disabled)
+        super().__init__(style=discord.ButtonStyle.secondary, label=f"{poke._name} | {poke.hp}/{poke.starting_hp}hp", disabled=disabled)
         self.poke = poke
 
     async def callback(self, interaction):

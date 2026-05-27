@@ -37,6 +37,8 @@ class AssetLoader:
             fallback = self._gen_team_preview_bg(width, height)
         elif name == "card_bg":
             fallback = self._gen_card_bg(width, height)
+        elif name == "trainer_card_bg":
+            fallback = self._gen_trainer_card_bg(width, height)
         else:
             fallback = self._gen_battle_bg(width, height)
 
@@ -167,6 +169,32 @@ class AssetLoader:
 
         # Dark border frame
         draw.rectangle([0, 0, width - 1, height - 1], outline=(48, 56, 112, 255), width=2)
+
+        return img
+
+    def _gen_trainer_card_bg(self, width: int, height: int) -> Image.Image:
+        """Classic Fire Red style trainer card background with diagonal stripes."""
+        img = Image.new("RGBA", (width, height))
+        draw = ImageDraw.Draw(img)
+
+        # Base color: warm retro orange/beige (Fire Red theme)
+        base_color = (248, 176, 112, 255)
+        draw.rectangle([0, 0, width, height], fill=base_color)
+
+        # Draw diagonal stripe pattern (slightly darker orange)
+        stripe_color = (240, 144, 80, 255)
+        for offset in range(-height, width + height, 20):
+            draw.line([(offset, 0), (offset + height, height)], fill=stripe_color, width=8)
+
+        # Add a retro frame/inner border
+        dark_blue = (48, 56, 112, 255)
+        cream = (248, 248, 240, 255)
+        draw.rectangle([0, 0, width - 1, height - 1], outline=dark_blue, width=4)
+        draw.rectangle([4, 4, width - 5, height - 5], outline=cream, width=2)
+
+        # Header background banner
+        header_h = 36
+        draw.rectangle([6, 6, width - 7, header_h], fill=dark_blue)
 
         return img
 
