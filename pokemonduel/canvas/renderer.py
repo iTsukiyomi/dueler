@@ -81,10 +81,43 @@ class BattleRenderer:
         self.asset_loader = AssetLoader(data_dir / "canvas_assets")
         self.fonts = self._load_fonts()
 
+    def _ensure_font(self, font_name: str, url: str) -> Optional[Path]:
+        """Ensures that a font exists locally, downloading it from the given URL if missing."""
+        font_dir = self.data_dir / "fonts"
+        try:
+            font_dir.mkdir(parents=True, exist_ok=True)
+        except Exception:
+            return None
+
+        font_path = font_dir / font_name
+        if font_path.exists():
+            return font_path
+
+        import urllib.request
+        try:
+            req = urllib.request.Request(
+                url, 
+                headers={'User-Agent': 'Mozilla/5.0'}
+            )
+            with urllib.request.urlopen(req, timeout=10) as response:
+                with open(font_path, "wb") as f:
+                    f.write(response.read())
+            return font_path
+        except Exception:
+            if font_path.exists():
+                try:
+                    font_path.unlink()
+                except Exception:
+                    pass
+            return None
+
     def _load_fonts(self) -> dict[str, ImageFont.ImageFont]:
         """Load fonts, preferring retro/monospace for pixel settings, clean sans-serif for modern."""
         is_pixel = getattr(self, "palette", None) and getattr(self.palette, "font_hint", "sans") == "pixel"
         
+        bold_path = None
+        reg_path = None
+
         if is_pixel:
             font_paths = [
                 "/usr/share/fonts/TTF/JetBrainsMonoNerdFont-Bold.ttf",
@@ -94,6 +127,24 @@ class BattleRenderer:
                 "/usr/share/fonts/liberation/LiberationMono-Bold.ttf",
                 "/usr/share/fonts/liberation/LiberationMono-Regular.ttf",
             ]
+            for p in font_paths:
+                if Path(p).exists():
+                    if "Bold" in p and not bold_path:
+                        bold_path = Path(p)
+                    elif not reg_path:
+                        reg_path = Path(p)
+
+            # Fallback to downloading JetBrains Mono
+            if not bold_path:
+                bold_path = self._ensure_font(
+                    "JetBrainsMono-Bold.ttf",
+                    "https://raw.githubusercontent.com/JetBrains/JetBrainsMono/master/fonts/ttf/JetBrainsMono-Bold.ttf"
+                )
+            if not reg_path:
+                reg_path = self._ensure_font(
+                    "JetBrainsMono-Regular.ttf",
+                    "https://raw.githubusercontent.com/JetBrains/JetBrainsMono/master/fonts/ttf/JetBrainsMono-Regular.ttf"
+                )
         else:
             font_paths = [
                 "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf",
@@ -103,36 +154,48 @@ class BattleRenderer:
                 "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
                 "/usr/share/fonts/liberation/LiberationSans-Regular.ttf",
             ]
+            for p in font_paths:
+                if Path(p).exists():
+                    if "Bold" in p and not bold_path:
+                        bold_path = Path(p)
+                    elif not reg_path:
+                        reg_path = Path(p)
 
-        bold_path = None
-        reg_path = None
-        for p in font_paths:
-            if Path(p).exists():
-                if "Bold" in p and not bold_path:
-                    bold_path = p
-                elif not reg_path:
-                    reg_path = p
+            # Fallback to downloading Roboto
+            if not bold_path:
+                bold_path = self._ensure_font(
+                    "Roboto-Bold.ttf",
+                    "https://raw.githubusercontent.com/googlefonts/roboto/main/src/hinted/Roboto-Bold.ttf"
+                )
+            if not reg_path:
+                reg_path = self._ensure_font(
+                    "Roboto-Regular.ttf",
+                    "https://raw.githubusercontent.com/googlefonts/roboto/main/src/hinted/Roboto-Regular.ttf"
+                )
 
         if not bold_path:
             bold_path = reg_path
 
+        bold_font = str(bold_path) if bold_path else "arial.ttf"
+        reg_font = str(reg_path) if reg_path else "arial.ttf"
+
         fonts = {}
         try:
-            fonts["title"]      = ImageFont.truetype(bold_path or "arial.ttf", 20)
-            fonts["body"]       = ImageFont.truetype(reg_path or "arial.ttf", 14)
-            fonts["body_bold"]  = ImageFont.truetype(bold_path or "arial.ttf", 14)
-            fonts["small"]      = ImageFont.truetype(reg_path or "arial.ttf", 11)
-            fonts["small_bold"] = ImageFont.truetype(bold_path or "arial.ttf", 11)
-            fonts["tiny"]       = ImageFont.truetype(reg_path or "arial.ttf", 9)
-            fonts["hp_label"]   = ImageFont.truetype(bold_path or "arial.ttf", 10)
+            fonts["title"]      = ImageFont.truetype(bold_font, 20)
+            fonts["body"]       = ImageFont.truetype(reg_font, 14)
+            fonts["body_bold"]  = ImageFont.truetype(bold_font, 14)
+            fonts["small"]      = ImageFont.truetype(reg_font, 11)
+            fonts["small_bold"] = ImageFont.truetype(bold_font, 11)
+            fonts["tiny"]       = ImageFont.truetype(reg_font, 9)
+            fonts["hp_label"]   = ImageFont.truetype(bold_font, 10)
         except Exception:
             default = ImageFont.load_default()
             for key in ("title", "body", "body_bold", "small", "small_bold", "tiny", "hp_label"):
                 # pyrefly: ignore [unsupported-operation]
                 fonts[key] = default
 
-        # pyrefly: ignore [bad-return]
         return fonts
+
 
     def _load_sprite(self, poke_id: Optional[int], size: Tuple[int, int], name: Optional[str] = None) -> Optional[Image.Image]:
         """Safely loads and scales a Pokémon sprite from disk.

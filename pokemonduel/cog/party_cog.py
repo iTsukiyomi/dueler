@@ -186,11 +186,10 @@ class PartyCog(commands.Cog, name="Party"):
             await ctx.send("Teambuilder system is currently unavailable.")
             return
 
-        ws_dict = getattr(tb_cog, "_workspace", None)
-        if ws_dict is None:
+        if not hasattr(tb_cog, "get_user_workspace"):
             await ctx.send("Teambuilder system is currently unavailable.")
             return
-        ws = ws_dict.get(str(ctx.author.id))
+        ws = await tb_cog.get_user_workspace(str(ctx.author.id))
         if ws is None or ws.get("pokemon") is None:
             await ctx.send(
                 embed=discord.Embed(
@@ -253,6 +252,7 @@ class PartyCog(commands.Cog, name="Party"):
         # Update the workspace metadata
         ws["slot_idx"] = slot - 1
         ws["team_name"] = active_party_name or "custom"
+        await tb_cog._workspace_repo.set(str(ctx.author.id), ws)
 
         pokemon_name = ws["pokemon"].get("pokname", "?")
         team_display = f"team **{active_party_name}**" if active_party_name else "active party"

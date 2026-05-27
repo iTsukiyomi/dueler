@@ -150,12 +150,23 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
         self._player_svc = PlayerService()
         # Per-user workspace: {user_id: {"team_name": str, "slot_idx": int | None, "pokemon": dict}}
         self._workspace: dict[str, dict] = {}
+        from ..repositories.workspace_repository import WorkspaceRepository
+        self._workspace_repo = WorkspaceRepository()
 
     # -- Helpers -----------------------------------------------------------
 
+    async def get_user_workspace(self, user_id: str) -> Optional[dict]:
+        """Get the workspace for a user (checking memory first, then database/cache repository)."""
+        ws = self._workspace.get(user_id)
+        if ws is None:
+            ws = await self._workspace_repo.get(user_id)
+            if ws is not None:
+                self._workspace[user_id] = ws
+        return ws
+
     async def _load_workspace(self, ctx: commands.Context) -> dict | None:
         """Return the current workspace Pokémon, or None with an error message."""
-        ws = self._workspace.get(str(ctx.author.id))
+        ws = await self.get_user_workspace(str(ctx.author.id))
         if ws is None:
             await ctx.send(
                 embed=discord.Embed(
@@ -170,7 +181,13 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
     async def _save_workspace(self, ctx: commands.Context) -> None:
         """Persist workspace changes back to the active party in MongoDB if it is a slot selection."""
         ws = self._workspace.get(str(ctx.author.id))
-        if ws is None or ws.get("slot_idx") is None:
+        if ws is None:
+            return
+
+        # Always save workspace to repository (MongoDB + Redis cache)
+        await self._workspace_repo.set(str(ctx.author.id), ws)
+
+        if ws.get("slot_idx") is None:
             return
 
         party = await self._team_svc.load_active_party(str(ctx.author.id))
@@ -239,11 +256,13 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
             profile = await self._player_svc.get_profile(str(ctx.author.id))
             team_name = profile.get("active_party_name", "?") if profile else "?"
 
-            self._workspace[str(ctx.author.id)] = {
+            ws = {
                 "team_name": team_name,
                 "slot_idx": idx,
                 "pokemon": pokemon.copy(),
             }
+            self._workspace[str(ctx.author.id)] = ws
+            await self._workspace_repo.set(str(ctx.author.id), ws)
 
             embed = discord.Embed(
                 title=f"Selected: {pokemon.get('pokname', '?').replace('-', ' ').title()}",
@@ -291,11 +310,13 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
             profile = await self._player_svc.get_profile(str(ctx.author.id))
             team_name = profile.get("active_party_name", "None") if profile else "None"
 
-            self._workspace[str(ctx.author.id)] = {
+            ws = {
                 "team_name": team_name,
                 "slot_idx": None,
                 "pokemon": pokemon,
             }
+            self._workspace[str(ctx.author.id)] = ws
+            await self._workspace_repo.set(str(ctx.author.id), ws)
 
             embed = discord.Embed(
                 title=f"Selected: {matched_identifier.replace('-', ' ').title()}",
