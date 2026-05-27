@@ -53,27 +53,14 @@ _TYPE_ID_TO_NAME = {
     16: "Dragon", 17: "Dark", 18: "Fairy",
 }
 
-# ── Classic Pokémon UI Color Palette ──
-_FRAME_DARK    = (40, 48, 72)       # Dark blue-grey frame border
-_FRAME_MID     = (72, 80, 112)      # Medium frame accent
-_PANEL_BG      = (248, 248, 240)    # Off-white panel fill
-_PANEL_BG_DARK = (232, 232, 216)    # Slightly darker panel
-_TEXT_DARK     = (40, 40, 40)       # Primary text color
-_TEXT_MID      = (88, 88, 88)       # Secondary text
-_TEXT_LIGHT    = (136, 136, 136)    # Tertiary text
-_HEADER_BG     = (48, 56, 112)     # Dark blue header bar
-_HEADER_TEXT   = (255, 255, 255)   # White header text
-_HP_GREEN      = (80, 200, 72)     # HP bar green
-_HP_YELLOW     = (248, 200, 48)    # HP bar yellow
-_HP_RED        = (240, 72, 56)     # HP bar red
-_HP_BG         = (56, 56, 56)      # HP bar background
-_HP_BORDER     = (40, 40, 40)      # HP bar border
+from .themes import DEFAULT_PALETTE, ThemePalette
 
 
 class BattleRenderer:
     """Classic Pokémon-style canvas rendering pipeline for battle screens, teams, and profiles."""
 
-    def __init__(self, data_dir: Path) -> None:
+    def __init__(self, data_dir: Path, palette: ThemePalette = DEFAULT_PALETTE) -> None:
+        self.palette = palette
         self.data_dir = data_dir
         self.sprite_dir = data_dir / "img"
         self.asset_loader = AssetLoader(data_dir / "canvas_assets")
@@ -172,23 +159,26 @@ class BattleRenderer:
 
     def _draw_classic_panel(self, draw: ImageDraw.ImageDraw,
                             x1: float, y1: float, x2: float, y2: float,
-                            *, fill=_PANEL_BG, border=_FRAME_DARK, border_width: int = 2,
+                            *, fill=None, border=None, border_width: int = 2,
                             radius: int = 4) -> None:
         """Draw a classic Pokémon-style bordered panel (solid fill, dark border)."""
+        fill = fill or self.palette.panel_bg
+        border = border or self.palette.frame_dark
         draw.rounded_rectangle([x1, y1, x2, y2], radius=radius, fill=(*fill, 255) if len(fill) == 3 else fill)
         draw.rounded_rectangle([x1, y1, x2, y2], radius=radius, outline=(*border, 255) if len(border) == 3 else border, width=border_width)
 
     def _draw_header_bar(self, draw: ImageDraw.ImageDraw,
                          x1: float, y1: float, x2: float, height: int = 24,
-                         text: str = "", *, bg=_HEADER_BG) -> None:
+                         text: str = "", *, bg=None) -> None:
         """Draw a classic dark header bar with white text (Gen 3/5 style)."""
+        bg = bg or self.palette.header_bg
         draw.rounded_rectangle([x1, y1, x2, y1 + height], radius=4, fill=(*bg, 255) if len(bg) == 3 else bg)
         if text:
             font = self.fonts["body_bold"]
             bbox = draw.textbbox((0, 0), text, font=font)
             tx = x1 + ((x2 - x1) - (bbox[2] - bbox[0])) // 2
             ty = y1 + (height - (bbox[3] - bbox[1])) // 2 - 1
-            draw.text((tx, ty), text, fill=_HEADER_TEXT, font=font)
+            draw.text((tx, ty), text, fill=self.palette.header_text, font=font)
 
     def _draw_type_badge(self, draw: ImageDraw.ImageDraw,
                          x: float, y: float, type_name: str,
@@ -242,28 +232,28 @@ class BattleRenderer:
 
         # "HP:" label on the left
         font = self.fonts["hp_label"]
-        draw.text((x - 24, y - 1), "HP:", fill=_TEXT_DARK, font=font)
+        draw.text((x - 24, y - 1), "HP:", fill=self.palette.text_dark, font=font)
 
         # Background bar with dark border
-        draw.rounded_rectangle([x, y, x + w, y + h], radius=2, fill=_HP_BG)
+        draw.rounded_rectangle([x, y, x + w, y + h], radius=2, fill=self.palette.hp_bg)
 
         if ratio > 0.0:
             fill_w = max(3, int(w * ratio))
             if ratio > 0.5:
-                color = _HP_GREEN
+                color = self.palette.hp_green
             elif ratio > 0.2:
-                color = _HP_YELLOW
+                color = self.palette.hp_yellow
             else:
-                color = _HP_RED
+                color = self.palette.hp_red
             draw.rounded_rectangle([x, y, x + fill_w, y + h], radius=2, fill=color)
 
         # Thin border
-        draw.rounded_rectangle([x, y, x + w, y + h], radius=2, outline=_HP_BORDER, width=1)
+        draw.rounded_rectangle([x, y, x + w, y + h], radius=2, outline=self.palette.hp_border, width=1)
 
         # HP text to the right
         hp_text = f"{current}/{maximum}"
         hp_font = self.fonts["small"]
-        draw.text((x + w + 6, y - 2), hp_text, fill=_TEXT_DARK, font=hp_font)
+        draw.text((x + w + 6, y - 2), hp_text, fill=self.palette.text_dark, font=hp_font)
 
     def _draw_hud(self, draw: ImageDraw.ImageDraw,
                   x: float, y: float, poke, is_left: bool) -> None:
@@ -273,7 +263,7 @@ class BattleRenderer:
 
         # Classic solid panel (cream/white with dark border)
         self._draw_classic_panel(draw, x, y, x + width, y + height,
-                                 fill=_PANEL_BG, border=_FRAME_DARK)
+                                 fill=None, border=None)
 
         # Name
         name_text = poke._name.replace('-', ' ').title()
@@ -281,7 +271,7 @@ class BattleRenderer:
         display_name = nick_text if nick_text and nick_text != "None" else name_text
 
         font_name = self.fonts["body_bold"]
-        draw.text((x + 10, y + 8), display_name, fill=_TEXT_DARK, font=font_name)
+        draw.text((x + 10, y + 8), display_name, fill=self.palette.text_dark, font=font_name)
 
         # Level (right-aligned)
         level = getattr(poke, 'level', 100)
@@ -289,7 +279,7 @@ class BattleRenderer:
         font_small = self.fonts["body"]
         lv_bbox = draw.textbbox((0, 0), level_text, font=font_small)
         lv_x = x + width - (lv_bbox[2] - lv_bbox[0]) - 10
-        draw.text((lv_x, y + 8), level_text, fill=_TEXT_MID, font=font_small)
+        draw.text((lv_x, y + 8), level_text, fill=self.palette.text_mid, font=font_small)
 
         # Gender icon
         gender = getattr(poke, 'gender', '')
@@ -321,7 +311,7 @@ class BattleRenderer:
                     stage_parts.append(f"{stat.upper()}{sign}{val}{arrow}")
             if stage_parts:
                 stages_text = " ".join(stage_parts[:3])
-                draw.text((start_x, curr_y + 1), stages_text, fill=_TEXT_MID, font=self.fonts["small"])
+                draw.text((start_x, curr_y + 1), stages_text, fill=self.palette.text_mid, font=self.fonts["small"])
 
     def _draw_terrain_overlay(self, draw: ImageDraw.ImageDraw, terrain: str, width: int, height: int) -> None:
         """Draw subtle terrain indicators on the battlefield."""
@@ -441,7 +431,7 @@ class BattleRenderer:
             canvas.paste(sprite_left, (130, 230), sprite_left)
         else:
             draw.rectangle([170, 260, 290, 380], fill=(80, 140, 60, 60), outline=(56, 120, 40, 160))
-            draw.text((215, 310), "?", fill=_TEXT_MID, font=self.fonts["title"])
+            draw.text((215, 310), "?", fill=self.palette.text_mid, font=self.fonts["title"])
 
         # Right Pokémon (opponent's — slightly smaller, higher)
         sprite_right = self._load_sprite(t2_id, (sprite_w - 10, sprite_h - 10), name=t2_name)
@@ -450,7 +440,7 @@ class BattleRenderer:
             canvas.paste(sprite_right, (635, 210), sprite_right)
         else:
             draw.rectangle([670, 250, 790, 370], fill=(80, 140, 60, 60), outline=(56, 120, 40, 160))
-            draw.text((715, 300), "?", fill=_TEXT_MID, font=self.fonts["title"])
+            draw.text((715, 300), "?", fill=self.palette.text_mid, font=self.fonts["title"])
 
         # Weather overlay
         self._apply_weather_overlay(canvas, weather)
@@ -466,13 +456,13 @@ class BattleRenderer:
         info_x = (width - info_w) // 2
         info_y = 16
         self._draw_classic_panel(draw, info_x, info_y, info_x + info_w, info_y + info_h,
-                                 fill=_PANEL_BG, border=_FRAME_DARK)
+                                 fill=None, border=None)
 
         turn = getattr(battle, 'turn', 1)
         turn_text = f"TURN {turn}"
         tb = draw.textbbox((0, 0), turn_text, font=self.fonts["body_bold"])
         draw.text((info_x + (info_w - (tb[2] - tb[0])) // 2, info_y + 6),
-                  turn_text, fill=_TEXT_DARK, font=self.fonts["body_bold"])
+                  turn_text, fill=self.palette.text_dark, font=self.fonts["body_bold"])
 
         # Weather/terrain subtitles
         if weather != "clear":
@@ -488,8 +478,8 @@ class BattleRenderer:
                       t_text, fill=(80, 160, 56), font=self.fonts["small"])
 
         # Outer frame border (classic game window)
-        draw.rectangle([0, 0, width - 1, height - 1], outline=_FRAME_DARK, width=3)
-        draw.rectangle([3, 3, width - 4, height - 4], outline=_FRAME_MID, width=1)
+        draw.rectangle([0, 0, width - 1, height - 1], outline=self.palette.frame_dark, width=3)
+        draw.rectangle([3, 3, width - 4, height - 4], outline=self.palette.frame_mid, width=1)
 
         buf = io.BytesIO()
         canvas.save(buf, format="PNG")
@@ -518,7 +508,7 @@ class BattleRenderer:
 
             # Trainer label
             draw.text((start_x, start_y - 18), label_text,
-                      fill=_HEADER_TEXT, font=self.fonts["small_bold"])
+                      fill=self.palette.header_text, font=self.fonts["small_bold"])
 
             for idx, poke in enumerate(party):
                 px = start_x + idx * (poke_w + col_gap)
@@ -548,7 +538,7 @@ class BattleRenderer:
                 name_font = self.fonts["small"]
                 nb = draw.textbbox((0, 0), name, font=name_font)
                 nx = px + (poke_w - (nb[2] - nb[0])) // 2
-                draw.text((nx, start_y + poke_h + 4), name, fill=_HEADER_TEXT, font=name_font)
+                draw.text((nx, start_y + poke_h + 4), name, fill=self.palette.header_text, font=name_font)
 
                 # Mini HP indicator
                 hp_text = f"{poke.hp}hp"
@@ -565,7 +555,7 @@ class BattleRenderer:
         draw.line([(40, div_y), (width - 40, div_y)], fill=(72, 88, 136, 180), width=1)
 
         # Outer frame
-        draw.rectangle([0, 0, width - 1, height - 1], outline=_FRAME_DARK, width=2)
+        draw.rectangle([0, 0, width - 1, height - 1], outline=self.palette.frame_dark, width=2)
 
         buf = io.BytesIO()
         canvas.save(buf, format="PNG")
@@ -742,7 +732,7 @@ class BattleRenderer:
         # ── Layout: Classic Pokémon Summary Screen ──
 
         # Header bar with Pokémon name
-        self._draw_header_bar(draw, 4, 8, width - 4, 26, text=display_name, bg=_HEADER_BG)
+        self._draw_header_bar(draw, 4, 8, width - 4, 26, text=display_name, bg=None)
 
         # Type badges (right of header or below)
         if type_names:
@@ -757,7 +747,7 @@ class BattleRenderer:
         sprite_panel_w, sprite_panel_h = 150, 150
         self._draw_classic_panel(draw, sprite_panel_x, sprite_panel_y,
                                  sprite_panel_x + sprite_panel_w, sprite_panel_y + sprite_panel_h,
-                                 fill=(232, 232, 224), border=_FRAME_DARK)
+                                 fill=(232, 232, 224), border=None)
 
         poke_name = poke.get("pokname", "") if isinstance(poke, dict) else getattr(poke, "_name", "")
         sprite = self._load_sprite(poke_id, (140, 140), name=poke_name)
@@ -765,7 +755,7 @@ class BattleRenderer:
             canvas.paste(sprite, (sprite_panel_x + 5, sprite_panel_y + 5), sprite)
         else:
             draw.text((sprite_panel_x + 65, sprite_panel_y + 65), "?",
-                      fill=_TEXT_LIGHT, font=self.fonts["title"])
+                      fill=self.palette.text_light, font=self.fonts["title"])
 
         # Info section (right of sprite)
         info_x = sprite_panel_x + sprite_panel_w + 12
@@ -782,16 +772,16 @@ class BattleRenderer:
 
         for i, (label, value) in enumerate(info_lines):
             ly = info_y + i * 20
-            draw.text((info_x, ly), label, fill=_TEXT_MID, font=self.fonts["small_bold"])
-            draw.text((info_x + 52, ly), value, fill=_TEXT_DARK, font=self.fonts["small"])
+            draw.text((info_x, ly), label, fill=self.palette.text_mid, font=self.fonts["small_bold"])
+            draw.text((info_x + 52, ly), value, fill=self.palette.text_dark, font=self.fonts["small"])
 
         # ── Stats Table (below info, classic grid) ──
         stats_y = info_y + 68
         stat_header = "STAT   BASE   IV   EV"
-        draw.text((info_x, stats_y), stat_header, fill=_HEADER_BG, font=self.fonts["small_bold"])
+        draw.text((info_x, stats_y), stat_header, fill=self.palette.header_bg, font=self.fonts["small_bold"])
 
         # Horizontal rule under header
-        draw.line([(info_x, stats_y + 14), (width - 16, stats_y + 14)], fill=_FRAME_MID, width=1)
+        draw.line([(info_x, stats_y + 14), (width - 16, stats_y + 14)], fill=self.palette.frame_mid, width=1)
 
         stats_keys = ["hp", "atk", "def", "spa", "spd", "spe"]
         stats_labels = ["HP ", "ATK", "DEF", "SPA", "SPD", "SPE"]
@@ -805,19 +795,19 @@ class BattleRenderer:
             ev_v = evs.get(key, 0)
 
             # Label with slightly different color per stat
-            draw.text((info_x, y_offset), f"{lbl:<5}", fill=_TEXT_DARK, font=self.fonts["small_bold"])
-            draw.text((info_x + 48, y_offset), f"{bs_v:<5}", fill=_TEXT_DARK, font=self.fonts["small"])
+            draw.text((info_x, y_offset), f"{lbl:<5}", fill=self.palette.text_dark, font=self.fonts["small_bold"])
+            draw.text((info_x + 48, y_offset), f"{bs_v:<5}", fill=self.palette.text_dark, font=self.fonts["small"])
             draw.text((info_x + 100, y_offset), f"{iv_v:<4}", fill=(80, 120, 200), font=self.fonts["small"])
             draw.text((info_x + 140, y_offset), f"{ev_v:<4}", fill=(200, 120, 60), font=self.fonts["small"])
 
         # ── Moveset section (bottom-left, below sprite) ──
         moves_y = sprite_panel_y + sprite_panel_h + 10
         self._draw_classic_panel(draw, 14, moves_y, sprite_panel_x + sprite_panel_w, height - 10,
-                                 fill=(240, 240, 232), border=_FRAME_MID, border_width=1)
+                                 fill=(240, 240, 232), border=self.palette.frame_mid, border_width=1)
 
-        draw.text((20, moves_y + 4), "MOVES", fill=_HEADER_BG, font=self.fonts["small_bold"])
+        draw.text((20, moves_y + 4), "MOVES", fill=self.palette.header_bg, font=self.fonts["small_bold"])
         draw.line([(20, moves_y + 18), (sprite_panel_x + sprite_panel_w - 6, moves_y + 18)],
-                  fill=_FRAME_MID, width=1)
+                  fill=self.palette.frame_mid, width=1)
 
         for idx, move in enumerate(moves[:4]):
             m_y = moves_y + 22 + (idx * 14)
@@ -825,10 +815,10 @@ class BattleRenderer:
                 m_name = move.replace('-', ' ').title()
             else:
                 m_name = getattr(move, 'pretty_name', str(move))
-            draw.text((24, m_y), f"• {m_name}", fill=_TEXT_DARK, font=self.fonts["small"])
+            draw.text((24, m_y), f"• {m_name}", fill=self.palette.text_dark, font=self.fonts["small"])
 
         # Outer frame
-        draw.rectangle([0, 0, width - 1, height - 1], outline=_FRAME_DARK, width=2)
+        draw.rectangle([0, 0, width - 1, height - 1], outline=self.palette.frame_dark, width=2)
 
         buf = io.BytesIO()
         canvas.save(buf, format="PNG")
@@ -852,18 +842,18 @@ class BattleRenderer:
         draw.text((tx, ty), title_text, fill=(255, 203, 5, 255), font=self.fonts["title"])  # Pokemon Yellow
 
         # 2. Main Details Panel (left column)
-        self._draw_classic_panel(draw, 14, 48, 332, 188, fill=(248, 248, 240), border=_FRAME_DARK, border_width=2)
+        self._draw_classic_panel(draw, 14, 48, 332, 188, fill=(248, 248, 240), border=None, border_width=2)
 
         # Draw Name
-        draw.text((24, 56), "NAME:", fill=_FRAME_MID, font=self.fonts["small_bold"])
-        draw.text((65, 54), username, fill=_TEXT_DARK, font=self.fonts["body_bold"])
+        draw.text((24, 56), "NAME:", fill=self.palette.frame_mid, font=self.fonts["small_bold"])
+        draw.text((65, 54), username, fill=self.palette.text_dark, font=self.fonts["body_bold"])
 
         # Draw ID No. (last 5 digits of discord id)
         id_no = str(player_id)[-5:] if player_id else "00000"
-        draw.text((240, 56), f"IDNo. {id_no}", fill=_TEXT_DARK, font=self.fonts["small_bold"])
+        draw.text((240, 56), f"IDNo. {id_no}", fill=self.palette.text_dark, font=self.fonts["small_bold"])
 
         # Separator Line
-        draw.line([(20, 76), (326, 76)], fill=_FRAME_MID, width=1)
+        draw.line([(20, 76), (326, 76)], fill=self.palette.frame_mid, width=1)
 
         # Detail lines
         total = wins + losses
@@ -881,15 +871,15 @@ class BattleRenderer:
         dy = 82
         for label, val in info_items:
             # Draw label
-            draw.text((24, dy), label, fill=_FRAME_MID, font=self.fonts["small_bold"])
+            draw.text((24, dy), label, fill=self.palette.frame_mid, font=self.fonts["small_bold"])
             # Draw value aligned to the right (x=320)
             val_bbox = draw.textbbox((0, 0), val, font=self.fonts["small_bold"])
             val_w = val_bbox[2] - val_bbox[0]
-            draw.text((320 - val_w, dy), val, fill=_TEXT_DARK, font=self.fonts["small_bold"])
+            draw.text((320 - val_w, dy), val, fill=self.palette.text_dark, font=self.fonts["small_bold"])
             dy += 20
 
         # 3. Avatar Panel
-        self._draw_classic_panel(draw, 346, 48, 466, 168, fill=(240, 240, 232), border=_FRAME_DARK, border_width=2)
+        self._draw_classic_panel(draw, 346, 48, 466, 168, fill=(240, 240, 232), border=None, border_width=2)
 
         # Draw Avatar Image if available
         avatar_loaded = False
@@ -907,12 +897,12 @@ class BattleRenderer:
             # Draw a classic retro Pokéball silhouette in the avatar frame as fallback
             cx, cy = 346 + 60, 48 + 60
             r = 35
-            draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(224, 220, 208), outline=_FRAME_MID, width=2)
-            draw.line([cx - r, cy, cx + r, cy], fill=_FRAME_MID, width=2)
-            draw.ellipse([cx - 10, cy - 10, cx + 10, cy + 10], fill=(240, 240, 232), outline=_FRAME_MID, width=2)
+            draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(224, 220, 208), outline=self.palette.frame_mid, width=2)
+            draw.line([cx - r, cy, cx + r, cy], fill=self.palette.frame_mid, width=2)
+            draw.ellipse([cx - 10, cy - 10, cx + 10, cy + 10], fill=(240, 240, 232), outline=self.palette.frame_mid, width=2)
 
         # 4. Active Team Section (6 slots)
-        self._draw_classic_panel(draw, 14, 198, width - 14, 268, fill=(240, 240, 232), border=_FRAME_DARK, border_width=2)
+        self._draw_classic_panel(draw, 14, 198, width - 14, 268, fill=(240, 240, 232), border=None, border_width=2)
 
         slot_w, slot_h = 56, 56
         gap = 12
@@ -923,7 +913,7 @@ class BattleRenderer:
         for idx in range(6):
             sx = sx_start + idx * (slot_w + gap)
             # Draw slot border
-            self._draw_classic_panel(draw, sx, sy, sx + slot_w, sy + slot_h, fill=(248, 248, 240), border=_FRAME_MID, border_width=1, radius=3)
+            self._draw_classic_panel(draw, sx, sy, sx + slot_w, sy + slot_h, fill=(248, 248, 240), border=self.palette.frame_mid, border_width=1, radius=3)
 
             poke_id = None
             poke_name = None
@@ -944,7 +934,7 @@ class BattleRenderer:
                 canvas.paste(sprite, (sx + 4, sy + 4), sprite)
             elif poke_id:
                 cx, cy = sx + 28, sy + 28
-                draw.text((cx - 4, cy - 8), "?", fill=_TEXT_LIGHT, font=self.fonts["small_bold"])
+                draw.text((cx - 4, cy - 8), "?", fill=self.palette.text_light, font=self.fonts["small_bold"])
             else:
                 # Draw a tiny faint Pokéball silhouette for empty slots
                 cx, cy = sx + 28, sy + 28
@@ -956,6 +946,47 @@ class BattleRenderer:
                 draw.ellipse([cx - 4, cy - 4, cx + 4, cy + 4], fill=faint_fill, outline=faint_outline, width=1)
 
         # Output to buffer
+        buf = io.BytesIO()
+        canvas.save(buf, format="PNG")
+        buf.seek(0)
+        return buf
+
+    def render_settings_menu(self, current_theme: str, current_gen: int) -> io.BytesIO:
+        """Render a classic Pokémon-style settings menu image."""
+        width, height = 480, 240
+        
+        canvas = Image.new("RGBA", (width, height), self.palette.frame_mid)
+        draw = ImageDraw.Draw(canvas)
+        
+        # Draw main background
+        self._draw_classic_panel(draw, 4, 4, width - 4, height - 4, fill=self.palette.panel_bg_dark, border=self.palette.frame_dark, border_width=4, radius=6)
+        
+        # Draw header
+        self._draw_header_bar(draw, 12, 12, width - 12, 30, text="OPTIONS", bg=self.palette.header_bg)
+        
+        # Draw options container
+        self._draw_classic_panel(draw, 12, 50, width - 12, height - 12, fill=self.palette.panel_bg, border=self.palette.frame_dark, border_width=2, radius=4)
+        
+        # Draw settings entries
+        font = self.fonts["body_bold"]
+        font_sm = self.fonts["small"]
+        
+        # Theme Option
+        draw.text((24, 64), "THEME", fill=self.palette.frame_mid, font=font)
+        # Highlight box for value
+        self._draw_classic_panel(draw, 220, 60, 440, 90, fill=self.palette.panel_bg_dark, border=self.palette.frame_mid, border_width=1, radius=2)
+        draw.text((230, 64), current_theme.upper(), fill=self.palette.text_dark, font=font)
+        
+        # Gen Option
+        draw.text((24, 114), "GENERATION", fill=self.palette.frame_mid, font=font)
+        # Highlight box for value
+        self._draw_classic_panel(draw, 220, 110, 440, 140, fill=self.palette.panel_bg_dark, border=self.palette.frame_mid, border_width=1, radius=2)
+        draw.text((230, 114), f"GEN {current_gen}", fill=self.palette.text_dark, font=font)
+
+        # Help Text
+        help_txt = "Use the dropdowns below to change settings."
+        draw.text((24, 180), help_txt, fill=self.palette.text_light, font=font_sm)
+        
         buf = io.BytesIO()
         canvas.save(buf, format="PNG")
         buf.seek(0)

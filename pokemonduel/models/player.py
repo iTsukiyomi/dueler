@@ -36,8 +36,9 @@ class PlayerSchema:
             "wins":              0,
             "losses":            0,
             "elo":               1000,
-            "wallet":            0,
             "active_party_name": null,
+            "theme":             "light",
+            "gen":               5,
             "created_at":        ISODate("..."),
             "updated_at":        ISODate("..."),
         }
@@ -55,6 +56,8 @@ class PlayerSchema:
             "elo": DEFAULT_ELO,
             "wallet": DEFAULT_WALLET,
             "active_party_name": None,
+            "theme": "light",
+            "gen": 5,
             "created_at": now,
             "updated_at": now,
         }

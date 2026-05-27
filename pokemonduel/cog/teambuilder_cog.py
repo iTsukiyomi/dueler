@@ -665,43 +665,29 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
           ;qi
           ;qi <pokemon_name>
         """
+        await self._player_svc.ensure_profile(str(ctx.author.id), ctx.author.name)
+        profile = await self._player_svc.get_profile(str(ctx.author.id))
+        theme = profile.get("theme", "light") if profile else "light"
+        gen = profile.get("gen", 5) if profile else 5
+        
+        from ..canvas import BattleRenderer
+        from ..canvas.themes import get_palette
+        from pathlib import Path
+        data_dir = Path(__file__).parent.parent / "data"
+        renderer = BattleRenderer(data_dir, palette=get_palette(gen, theme))
+
         if poke is None:
             ws = await self._load_workspace(ctx)
             if ws is None:
                 return
-
             poke_data = ws["pokemon"]
-            from ..canvas import BattleRenderer
-            from pathlib import Path
-
-            data_dir = Path(__file__).parent.parent / "data"
-            renderer = BattleRenderer(data_dir)
-
-            # Resolve types for the card
-            pokname = poke_data.get("pokname", "")
-            type_names = renderer._get_type_names(pokname)
-
-            try:
-                img_buf = renderer.render_pokemon_card(poke_data, type_names=type_names)
-                file = discord.File(fp=img_buf, filename="pokemon_card.png")
-
-                # Build type string for embed description
-                type_str = " / ".join(type_names) if type_names else "Unknown"
-
-                embed = discord.Embed(
-                    title=f"⚡ {poke_data.get('pokname', '?').replace('-', ' ').title()}",
-                    description=f"**Type:** {type_str}",
-                    color=0x3B4CCA,  # Classic Pokémon blue
-                )
-                embed.set_image(url="attachment://pokemon_card.png")
-                slot_text = str(ws['slot_idx'] + 1) if ws['slot_idx'] is not None else "Workspace"
-                embed.set_footer(text=f"Team: {ws['team_name']} │ Slot: {slot_text}")
-
-                await ctx.send(embed=embed, file=file)
-            except Exception as e:
-                log.exception("Failed to render pokemon card for ;qi")
-                await ctx.send(f"Error rendering card: {e}")
+            slot_text = str(ws['slot_idx'] + 1) if ws.get('slot_idx') is not None else "Workspace"
+            team_text = ws.get('team_name', 'Unknown')
+            footer_text = f"Team: {team_text} │ Slot: {slot_text}"
         else:
+            from ..core.registry import FORMS
+            from ..pokemon.pokemon_utils import resolve_form_identifier
+            
             matched_identifier = resolve_form_identifier(poke)
             if not matched_identifier:
                 await ctx.send(f"Pokémon **{poke}** not found in the forms database.")
@@ -711,67 +697,49 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
             if form_info is None:
                 await ctx.send(f"Error: form info not found for {matched_identifier}.")
                 return
+                
+            poke_data = {
+                "pokname": matched_identifier,
+                "hpiv": 31, "atkiv": 31, "defiv": 31, "spatkiv": 31, "spdefiv": 31, "speediv": 31,
+                "hpev": 0, "atkev": 0, "defev": 0, "spatkev": 0, "spdefev": 0, "speedev": 0,
+                "moves": ["tackle", "tackle", "tackle", "tackle"],
+                "ability_index": 0,
+                "hitem": "None",
+                "nature": "Serious"
+            }
+            footer_text = "Search Result"
 
-            pokemon_id = form_info["pokemon_id"]
+        # Resolve types for the card
+        pokname = poke_data.get("pokname", "")
+        type_names = renderer._get_type_names(pokname)
 
-            # Get types
-            from ..core.registry import POKEMON_STATS, POKE_ABILITIES, ABILITIES, PTYPES
-            ptype_entry = PTYPES.get(pokemon_id)
-            type_names = []
-            if ptype_entry and "types" in ptype_entry:
-                type_names = [_TYPE_ID_TO_NAME.get(tid, "???") for tid in ptype_entry["types"]]
-            type_str = " / ".join(type_names) if type_names else "Unknown"
-
-            # Get stats
-            stats_entry = POKEMON_STATS.find_one({"pokemon_id": pokemon_id})
-            if stats_entry:
-                raw_stats = stats_entry["stats"]
-                stats_str = (
-                    f"**HP**: {raw_stats[0]} │ "
-                    f"**ATK**: {raw_stats[1]} │ "
-                    f"**DEF**: {raw_stats[2]}\n"
-                    f"**SPA**: {raw_stats[3]} │ "
-                    f"**SPD**: {raw_stats[4]} │ "
-                    f"**SPE**: {raw_stats[5]}\n"
-                    f"**Total**: {sum(raw_stats)}"
-                )
-            else:
-                stats_str = "No base stats found."
-
-            # Get abilities
-            records = POKE_ABILITIES.by_secondary(pokemon_id)
-            ability_names = []
-            for r in records:
-                ab_id = r["ability_id"]
-                ab_data = ABILITIES.find_one({"id": ab_id})
-                if ab_data:
-                    ab_name = ab_data["identifier"].replace("-", " ").title()
-                    if r.get("is_hidden"):
-                        ab_name += " (HA)"
-                    ability_names.append(ab_name)
-
-            abilities_str = ", ".join(ability_names) if ability_names else "None"
-
-            embed = discord.Embed(
-                title=f"⚡ {matched_identifier.replace('-', ' ').title()}",
-                color=0x3B4CCA,  # Classic Pokémon blue
+        try:
+            import asyncio
+            loop = asyncio.get_running_loop()
+            img_buf = await loop.run_in_executor(
+                None,
+                renderer.render_pokemon_card,
+                poke_data,
+                ctx.author.name,
+                type_names
             )
-            embed.add_field(name="Type", value=type_str, inline=True)
-            embed.add_field(name="Dex #", value=str(pokemon_id), inline=True)
-            embed.add_field(name="Abilities", value=abilities_str, inline=False)
-            embed.add_field(name="Base Stats", value=stats_str, inline=False)
+            file = discord.File(fp=img_buf, filename="pokemon_card.png")
 
-            from pathlib import Path
-            img_path = Path(__file__).parent.parent / "data" / "img" / f"{pokemon_id}.png"
-            file = None
-            if img_path.exists():
-                file = discord.File(img_path, filename="pokemon.png")
-                embed.set_thumbnail(url="attachment://pokemon.png")
+            type_str = " / ".join(type_names) if type_names else "Unknown"
+            embed = discord.Embed(
+                title=f"⚡ {poke_data.get('pokname', '?').replace('-', ' ').title()}",
+                description=f"**Type:** {type_str}",
+                color=0x3B4CCA,
+            )
+            embed.set_image(url="attachment://pokemon_card.png")
+            embed.set_footer(text=footer_text)
 
-            if file:
-                await ctx.send(embed=embed, file=file)
-            else:
-                await ctx.send(embed=embed)
+            await ctx.send(embed=embed, file=file)
+        except Exception as e:
+            import logging
+            log = logging.getLogger("dueler.cog.teambuilder")
+            log.exception("Failed to render pokemon card for ;qi")
+            await ctx.send(f"Error rendering card: {e}")
 
 
 async def setup(bot: commands.Bot) -> None:
