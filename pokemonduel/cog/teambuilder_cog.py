@@ -667,14 +667,13 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
         """
         await self._player_svc.ensure_profile(str(ctx.author.id), ctx.author.name)
         profile = await self._player_svc.get_profile(str(ctx.author.id))
-        theme = profile.get("theme", "light") if profile else "light"
-        gen = profile.get("gen", 5) if profile else 5
+        theme = profile.get("theme", "firered") if profile else "firered"
         
         from ..canvas import BattleRenderer
-        from ..canvas.themes import get_palette
+        from ..canvas.themes.palette import get_palette
         from pathlib import Path
         data_dir = Path(__file__).parent.parent / "data"
-        renderer = BattleRenderer(data_dir, palette=get_palette(gen, theme), gen=gen, theme=theme)
+        renderer = BattleRenderer(data_dir, palette=get_palette(theme), theme=theme)
 
         if poke is None:
             ws = await self._load_workspace(ctx)

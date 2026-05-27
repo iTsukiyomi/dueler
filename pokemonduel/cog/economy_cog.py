@@ -182,16 +182,15 @@ class EconomyCog(commands.Cog, name="Economy"):
 
         # Render the trainer card
         from ..canvas import BattleRenderer
-        from ..canvas.themes import get_palette
+        from ..canvas.themes.palette import get_palette
         from pathlib import Path
         
         data_dir = Path(__file__).parent.parent / "data"
         
-        # Get user theme and gen preferences
-        theme = profile.get("theme", "light")
-        gen = profile.get("gen", 5)
+        # Get user theme preferences
+        theme = profile.get("theme", "firered")
         
-        renderer = BattleRenderer(data_dir, palette=get_palette(gen, theme), gen=gen, theme=theme)
+        renderer = BattleRenderer(data_dir, palette=get_palette(theme), theme=theme)
 
         import asyncio
         loop = asyncio.get_running_loop()

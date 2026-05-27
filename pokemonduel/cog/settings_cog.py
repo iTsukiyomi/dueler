@@ -1,12 +1,11 @@
 import discord
 from discord.ext import commands
 import logging
-import io
+from pathlib import Path
 
 from ..services.player_service import PlayerService
 from ..canvas import BattleRenderer
-from ..canvas.themes import get_palette
-from pathlib import Path
+from ..canvas.themes.palette import get_palette
 
 log = logging.getLogger("dueler.cog.settings")
 
@@ -16,7 +15,7 @@ class SettingsView(discord.ui.View):
         self.ctx = ctx
         self.player_svc = player_svc
 
-    async def _update_settings(self, interaction: discord.Interaction, theme: str, gen: int):
+    async def _update_settings(self, interaction: discord.Interaction, theme: str):
         # Update db
         from ..core.database import get_db
         from ..models.player import COLLECTION
@@ -27,7 +26,6 @@ class SettingsView(discord.ui.View):
             {"_id": str(interaction.user.id)},
             {"$set": {
                 "theme": theme,
-                "gen": gen,
                 "updated_at": datetime.now(timezone.utc)
             }}
         )
@@ -38,8 +36,8 @@ class SettingsView(discord.ui.View):
             
         # Re-render image
         data_dir = Path(__file__).parent.parent / "data"
-        renderer = BattleRenderer(data_dir, palette=get_palette(gen, theme), gen=gen, theme=theme)
-        img_buf = renderer.render_settings_menu(theme, gen)
+        renderer = BattleRenderer(data_dir, palette=get_palette(theme), theme=theme)
+        img_buf = renderer.render_settings_menu(theme)
         file = discord.File(fp=img_buf, filename="settings.png")
         
         embed = discord.Embed(
@@ -49,44 +47,29 @@ class SettingsView(discord.ui.View):
         embed.set_image(url="attachment://settings.png")
         
         await interaction.response.send_message(
-            f"Changed theme to {theme}. Changed gen to {gen}.",
+            f"Changed theme to {theme.upper()}.",
             ephemeral=True
         )
         # We edit the original message to show the new image
         await interaction.message.edit(embed=embed, attachments=[file])
 
-    @discord.ui.button(label="Toggle Theme (Light/Dark)", style=discord.ButtonStyle.primary, row=0)
-    async def toggle_theme(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id != self.ctx.author.id:
-            await interaction.response.send_message("This is not your settings menu.", ephemeral=True)
-            return
-            
-        profile = await self.player_svc.get_profile(str(interaction.user.id))
-        if not profile:
-            await interaction.response.send_message("Profile not found.", ephemeral=True)
-            return
-            
-        current_theme = profile.get("theme", "light")
-        new_theme = "dark" if current_theme == "light" else "light"
-        current_gen = profile.get("gen", 5)
-        
-        await self._update_settings(interaction, new_theme, current_gen)
-
     @discord.ui.select(
-        placeholder="Select Generation...",
+        placeholder="Select Game Theme...",
         min_values=1,
         max_values=1,
         options=[
-            discord.SelectOption(label="Gen 1", value="1", description="GameBoy Monochrome"),
-            discord.SelectOption(label="Gen 2", value="2", description="GameBoy Color"),
-            discord.SelectOption(label="Gen 3", value="3", description="GameBoy Advance"),
-            discord.SelectOption(label="Gen 4", value="4", description="Nintendo DS (DPPt)"),
-            discord.SelectOption(label="Gen 5", value="5", description="Nintendo DS (BW)"),
-            discord.SelectOption(label="Gen 6-9", value="9", description="Modern 3D Era"),
+            discord.SelectOption(label="FireRed / LeafGreen", value="firered", description="GBA Era"),
+            discord.SelectOption(label="HeartGold / SoulSilver", value="heartgold", description="DS Johto Style"),
+            discord.SelectOption(label="Platinum", value="platinum", description="DS Sinnoh Style"),
+            discord.SelectOption(label="Black / White", value="black", description="DS High-Contrast"),
+            discord.SelectOption(label="X / Y", value="x", description="3DS Kalos Style"),
+            discord.SelectOption(label="Sun / Moon", value="sun", description="3DS Alola Passport"),
+            discord.SelectOption(label="Sword / Shield", value="sword", description="Switch Galar League Card"),
+            discord.SelectOption(label="Scarlet / Violet", value="scarlet", description="Switch SV Rotom App"),
         ],
-        row=1
+        row=0
     )
-    async def select_gen(self, interaction: discord.Interaction, select: discord.ui.Select):
+    async def select_theme(self, interaction: discord.Interaction, select: discord.ui.Select):
         if interaction.user.id != self.ctx.author.id:
             await interaction.response.send_message("This is not your settings menu.", ephemeral=True)
             return
@@ -96,10 +79,8 @@ class SettingsView(discord.ui.View):
             await interaction.response.send_message("Profile not found.", ephemeral=True)
             return
             
-        current_theme = profile.get("theme", "light")
-        new_gen = int(select.values[0])
-        
-        await self._update_settings(interaction, current_theme, new_gen)
+        new_theme = select.values[0]
+        await self._update_settings(interaction, new_theme)
 
 
 class SettingsCog(commands.Cog, name="Settings"):
@@ -113,7 +94,7 @@ class SettingsCog(commands.Cog, name="Settings"):
     async def show_settings(self, ctx: commands.Context):
         """
         Open the Settings menu.
-        Configure your global visual theme (Light/Dark) and Generation style (Gen 1-9).
+        Configure your global visual theme matching a specific Pokémon game.
         """
         await self._player_svc.ensure_profile(str(ctx.author.id), ctx.author.name)
         profile = await self._player_svc.get_profile(str(ctx.author.id))
@@ -122,13 +103,12 @@ class SettingsCog(commands.Cog, name="Settings"):
             await ctx.send("Could not load profile.")
             return
             
-        theme = profile.get("theme", "light")
-        gen = profile.get("gen", 5)
+        theme = profile.get("theme", "firered")
         
         data_dir = Path(__file__).parent.parent / "data"
-        renderer = BattleRenderer(data_dir, palette=get_palette(gen, theme), gen=gen, theme=theme)
+        renderer = BattleRenderer(data_dir, palette=get_palette(theme), theme=theme)
         
-        img_buf = renderer.render_settings_menu(theme, gen)
+        img_buf = renderer.render_settings_menu(theme)
         file = discord.File(fp=img_buf, filename="settings.png")
         
         embed = discord.Embed(
