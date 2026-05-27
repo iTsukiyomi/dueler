@@ -15,7 +15,7 @@ class AssetLoader:
         self.asset_dir = asset_dir
         self.cache: dict[str, Image.Image] = {}
 
-    def get_background(self, name: str, width: int = 960, height: int = 540, gen: int = 5, theme: str = "light") -> Image.Image:
+    def get_background(self, name: str, width: int = 960, height: int = 540, gen: int | None = None, theme: str = "firered") -> Image.Image:
         """Loads a background image by name, falling back to a procedural classic Pokémon background."""
         cache_key = f"bg_{name}_{width}x{height}_{gen}_{theme}"
         if cache_key in self.cache:
@@ -150,10 +150,45 @@ class AssetLoader:
 
     # -- Pokémon Card Background --
 
-    def _gen_card_bg(self, width: int, height: int, gen: int, theme: str) -> Image.Image:
+    def _gen_card_bg(self, width: int, height: int, gen: int | None = None, theme: str = "firered") -> Image.Image:
         """Generates a generation-specific Pokémon summary screen card background."""
         from .themes import get_palette
-        palette = get_palette(gen, theme)
+        
+        # Resolve legacy gen/theme parameters
+        theme_lower = theme.lower().strip()
+        if theme_lower in ("light", "dark"):
+            if gen == 1:
+                theme_lower = "firered"
+            elif gen == 2:
+                theme_lower = "firered"
+            elif gen == 3:
+                theme_lower = "firered"
+            elif gen == 4:
+                theme_lower = "platinum"
+            elif gen == 5:
+                theme_lower = "black"
+            elif gen == 6:
+                theme_lower = "x"
+            elif gen == 7:
+                theme_lower = "sun"
+            elif gen == 8:
+                theme_lower = "sword"
+            elif gen == 9:
+                theme_lower = "scarlet"
+            else:
+                theme_lower = "firered"
+        
+        palette = get_palette(theme_lower)
+        
+        if gen is None or theme.lower().strip() not in ("light", "dark"):
+            if theme_lower == "firered":
+                gen = 3
+            elif theme_lower in ("heartgold", "platinum"):
+                gen = 4
+            elif theme_lower == "black":
+                gen = 5
+            else:
+                gen = 6
         
         img = Image.new("RGBA", (width, height))
         draw = ImageDraw.Draw(img)
@@ -250,10 +285,45 @@ class AssetLoader:
             
         return img
 
-    def _gen_trainer_card_bg(self, width: int, height: int, gen: int, theme: str) -> Image.Image:
+    def _gen_trainer_card_bg(self, width: int, height: int, gen: int | None = None, theme: str = "firered") -> Image.Image:
         """Generates a generation-specific trainer card background."""
         from .themes import get_palette
-        palette = get_palette(gen, theme)
+        
+        # Resolve legacy gen/theme parameters
+        theme_lower = theme.lower().strip()
+        if theme_lower in ("light", "dark"):
+            if gen == 1:
+                theme_lower = "firered"
+            elif gen == 2:
+                theme_lower = "firered"
+            elif gen == 3:
+                theme_lower = "firered"
+            elif gen == 4:
+                theme_lower = "platinum"
+            elif gen == 5:
+                theme_lower = "black"
+            elif gen == 6:
+                theme_lower = "x"
+            elif gen == 7:
+                theme_lower = "sun"
+            elif gen == 8:
+                theme_lower = "sword"
+            elif gen == 9:
+                theme_lower = "scarlet"
+            else:
+                theme_lower = "firered"
+        
+        palette = get_palette(theme_lower)
+        
+        if gen is None or theme.lower().strip() not in ("light", "dark"):
+            if theme_lower == "firered":
+                gen = 3
+            elif theme_lower in ("heartgold", "platinum"):
+                gen = 4
+            elif theme_lower == "black":
+                gen = 5
+            else:
+                gen = 6
         
         img = Image.new("RGBA", (width, height))
         draw = ImageDraw.Draw(img)

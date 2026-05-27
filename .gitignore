@@ -18,3 +18,6 @@ team_preview.png
 # OS artifacts
 .DS_Store
 Thumbs.db
+
+# Scratch verification images
+pokemonduel/scratch_images/

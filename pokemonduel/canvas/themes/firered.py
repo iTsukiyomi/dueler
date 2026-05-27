@@ -11,7 +11,7 @@ class FireRedRenderer(BaseThemeRenderer):
                             active_team: str, avatar_bytes: Optional[bytes] = None,
                             party_pokemon: Optional[List[Dict[str, Any]]] = None) -> io.BytesIO:
         width, height = 480, 280
-        canvas = self.renderer.asset_loader.get_background("trainer_card_bg", width, height, gen=3, theme="light").copy()
+        canvas = self.renderer.asset_loader.get_background("trainer_card_bg", width, height, theme="firered").copy()
         draw = ImageDraw.Draw(canvas)
 
         # 1. Header Title: "TRAINER CARD"
@@ -127,7 +127,7 @@ class FireRedRenderer(BaseThemeRenderer):
                             type_names: Optional[List[str]] = None) -> io.BytesIO:
         data = self.parse_pokemon_data(poke, type_names)
         width, height = 500, 310
-        canvas = self.renderer.asset_loader.get_background("card_bg", width, height, gen=3, theme="light").copy()
+        canvas = self.renderer.asset_loader.get_background("card_bg", width, height, theme="firered").copy()
         draw = ImageDraw.Draw(canvas)
 
         # 1. Header block
