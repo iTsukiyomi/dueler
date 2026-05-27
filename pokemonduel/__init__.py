@@ -49,6 +49,7 @@ async def setup(bot):
     from .cog.teambuilder_cog import TeambuilderCog
     from .cog.economy_cog import EconomyCog
     from .cog.admin_cog import AdminCog
+    from .cog.settings_cog import SettingsCog
 
     cogs = [
         PokemonDuel(bot),
@@ -56,6 +57,7 @@ async def setup(bot):
         TeambuilderCog(bot),
         EconomyCog(bot),
         AdminCog(bot),
+        SettingsCog(bot),
     ]
 
     for cog in cogs:
