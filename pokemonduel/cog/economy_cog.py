@@ -191,7 +191,7 @@ class EconomyCog(commands.Cog, name="Economy"):
         theme = profile.get("theme", "light")
         gen = profile.get("gen", 5)
         
-        renderer = BattleRenderer(data_dir, palette=get_palette(gen, theme))
+        renderer = BattleRenderer(data_dir, palette=get_palette(gen, theme), gen=gen, theme=theme)
 
         import asyncio
         loop = asyncio.get_running_loop()

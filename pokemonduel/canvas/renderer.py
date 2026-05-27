@@ -59,23 +59,37 @@ from .themes import DEFAULT_PALETTE, ThemePalette
 class BattleRenderer:
     """Classic Pokémon-style canvas rendering pipeline for battle screens, teams, and profiles."""
 
-    def __init__(self, data_dir: Path, palette: ThemePalette = DEFAULT_PALETTE) -> None:
+    def __init__(self, data_dir: Path, palette: ThemePalette = DEFAULT_PALETTE, gen: int = 5, theme: str = "light") -> None:
         self.palette = palette
         self.data_dir = data_dir
+        self.gen = gen
+        self.theme = theme.lower()
         self.sprite_dir = data_dir / "img"
         self.asset_loader = AssetLoader(data_dir / "canvas_assets")
         self.fonts = self._load_fonts()
 
     def _load_fonts(self) -> dict[str, ImageFont.ImageFont]:
-        """Load fonts, preferring clean sans-serif for classic game feel."""
-        font_paths = [
-            "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf",
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-            "/usr/share/fonts/liberation/LiberationSans-Bold.ttf",
-            "/usr/share/fonts/TTF/DejaVuSans.ttf",
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-            "/usr/share/fonts/liberation/LiberationSans-Regular.ttf",
-        ]
+        """Load fonts, preferring retro/monospace for pixel settings, clean sans-serif for modern."""
+        is_pixel = getattr(self, "palette", None) and getattr(self.palette, "font_hint", "sans") == "pixel"
+        
+        if is_pixel:
+            font_paths = [
+                "/usr/share/fonts/TTF/JetBrainsMonoNerdFont-Bold.ttf",
+                "/usr/share/fonts/TTF/JetBrainsMonoNerdFont-Regular.ttf",
+                "/usr/share/fonts/noto/NotoSansMono-Bold.ttf",
+                "/usr/share/fonts/noto/NotoSansMono-Regular.ttf",
+                "/usr/share/fonts/liberation/LiberationMono-Bold.ttf",
+                "/usr/share/fonts/liberation/LiberationMono-Regular.ttf",
+            ]
+        else:
+            font_paths = [
+                "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf",
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                "/usr/share/fonts/liberation/LiberationSans-Bold.ttf",
+                "/usr/share/fonts/TTF/DejaVuSans.ttf",
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+                "/usr/share/fonts/liberation/LiberationSans-Regular.ttf",
+            ]
 
         bold_path = None
         reg_path = None
@@ -164,6 +178,17 @@ class BattleRenderer:
         """Draw a classic Pokémon-style bordered panel (solid fill, dark border)."""
         fill = fill or self.palette.panel_bg
         border = border or self.palette.frame_dark
+        
+        if self.gen in (1, 2):
+            radius = 0
+
+        if self.gen == 1:
+            # GameBoy border: thick outline, 1px space, thin inner line
+            draw.rectangle([x1, y1, x2, y2], fill=(*fill, 255) if len(fill) == 3 else fill)
+            draw.rectangle([x1, y1, x2, y2], outline=(*border, 255) if len(border) == 3 else border, width=2)
+            draw.rectangle([x1 + 3, y1 + 3, x2 - 3, y2 - 3], outline=(*border, 255) if len(border) == 3 else border, width=1)
+            return
+
         draw.rounded_rectangle([x1, y1, x2, y2], radius=radius, fill=(*fill, 255) if len(fill) == 3 else fill)
         draw.rounded_rectangle([x1, y1, x2, y2], radius=radius, outline=(*border, 255) if len(border) == 3 else border, width=border_width)
 
@@ -172,7 +197,14 @@ class BattleRenderer:
                          text: str = "", *, bg=None) -> None:
         """Draw a classic dark header bar with white text (Gen 3/5 style)."""
         bg = bg or self.palette.header_bg
-        draw.rounded_rectangle([x1, y1, x2, y1 + height], radius=4, fill=(*bg, 255) if len(bg) == 3 else bg)
+        radius = 0 if self.gen in (1, 2) else 4
+        
+        if self.gen == 1:
+            draw.rectangle([x1, y1, x2, y1 + height], fill=(*bg, 255) if len(bg) == 3 else bg)
+            draw.rectangle([x1, y1, x2, y1 + height], outline=self.palette.frame_dark, width=1)
+        else:
+            draw.rounded_rectangle([x1, y1, x2, y1 + height], radius=radius, fill=(*bg, 255) if len(bg) == 3 else bg)
+            
         if text:
             font = self.fonts["body_bold"]
             bbox = draw.textbbox((0, 0), text, font=font)
@@ -184,11 +216,22 @@ class BattleRenderer:
                          x: float, y: float, type_name: str,
                          *, width: int = 60, height: int = 18) -> Tuple[float, float]:
         """Draw a classic Gen 3/5 style type rectangle badge."""
+        if self.gen == 1:
+            font = self.fonts["small_bold"]
+            label = type_name.upper()
+            draw.rectangle([x, y, x + width, y + height], fill=self.palette.panel_bg, outline=self.palette.frame_dark, width=1)
+            bbox = draw.textbbox((0, 0), label, font=font)
+            tx = x + (width - (bbox[2] - bbox[0])) // 2
+            ty = y + (height - (bbox[3] - bbox[1])) // 2 - 1
+            draw.text((tx, ty), label, fill=self.palette.text_dark, font=font)
+            return width, height
+
         color = TYPE_COLORS.get(type_name.lower(), (128, 128, 128, 255))
         font = self.fonts["small_bold"]
+        radius = 0 if self.gen == 2 else 3
 
         # Filled rounded rectangle with slight darker border
-        draw.rounded_rectangle([x, y, x + width, y + height], radius=3,
+        draw.rounded_rectangle([x, y, x + width, y + height], radius=radius,
                                fill=color, outline=(max(0, color[0]-40), max(0, color[1]-40), max(0, color[2]-40), 255), width=1)
 
         # Centered white text
@@ -604,7 +647,7 @@ class BattleRenderer:
     def render_pokemon_card(self, poke, player_name: str = "Trainer", type_names: list[str] | None = None) -> io.BytesIO:
         """Generates a classic Pokémon summary screen-style card."""
         width, height = 500, 310
-        canvas = self.asset_loader.get_background("card_bg", width, height).copy()
+        canvas = self.asset_loader.get_background("card_bg", width, height, gen=self.gen, theme=self.theme).copy()
         draw = ImageDraw.Draw(canvas)
 
         # Extract values depending on whether input is dict or object
@@ -747,7 +790,7 @@ class BattleRenderer:
         sprite_panel_w, sprite_panel_h = 150, 150
         self._draw_classic_panel(draw, sprite_panel_x, sprite_panel_y,
                                  sprite_panel_x + sprite_panel_w, sprite_panel_y + sprite_panel_h,
-                                 fill=(232, 232, 224), border=None)
+                                 fill=self.palette.panel_bg_dark, border=None)
 
         poke_name = poke.get("pokname", "") if isinstance(poke, dict) else getattr(poke, "_name", "")
         sprite = self._load_sprite(poke_id, (140, 140), name=poke_name)
@@ -773,7 +816,7 @@ class BattleRenderer:
         for i, (label, value) in enumerate(info_lines):
             ly = info_y + i * 20
             draw.text((info_x, ly), label, fill=self.palette.text_mid, font=self.fonts["small_bold"])
-            draw.text((info_x + 52, ly), value, fill=self.palette.text_dark, font=self.fonts["small"])
+            draw.text((info_x + 80 if self.gen == 1 else info_x + 65, ly), value, fill=self.palette.text_dark, font=self.fonts["small"])
 
         # ── Stats Table (below info, classic grid) ──
         stats_y = info_y + 68
@@ -786,6 +829,9 @@ class BattleRenderer:
         stats_keys = ["hp", "atk", "def", "spa", "spd", "spe"]
         stats_labels = ["HP ", "ATK", "DEF", "SPA", "SPD", "SPE"]
 
+        iv_color = self.palette.text_dark if self.gen == 1 else ((80, 120, 200) if self.theme == "light" else (140, 180, 255))
+        ev_color = self.palette.text_dark if self.gen == 1 else ((200, 120, 60) if self.theme == "light" else (255, 160, 100))
+
         for idx, key in enumerate(stats_keys):
             y_offset = stats_y + 18 + (idx * 15)
             lbl = stats_labels[idx]
@@ -797,13 +843,13 @@ class BattleRenderer:
             # Label with slightly different color per stat
             draw.text((info_x, y_offset), f"{lbl:<5}", fill=self.palette.text_dark, font=self.fonts["small_bold"])
             draw.text((info_x + 48, y_offset), f"{bs_v:<5}", fill=self.palette.text_dark, font=self.fonts["small"])
-            draw.text((info_x + 100, y_offset), f"{iv_v:<4}", fill=(80, 120, 200), font=self.fonts["small"])
-            draw.text((info_x + 140, y_offset), f"{ev_v:<4}", fill=(200, 120, 60), font=self.fonts["small"])
+            draw.text((info_x + 100, y_offset), f"{iv_v:<4}", fill=iv_color, font=self.fonts["small"])
+            draw.text((info_x + 140, y_offset), f"{ev_v:<4}", fill=ev_color, font=self.fonts["small"])
 
         # ── Moveset section (bottom-left, below sprite) ──
         moves_y = sprite_panel_y + sprite_panel_h + 10
         self._draw_classic_panel(draw, 14, moves_y, sprite_panel_x + sprite_panel_w, height - 10,
-                                 fill=(240, 240, 232), border=self.palette.frame_mid, border_width=1)
+                                 fill=self.palette.panel_bg_dark, border=self.palette.frame_mid, border_width=1)
 
         draw.text((20, moves_y + 4), "MOVES", fill=self.palette.header_bg, font=self.fonts["small_bold"])
         draw.line([(20, moves_y + 18), (sprite_panel_x + sprite_panel_w - 6, moves_y + 18)],
@@ -829,28 +875,30 @@ class BattleRenderer:
                             elo: int, wins: int, losses: int, wallet: int,
                             active_team: str, avatar_bytes: Optional[bytes] = None,
                             party_pokemon: Optional[list[dict]] = None) -> io.BytesIO:
-        """Generates a classic Fire Red/BW2 style trainer card image."""
+        """Generates a classic trainer card image."""
         width, height = 480, 280
-        canvas = self.asset_loader.get_background("trainer_card_bg", width, height).copy()
+        canvas = self.asset_loader.get_background("trainer_card_bg", width, height, gen=self.gen, theme=self.theme).copy()
         draw = ImageDraw.Draw(canvas)
 
-        # 1. Header Title: "TRAINER CARD" centered in the blue header banner (y: 6 to 42)
+        # 1. Header Title: "TRAINER CARD" centered in the header banner
         title_text = "TRAINER CARD"
         bbox = draw.textbbox((0, 0), title_text, font=self.fonts["title"])
         tx = (width - (bbox[2] - bbox[0])) // 2
         ty = 6 + (30 - (bbox[3] - bbox[1])) // 2
-        draw.text((tx, ty), title_text, fill=(255, 203, 5, 255), font=self.fonts["title"])  # Pokemon Yellow
+        
+        title_color = self.palette.header_text if self.gen in (1, 2, 4, 5, 9) else (255, 203, 5, 255)
+        draw.text((tx, ty), title_text, fill=title_color, font=self.fonts["title"])
 
         # 2. Main Details Panel (left column)
-        self._draw_classic_panel(draw, 14, 48, 332, 188, fill=(248, 248, 240), border=None, border_width=2)
+        self._draw_classic_panel(draw, 14, 48, 332, 188, fill=self.palette.panel_bg, border=None, border_width=2)
 
         # Draw Name
         draw.text((24, 56), "NAME:", fill=self.palette.frame_mid, font=self.fonts["small_bold"])
-        draw.text((65, 54), username, fill=self.palette.text_dark, font=self.fonts["body_bold"])
+        draw.text((80 if self.gen == 1 else 65, 54), username, fill=self.palette.text_dark, font=self.fonts["body_bold"])
 
         # Draw ID No. (last 5 digits of discord id)
         id_no = str(player_id)[-5:] if player_id else "00000"
-        draw.text((240, 56), f"IDNo. {id_no}", fill=self.palette.text_dark, font=self.fonts["small_bold"])
+        draw.text((240 if self.gen == 1 else 230, 56), f"IDNo. {id_no}", fill=self.palette.text_dark, font=self.fonts["small_bold"])
 
         # Separator Line
         draw.line([(20, 76), (326, 76)], fill=self.palette.frame_mid, width=1)
@@ -879,7 +927,7 @@ class BattleRenderer:
             dy += 20
 
         # 3. Avatar Panel
-        self._draw_classic_panel(draw, 346, 48, 466, 168, fill=(240, 240, 232), border=None, border_width=2)
+        self._draw_classic_panel(draw, 346, 48, 466, 168, fill=self.palette.panel_bg_dark, border=None, border_width=2)
 
         # Draw Avatar Image if available
         avatar_loaded = False
@@ -894,15 +942,16 @@ class BattleRenderer:
                 pass
 
         if not avatar_loaded:
-            # Draw a classic retro Pokéball silhouette in the avatar frame as fallback
             cx, cy = 346 + 60, 48 + 60
             r = 35
-            draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(224, 220, 208), outline=self.palette.frame_mid, width=2)
+            ball_fill = (224, 220, 208) if self.gen != 1 else self.palette.panel_bg
+            center_fill = (240, 240, 232) if self.gen != 1 else self.palette.panel_bg_dark
+            draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=ball_fill, outline=self.palette.frame_mid, width=2)
             draw.line([cx - r, cy, cx + r, cy], fill=self.palette.frame_mid, width=2)
-            draw.ellipse([cx - 10, cy - 10, cx + 10, cy + 10], fill=(240, 240, 232), outline=self.palette.frame_mid, width=2)
+            draw.ellipse([cx - 10, cy - 10, cx + 10, cy + 10], fill=center_fill, outline=self.palette.frame_mid, width=2)
 
         # 4. Active Team Section (6 slots)
-        self._draw_classic_panel(draw, 14, 198, width - 14, 268, fill=(240, 240, 232), border=None, border_width=2)
+        self._draw_classic_panel(draw, 14, 198, width - 14, 268, fill=self.palette.panel_bg_dark, border=None, border_width=2)
 
         slot_w, slot_h = 56, 56
         gap = 12
@@ -913,7 +962,7 @@ class BattleRenderer:
         for idx in range(6):
             sx = sx_start + idx * (slot_w + gap)
             # Draw slot border
-            self._draw_classic_panel(draw, sx, sy, sx + slot_w, sy + slot_h, fill=(248, 248, 240), border=self.palette.frame_mid, border_width=1, radius=3)
+            self._draw_classic_panel(draw, sx, sy, sx + slot_w, sy + slot_h, fill=self.palette.panel_bg, border=self.palette.frame_mid, border_width=1, radius=3)
 
             poke_id = None
             poke_name = None
@@ -939,8 +988,8 @@ class BattleRenderer:
                 # Draw a tiny faint Pokéball silhouette for empty slots
                 cx, cy = sx + 28, sy + 28
                 r = 12
-                faint_outline = (200, 200, 200, 255)
-                faint_fill = (248, 248, 240, 255)
+                faint_outline = self.palette.frame_mid
+                faint_fill = self.palette.panel_bg
                 draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=faint_fill, outline=faint_outline, width=1)
                 draw.line([cx - r, cy, cx + r, cy], fill=faint_outline, width=1)
                 draw.ellipse([cx - 4, cy - 4, cx + 4, cy + 4], fill=faint_fill, outline=faint_outline, width=1)

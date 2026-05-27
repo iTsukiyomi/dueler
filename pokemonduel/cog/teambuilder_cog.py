@@ -674,7 +674,7 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
         from ..canvas.themes import get_palette
         from pathlib import Path
         data_dir = Path(__file__).parent.parent / "data"
-        renderer = BattleRenderer(data_dir, palette=get_palette(gen, theme))
+        renderer = BattleRenderer(data_dir, palette=get_palette(gen, theme), gen=gen, theme=theme)
 
         if poke is None:
             ws = await self._load_workspace(ctx)
@@ -686,8 +686,6 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
             footer_text = f"Team: {team_text} │ Slot: {slot_text}"
         else:
             from ..core.registry import FORMS
-            from ..pokemon.pokemon_utils import resolve_form_identifier
-            
             matched_identifier = resolve_form_identifier(poke)
             if not matched_identifier:
                 await ctx.send(f"Pokémon **{poke}** not found in the forms database.")

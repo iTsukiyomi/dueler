@@ -38,7 +38,7 @@ class SettingsView(discord.ui.View):
             
         # Re-render image
         data_dir = Path(__file__).parent.parent / "data"
-        renderer = BattleRenderer(data_dir, palette=get_palette(gen, theme))
+        renderer = BattleRenderer(data_dir, palette=get_palette(gen, theme), gen=gen, theme=theme)
         img_buf = renderer.render_settings_menu(theme, gen)
         file = discord.File(fp=img_buf, filename="settings.png")
         
@@ -126,7 +126,7 @@ class SettingsCog(commands.Cog, name="Settings"):
         gen = profile.get("gen", 5)
         
         data_dir = Path(__file__).parent.parent / "data"
-        renderer = BattleRenderer(data_dir, palette=get_palette(gen, theme))
+        renderer = BattleRenderer(data_dir, palette=get_palette(gen, theme), gen=gen, theme=theme)
         
         img_buf = renderer.render_settings_menu(theme, gen)
         file = discord.File(fp=img_buf, filename="settings.png")

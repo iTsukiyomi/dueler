@@ -15,9 +15,9 @@ class AssetLoader:
         self.asset_dir = asset_dir
         self.cache: dict[str, Image.Image] = {}
 
-    def get_background(self, name: str, width: int = 960, height: int = 540) -> Image.Image:
+    def get_background(self, name: str, width: int = 960, height: int = 540, gen: int = 5, theme: str = "light") -> Image.Image:
         """Loads a background image by name, falling back to a procedural classic Pokémon background."""
-        cache_key = f"bg_{name}_{width}x{height}"
+        cache_key = f"bg_{name}_{width}x{height}_{gen}_{theme}"
         if cache_key in self.cache:
             return self.cache[cache_key]
 
@@ -36,9 +36,9 @@ class AssetLoader:
         elif name == "team_preview_bg":
             fallback = self._gen_team_preview_bg(width, height)
         elif name == "card_bg":
-            fallback = self._gen_card_bg(width, height)
+            fallback = self._gen_card_bg(width, height, gen, theme)
         elif name == "trainer_card_bg":
-            fallback = self._gen_trainer_card_bg(width, height)
+            fallback = self._gen_trainer_card_bg(width, height, gen, theme)
         else:
             fallback = self._gen_battle_bg(width, height)
 
@@ -150,52 +150,193 @@ class AssetLoader:
 
     # -- Pokémon Card Background --
 
-    def _gen_card_bg(self, width: int, height: int) -> Image.Image:
-        """Cream/off-white Pokémon summary screen background."""
+    def _gen_card_bg(self, width: int, height: int, gen: int, theme: str) -> Image.Image:
+        """Generates a generation-specific Pokémon summary screen card background."""
+        from .themes import get_palette
+        palette = get_palette(gen, theme)
+        
         img = Image.new("RGBA", (width, height))
         draw = ImageDraw.Draw(img)
-
-        # Cream/off-white fill (classic summary screen)
-        cream = (248, 244, 232, 255)
-        draw.rectangle([0, 0, width, height], fill=cream)
-
-        # Subtle paper texture — very faint horizontal lines
-        for y in range(0, height, 4):
-            draw.line([(0, y), (width, y)], fill=(232, 228, 216, 120), width=1)
-
-        # Dark blue header bar at top (like Gen 3/5 summary header)
-        header_h = 6
-        draw.rectangle([0, 0, width, header_h], fill=(48, 56, 112, 255))
-
-        # Dark border frame
-        draw.rectangle([0, 0, width - 1, height - 1], outline=(48, 56, 112, 255), width=2)
-
+        
+        if gen == 1:
+            # Gen 1 GameBoy Monochrome Green
+            bg_color = palette.panel_bg
+            draw.rectangle([0, 0, width, height], fill=bg_color)
+            # Classic GameBoy grid texture (faint dots or vertical lines)
+            dot_color = palette.panel_bg_dark
+            for y in range(0, height, 4):
+                for x in range(0, width, 4):
+                    if (x + y) % 8 == 0:
+                        draw.point((x, y), fill=dot_color)
+            # Outer double-line border
+            draw.rectangle([0, 0, width - 1, height - 1], outline=palette.frame_dark, width=3)
+            draw.rectangle([4, 4, width - 5, height - 5], outline=palette.frame_dark, width=1)
+            
+        elif gen == 2:
+            # Gen 2 GameBoy Color / Crystal style split-color panel
+            draw.rectangle([0, 0, width, height], fill=palette.panel_bg)
+            
+            # Left panel split (x: 0 to 175)
+            left_fill = palette.panel_bg_dark
+            draw.rectangle([0, 0, 175, height], fill=left_fill)
+            
+            # Simple line pattern for Left Panel
+            for y in range(0, height, 8):
+                draw.line([(0, y), (175, y)], fill=(*palette.frame_mid, 40), width=1)
+                
+            # Sharp 2px outer border
+            draw.rectangle([0, 0, width - 1, height - 1], outline=palette.frame_dark, width=2)
+            draw.line([(175, 0), (175, height)], fill=palette.frame_dark, width=2)
+            
+        elif gen == 3:
+            # Gen 3 GBA Summary screen
+            draw.rectangle([0, 0, width, height], fill=palette.panel_bg)
+            
+            # Left side panel gradient
+            left_w = 170
+            for x in range(left_w):
+                f = x / left_w
+                r = int(palette.panel_bg_dark[0] * (1 - f) + palette.frame_mid[0] * f * 0.5)
+                g = int(palette.panel_bg_dark[1] * (1 - f) + palette.frame_mid[1] * f * 0.5)
+                b = int(palette.panel_bg_dark[2] * (1 - f) + palette.frame_mid[2] * f * 0.5)
+                draw.line([(x, 0), (x, height)], fill=(r, g, b, 255))
+            
+            draw.line([(170, 0), (170, height)], fill=palette.frame_dark, width=2)
+            draw.rectangle([0, 0, width, 6], fill=palette.frame_dark)
+            draw.rectangle([0, 0, width - 1, height - 1], outline=palette.frame_dark, width=2)
+            
+        elif gen == 4:
+            # Gen 4 DS metallic/tech panel with steel/blue frames
+            draw.rectangle([0, 0, width, height], fill=palette.panel_bg)
+            
+            # Tech lines in background
+            grid_color = (*palette.frame_mid, 30)
+            for x in range(0, width, 30):
+                draw.line([(x, 0), (x, height)], fill=grid_color, width=1)
+            for y in range(0, height, 30):
+                draw.line([(0, y), (width, y)], fill=grid_color, width=1)
+                
+            draw.rectangle([10, 40, 168, 200], fill=palette.panel_bg_dark, outline=palette.frame_mid, width=2)
+            draw.rectangle([0, 0, width - 1, height - 1], outline=palette.frame_dark, width=2)
+            
+        elif gen == 5:
+            # Gen 5 DS carbon-fiber / grid tech style
+            draw.rectangle([0, 0, width, height], fill=palette.panel_bg)
+            for y in range(0, height, 4):
+                draw.line([(0, y), (width, y)], fill=(*palette.frame_mid, 15), width=1)
+            for x in range(0, width, 8):
+                draw.line([(x, 0), (x, height)], fill=(*palette.frame_mid, 10), width=1)
+                
+            draw.rectangle([0, 0, width - 1, height - 1], outline=palette.frame_dark, width=2)
+            
+        else:
+            # Gen 6-9 Modern flat card with beautiful smooth pastel gradients
+            if theme == "dark":
+                for y in range(height):
+                    f = y / height
+                    r = int(24 * (1 - f) + 48 * f)
+                    g = int(24 * (1 - f) + 24 * f)
+                    b = int(48 * (1 - f) + 80 * f)
+                    draw.line([(0, y), (width, y)], fill=(r, g, b, 255))
+            else:
+                for y in range(height):
+                    f = y / height
+                    r = int(230 * (1 - f) + 250 * f)
+                    g = int(240 * (1 - f) + 230 * f)
+                    b = int(255 * (1 - f) + 240 * f)
+                    draw.line([(0, y), (width, y)], fill=(r, g, b, 255))
+            
+            draw.rectangle([0, 0, width - 1, height - 1], outline=palette.frame_dark, width=2)
+            
         return img
 
-    def _gen_trainer_card_bg(self, width: int, height: int) -> Image.Image:
-        """Classic Fire Red style trainer card background with diagonal stripes."""
+    def _gen_trainer_card_bg(self, width: int, height: int, gen: int, theme: str) -> Image.Image:
+        """Generates a generation-specific trainer card background."""
+        from .themes import get_palette
+        palette = get_palette(gen, theme)
+        
         img = Image.new("RGBA", (width, height))
         draw = ImageDraw.Draw(img)
-
-        # Base color: warm retro orange/beige (Fire Red theme)
-        base_color = (248, 176, 112, 255)
-        draw.rectangle([0, 0, width, height], fill=base_color)
-
-        # Draw diagonal stripe pattern (slightly darker orange)
-        stripe_color = (240, 144, 80, 255)
-        for offset in range(-height, width + height, 20):
-            draw.line([(offset, 0), (offset + height, height)], fill=stripe_color, width=8)
-
-        # Add a retro frame/inner border
-        dark_blue = (48, 56, 112, 255)
-        cream = (248, 248, 240, 255)
-        draw.rectangle([0, 0, width - 1, height - 1], outline=dark_blue, width=4)
-        draw.rectangle([4, 4, width - 5, height - 5], outline=cream, width=2)
-
-        # Header background banner
-        header_h = 36
-        draw.rectangle([6, 6, width - 7, header_h], fill=dark_blue)
-
+        
+        if gen == 1:
+            draw.rectangle([0, 0, width, height], fill=palette.panel_bg)
+            draw.rectangle([0, 0, width - 1, height - 1], outline=palette.frame_dark, width=3)
+            draw.rectangle([4, 4, width - 5, height - 5], outline=palette.frame_dark, width=1)
+            
+            for y in range(48, height - 48, 6):
+                draw.point((width - 24, y), fill=palette.frame_dark)
+                draw.point((width - 12, y), fill=palette.frame_dark)
+                
+        elif gen == 2:
+            draw.rectangle([0, 0, width, height], fill=palette.panel_bg)
+            grid_color = (*palette.frame_mid, 30)
+            for offset in range(-height, width + height, 15):
+                draw.line([(offset, 0), (offset + height, height)], fill=grid_color, width=1)
+                
+            draw.rectangle([0, 0, width - 1, height - 1], outline=palette.frame_dark, width=3)
+            draw.rectangle([3, 3, width - 4, height - 4], outline=(255, 255, 255, 255) if theme == "light" else palette.panel_bg_dark, width=1)
+            
+        elif gen == 3:
+            if theme == "dark":
+                base_color = (64, 40, 24, 255)
+                stripe_color = (48, 28, 16, 255)
+            else:
+                base_color = (248, 176, 112, 255)
+                stripe_color = (240, 144, 80, 255)
+                
+            draw.rectangle([0, 0, width, height], fill=base_color)
+            for offset in range(-height, width + height, 20):
+                draw.line([(offset, 0), (offset + height, height)], fill=stripe_color, width=8)
+                
+            draw.rectangle([0, 0, width - 1, height - 1], outline=palette.frame_dark, width=4)
+            draw.rectangle([4, 4, width - 5, height - 5], outline=(255, 255, 255, 255) if theme == "light" else palette.panel_bg_dark, width=2)
+            draw.rectangle([6, 6, width - 7, 36], fill=palette.frame_dark)
+            
+        elif gen == 4:
+            if theme == "dark":
+                for y in range(height):
+                    f = y / height
+                    c = int(48 * (1 - f) + 24 * f)
+                    draw.line([(0, y), (width, y)], fill=(c, c, c + 8, 255))
+            else:
+                for y in range(height):
+                    f = y / height
+                    c = int(220 * (1 - f) + 190 * f)
+                    draw.line([(0, y), (width, y)], fill=(c, c - 5, c - 15, 255))
+                    
+            draw.rectangle([0, 0, width - 1, height - 1], outline=palette.frame_dark, width=3)
+            draw.rectangle([4, 4, width - 5, height - 5], outline=palette.frame_mid, width=1)
+            draw.rectangle([5, 5, width - 6, 36], fill=palette.frame_dark)
+            
+        elif gen == 5:
+            draw.rectangle([0, 0, width, height], fill=palette.panel_bg)
+            stripe_color = (*palette.frame_mid, 20)
+            for offset in range(-height, width + height, 12):
+                draw.line([(offset, 0), (offset + height, height)], fill=stripe_color, width=4)
+                
+            draw.rectangle([0, 0, width - 1, height - 1], outline=palette.frame_dark, width=3)
+            draw.rectangle([4, 4, width - 5, height - 5], outline=palette.frame_mid, width=1)
+            draw.rectangle([5, 5, width - 6, 36], fill=palette.frame_dark)
+            
+        else:
+            if theme == "dark":
+                for y in range(height):
+                    f = y / height
+                    r = int(16 * (1 - f) + 48 * f)
+                    g = int(40 * (1 - f) + 16 * f)
+                    b = int(64 * (1 - f) + 80 * f)
+                    draw.line([(0, y), (width, y)], fill=(r, g, b, 255))
+            else:
+                for y in range(height):
+                    f = y / height
+                    r = int(255 * (1 - f) + 253 * f)
+                    g = int(180 * (1 - f) + 220 * f)
+                    b = int(140 * (1 - f) + 160 * f)
+                    draw.line([(0, y), (width, y)], fill=(r, g, b, 255))
+                    
+            draw.rectangle([0, 0, width - 1, height - 1], outline=palette.frame_dark, width=2)
+            draw.rectangle([3, 3, width - 4, 36], fill=palette.header_bg)
+            
         return img
 
     def clear(self) -> None:
