@@ -16,7 +16,7 @@ class BattlePromptView(discord.ui.View):
         self.turn = battle.turn
         self.child_views = []
 
-    @discord.ui.button(label="View your actions", style=discord.ButtonStyle.primary)
+    @discord.ui.button(label="FIGHT", style=discord.ButtonStyle.primary, emoji="⚔️")
     async def actions(self, interaction, button):
         if interaction.user.id == self.battle.trainer1.id:
             trainer = self.battle.trainer1

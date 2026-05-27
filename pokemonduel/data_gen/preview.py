@@ -15,8 +15,9 @@ async def generate_team_preview(battle):
 
     # Create embed with the team image
     embed = discord.Embed(
-        title=f"Battle Team Preview",
-        description=f"{battle.trainer1.name} vs {battle.trainer2.name}\nSelect your lead Pokémon!"
+        title=f"⚡ Team Preview",
+        description=f"**{battle.trainer1.name}** vs **{battle.trainer2.name}**\nChoose your lead Pokémon!",
+        color=0x3B4CCA,  # Classic Pokémon blue
     )
 
     # Attach the image to the embed

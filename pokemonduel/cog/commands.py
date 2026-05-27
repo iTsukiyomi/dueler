@@ -242,7 +242,7 @@ class PokemonDuel(commands.Cog):
                                 f"**{loser.name}** Elo: **{l_elo}** (−↓)\n"
                                 f"**{winner.name}** earned ¥100."
                             ),
-                            color=_dc.Color.gold(),
+                            color=0xFFCB05,  # Pokémon yellow
                         )
                         await battle.channel.send(embed=embed)
                     except Exception as exc:
@@ -268,7 +268,7 @@ class PokemonDuel(commands.Cog):
                                 f"Elo: **{new_elo}** (No Change)\n"
                                 f"**{winner.name}** earned ¥100."
                             ),
-                            color=_dc.Color.gold(),
+                            color=0xFFCB05,  # Pokémon yellow
                         )
                         await battle.channel.send(embed=embed)
                     except Exception as exc:

@@ -10,7 +10,7 @@ class PreviewPromptView(discord.ui.View):
         self.battle = battle
         self.child_views = []
 
-    @discord.ui.button(label="Select a lead pokemon", style=discord.ButtonStyle.primary)
+    @discord.ui.button(label="Choose your lead!", style=discord.ButtonStyle.primary, emoji="⭐")
     async def actions(self, interaction, button):
         if interaction.user.id == self.battle.trainer1.id:
             trainer = self.battle.trainer1

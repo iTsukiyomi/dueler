@@ -15,7 +15,7 @@ class SwapPromptView(discord.ui.View):
         self.mid_turn = mid_turn
         self.child_views = []
 
-    @discord.ui.button(label="View your pokemon", style=discord.ButtonStyle.primary)
+    @discord.ui.button(label="POKéMON", style=discord.ButtonStyle.primary, emoji="🔄")
     async def swap(self, interaction, button):
         view = SwapView(self.trainer, self.opponent, self.battle, mid_turn=self.mid_turn)
         self.child_views.append(view)
@@ -68,7 +68,8 @@ class SwapView(discord.ui.View):
 class SwapButton(discord.ui.Button):
     """A button that swaps to that pokemon when pressed."""
     def __init__(self, poke, *, disabled=False):
-        super().__init__(style=discord.ButtonStyle.secondary, label=f"{poke._name} | {poke.hp}hp", disabled=disabled)
+        hp_pct = int((poke.hp / poke.starting_hp * 100) if poke.starting_hp > 0 else 0)
+        super().__init__(style=discord.ButtonStyle.secondary, label=f"{poke._name} | {hp_pct}% HP", disabled=disabled)
         self.poke = poke
 
     async def callback(self, interaction):

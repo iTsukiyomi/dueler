@@ -75,7 +75,7 @@ class PartyCog(commands.Cog, name="Party"):
         embed = discord.Embed(
             title=f"Team \"{name}\" Created",
             description=desc,
-            color=discord.Color.green(),
+            color=0x4CAF50,  # Classic green
         )
         embed.set_footer(text=f"Load with: ;party load {name}")
         await ctx.send(embed=embed)
@@ -97,7 +97,7 @@ class PartyCog(commands.Cog, name="Party"):
         embed = discord.Embed(
             title=f"Team \"{name}\" Loaded",
             description="This team is now your active party for battles.",
-            color=discord.Color.green(),
+            color=0x4CAF50,  # Classic green
         )
         await ctx.send(embed=embed)
 
@@ -109,7 +109,7 @@ class PartyCog(commands.Cog, name="Party"):
             embed = discord.Embed(
                 title="No Teams Saved",
                 description="Create a team with `;party create <name> <showdown_paste>`",
-                color=discord.Color.greyple(),
+                color=0x3B4CCA,  # Pokémon blue
             )
             await ctx.send(embed=embed)
             return
@@ -128,7 +128,7 @@ class PartyCog(commands.Cog, name="Party"):
         embed = discord.Embed(
             title=f"{ctx.author.name}'s Teams",
             description="\n".join(lines),
-            color=discord.Color.blue(),
+            color=0x3B4CCA,  # Pokémon blue
         )
         embed.set_footer(text="⭐ = active party  |  ;party load <name> to switch")
         await ctx.send(embed=embed)
@@ -146,7 +146,7 @@ class PartyCog(commands.Cog, name="Party"):
 
         embed = discord.Embed(
             title=f"Team \"{name}\" Deleted",
-            color=discord.Color.dark_grey(),
+            color=0x505868,  # Classic dark grey
         )
         await ctx.send(embed=embed)
 
@@ -211,11 +211,8 @@ class PartyCog(commands.Cog, name="Party"):
         party = await self._team_svc.load_active_party(str(ctx.author.id))
         if party is None:
             # Try to load from legacy config
-            from ..config import EnhancedConfigManager
-            class DummyPokemonDuelCog:
-                pass
-            DummyPokemonDuelCog.__class__.__name__ = "PokemonDuel"
-            cfg = EnhancedConfigManager.get_conf(DummyPokemonDuelCog(), identifier=145519400223506432)
+            from ..config import get_legacy_config
+            cfg = get_legacy_config()
             party = await cfg.member(ctx.author).party()
             if not party:
                 party = []
@@ -249,11 +246,8 @@ class PartyCog(commands.Cog, name="Party"):
         await self._team_svc.save_active_party(str(ctx.author.id), party)
 
         # Double-write to legacy config
-        from ..config import EnhancedConfigManager
-        class DummyPokemonDuelCog:
-            pass
-        DummyPokemonDuelCog.__class__.__name__ = "PokemonDuel"
-        cfg = EnhancedConfigManager.get_conf(DummyPokemonDuelCog(), identifier=145519400223506432)
+        from ..config import get_legacy_config
+        cfg = get_legacy_config()
         await cfg.member(ctx.author).party.set(party)
 
         # Update the workspace metadata
@@ -265,7 +259,7 @@ class PartyCog(commands.Cog, name="Party"):
         embed = discord.Embed(
             title="Added to Party",
             description=f"Added **{pokemon_name.replace('-', ' ').title()}** to slot {slot} of {team_display}.",
-            color=discord.Color.green(),
+            color=0x4CAF50,  # Classic green
         )
         await ctx.send(embed=embed)
 
@@ -278,11 +272,8 @@ class PartyCog(commands.Cog, name="Party"):
         party = await self._team_svc.load_active_party(str(member.id))
         if party is None:
             # Fallback to legacy config
-            from ..config import EnhancedConfigManager
-            class DummyPokemonDuelCog:
-                pass
-            DummyPokemonDuelCog.__class__.__name__ = "PokemonDuel"
-            cfg = EnhancedConfigManager.get_conf(DummyPokemonDuelCog(), identifier=145519400223506432)
+            from ..config import get_legacy_config
+            cfg = get_legacy_config()
             party = await cfg.member(member).party()
 
         if not party or len(party) == 0:
@@ -365,11 +356,8 @@ class PartyCog(commands.Cog, name="Party"):
         party = await self._team_svc.load_active_party(str(ctx.author.id))
         if party is None:
             # Fallback to legacy config
-            from ..config import EnhancedConfigManager
-            class DummyPokemonDuelCog:
-                pass
-            DummyPokemonDuelCog.__class__.__name__ = "PokemonDuel"
-            cfg = EnhancedConfigManager.get_conf(DummyPokemonDuelCog(), identifier=145519400223506432)
+            from ..config import get_legacy_config
+            cfg = get_legacy_config()
             party = await cfg.member(ctx.author).party()
 
         if not party or len(party) == 0:
@@ -409,7 +397,7 @@ class PartyCog(commands.Cog, name="Party"):
         embed = discord.Embed(
             title="Team Saved",
             description=f"Your active party has been saved as **{name}**.",
-            color=discord.Color.green(),
+            color=0x4CAF50,  # Classic green
         )
         await ctx.send(embed=embed)
 

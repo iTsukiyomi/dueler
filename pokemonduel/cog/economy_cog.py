@@ -46,7 +46,7 @@ class EconomyCog(commands.Cog, name="Economy"):
 
         embed = discord.Embed(
             title=f"{ctx.author.name}'s Balance",
-            color=discord.Color.gold(),
+            color=0xFFCB05,  # Pokémon yellow
         )
         embed.add_field(name="💰 Wallet", value=f"¥{bal['wallet']:,}", inline=True)
         await ctx.send(embed=embed)
@@ -104,7 +104,7 @@ class EconomyCog(commands.Cog, name="Economy"):
         embed = discord.Embed(
             title="🏆 Elo Leaderboard",
             description="\n".join(lines),
-            color=discord.Color.gold(),
+            color=0xFFCB05,  # Pokémon yellow
         )
         embed.set_footer(text=f"Page {page}")
         await ctx.send(embed=embed)
@@ -137,7 +137,7 @@ class EconomyCog(commands.Cog, name="Economy"):
 
         embed = discord.Embed(
             title=f"{target.name}'s Rank",
-            color=discord.Color.blue(),
+            color=0x3B4CCA,  # Pokémon blue
         )
         embed.add_field(name="Rank", value=f"#{rank}" if rank else "Unranked", inline=True)
         embed.add_field(name="Elo", value=str(elo), inline=True)
@@ -174,7 +174,7 @@ class EconomyCog(commands.Cog, name="Economy"):
 
         embed = discord.Embed(
             title=f"{target.name}'s Profile",
-            color=discord.Color.purple(),
+            color=0x3B4CCA,  # Pokémon blue
         )
         embed.set_thumbnail(url=target.display_avatar.url)
         embed.add_field(name="Rank", value=f"#{rank}" if rank else "Unranked", inline=True)

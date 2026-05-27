@@ -311,11 +311,8 @@ class TeamService:
         await self._player_svc.set_active_party(str(owner_id), team_name)
 
         # Double-write to legacy config
-        from ..config import EnhancedConfigManager
-        class DummyPokemonDuelCog:
-            pass
-        DummyPokemonDuelCog.__class__.__name__ = "PokemonDuel"
-        cfg = EnhancedConfigManager.get_conf(DummyPokemonDuelCog(), identifier=145519400223506432)
+        from ..config import get_legacy_config
+        cfg = get_legacy_config()
         await cfg.member(owner_id).party.set(team["pokemon"])
 
         return True

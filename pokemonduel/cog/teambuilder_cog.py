@@ -176,11 +176,8 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
         party = await self._team_svc.load_active_party(str(ctx.author.id))
         if party is None:
             # Fallback to legacy config
-            from ..config import EnhancedConfigManager
-            class DummyPokemonDuelCog:
-                pass
-            DummyPokemonDuelCog.__class__.__name__ = "PokemonDuel"
-            cfg = EnhancedConfigManager.get_conf(DummyPokemonDuelCog(), identifier=145519400223506432)
+            from ..config import get_legacy_config
+            cfg = get_legacy_config()
             party = await cfg.member(ctx.author).party()
             if not party:
                 return
@@ -194,11 +191,8 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
         await self._team_svc.save_active_party(str(ctx.author.id), party)
 
         # Double-write to legacy config
-        from ..config import EnhancedConfigManager
-        class DummyPokemonDuelCog:
-            pass
-        DummyPokemonDuelCog.__class__.__name__ = "PokemonDuel"
-        cfg = EnhancedConfigManager.get_conf(DummyPokemonDuelCog(), identifier=145519400223506432)
+        from ..config import get_legacy_config
+        cfg = get_legacy_config()
         await cfg.member(ctx.author).party.set(party)
 
     # -- ;select -----------------------------------------------------------
@@ -256,7 +250,7 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
                 description=f"Slot {slot_num} of team **{team_name}**\n"
                             "Use `;learn`, `;iv`, `;evs`, `;nature`, `;ability`, `;item` to customise.\n"
                             "Use `;qi` to view full details.",
-                color=discord.Color.teal(),
+                color=0xFFCB05,  # Pokémon yellow
             )
             await ctx.send(embed=embed)
         else:
@@ -309,7 +303,7 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
                             "Use `;learn`, `;iv`, `;evs`, `;nature`, `;ability`, `;item` to customise.\n"
                             "Use `;party add <slot>` to insert it into your active team.\n"
                             "Use `;qi` to view full details.",
-                color=discord.Color.teal(),
+                color=0xFFCB05,  # Pokémon yellow
             )
             await ctx.send(embed=embed)
 
@@ -367,7 +361,7 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
                 title="Move Learned",
                 description=f"**{poke['pokname'].replace('-', ' ').title()}** learned **{norm.replace('-', ' ').title()}** in slot {slot}.\n"
                             f"Power: {power}",
-                color=discord.Color.green(),
+                color=0x4CAF50,  # Classic green
             )
         )
 
@@ -423,7 +417,7 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
             await ctx.send(
                 embed=discord.Embed(
                     description=f"Switched ability of **{poke['pokname'].replace('-', ' ').title()}** to **{selected_ab['identifier'].replace('-', ' ').title()}** (slot {new_idx + 1}).",
-                    color=discord.Color.green(),
+                    color=0x4CAF50,  # Classic green
                 )
             )
         else:
@@ -451,7 +445,7 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
             await ctx.send(
                 embed=discord.Embed(
                     description=f"Set ability of **{poke['pokname'].replace('-', ' ').title()}** to **{selected_ab['identifier'].replace('-', ' ').title()}**.",
-                    color=discord.Color.green(),
+                    color=0x4CAF50,  # Classic green
                 )
             )
 
@@ -516,7 +510,7 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
         embed = discord.Embed(
             title=f"{pokname.replace('-', ' ').title()}'s Learnable Moves",
             description=pages[0],
-            color=discord.Color.blue(),
+            color=0x3B4CCA,  # Pokémon blue
         )
         
         view = MovesetView(ctx.author.id, embed, pages)
@@ -551,7 +545,7 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
         await ctx.send(
             embed=discord.Embed(
                 description=f"**{ws['pokemon']['pokname'].replace('-', ' ').title()}** {stat.upper()} IV set to **{value}**.",
-                color=discord.Color.green(),
+                color=0x4CAF50,  # Classic green
             )
         )
 
@@ -596,7 +590,7 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
             embed=discord.Embed(
                 description=f"**{poke['pokname'].replace('-', ' ').title()}** {stat.upper()} EV set to **{value}**.\n"
                             f"Total EVs: {new_total}/510",
-                color=discord.Color.green(),
+                color=0x4CAF50,  # Classic green
             )
         )
 
@@ -628,7 +622,7 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
             embed=discord.Embed(
                 description=f"**{ws['pokemon']['pokname'].replace('-', ' ').title()}** nature set to **{norm.capitalize()}**.\n"
                             f"(+stat_id={inc}, -stat_id={dec})",
-                color=discord.Color.green(),
+                color=0x4CAF50,  # Classic green
             )
         )
 
@@ -656,7 +650,7 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
         await ctx.send(
             embed=discord.Embed(
                 description=f"**{ws['pokemon']['pokname'].replace('-', ' ').title()}** is now holding **{norm}**.",
-                color=discord.Color.green(),
+                color=0x4CAF50,  # Classic green
             )
         )
 
@@ -683,16 +677,25 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
             data_dir = Path(__file__).parent.parent / "data"
             renderer = BattleRenderer(data_dir)
 
+            # Resolve types for the card
+            pokname = poke_data.get("pokname", "")
+            type_names = renderer._get_type_names(pokname)
+
             try:
-                img_buf = renderer.render_pokemon_card(poke_data)
+                img_buf = renderer.render_pokemon_card(poke_data, type_names=type_names)
                 file = discord.File(fp=img_buf, filename="pokemon_card.png")
 
+                # Build type string for embed description
+                type_str = " / ".join(type_names) if type_names else "Unknown"
+
                 embed = discord.Embed(
-                    title=f"{poke_data.get('pokname', '?').replace('-', ' ').title()}",
-                    color=discord.Color.teal(),
+                    title=f"⚡ {poke_data.get('pokname', '?').replace('-', ' ').title()}",
+                    description=f"**Type:** {type_str}",
+                    color=0x3B4CCA,  # Classic Pokémon blue
                 )
                 embed.set_image(url="attachment://pokemon_card.png")
-                embed.set_footer(text=f"Team: {ws['team_name']} | Slot: {str(ws['slot_idx'] + 1) if ws['slot_idx'] is not None else 'None (Workspace)'}")
+                slot_text = str(ws['slot_idx'] + 1) if ws['slot_idx'] is not None else "Workspace"
+                embed.set_footer(text=f"Team: {ws['team_name']} │ Slot: {slot_text}")
 
                 await ctx.send(embed=embed, file=file)
             except Exception as e:
@@ -710,18 +713,25 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
                 return
 
             pokemon_id = form_info["pokemon_id"]
-            
+
+            # Get types
+            from ..core.registry import POKEMON_STATS, POKE_ABILITIES, ABILITIES, PTYPES
+            ptype_entry = PTYPES.get(pokemon_id)
+            type_names = []
+            if ptype_entry and "types" in ptype_entry:
+                type_names = [_TYPE_ID_TO_NAME.get(tid, "???") for tid in ptype_entry["types"]]
+            type_str = " / ".join(type_names) if type_names else "Unknown"
+
             # Get stats
-            from ..core.registry import POKEMON_STATS, POKE_ABILITIES, ABILITIES
             stats_entry = POKEMON_STATS.find_one({"pokemon_id": pokemon_id})
             if stats_entry:
                 raw_stats = stats_entry["stats"]
                 stats_str = (
-                    f"**HP**: {raw_stats[0]} | "
-                    f"**ATK**: {raw_stats[1]} | "
-                    f"**DEF**: {raw_stats[2]} | "
-                    f"**SPA**: {raw_stats[3]} | "
-                    f"**SPD**: {raw_stats[4]} | "
+                    f"**HP**: {raw_stats[0]} │ "
+                    f"**ATK**: {raw_stats[1]} │ "
+                    f"**DEF**: {raw_stats[2]}\n"
+                    f"**SPA**: {raw_stats[3]} │ "
+                    f"**SPD**: {raw_stats[4]} │ "
                     f"**SPE**: {raw_stats[5]}\n"
                     f"**Total**: {sum(raw_stats)}"
                 )
@@ -743,12 +753,12 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
             abilities_str = ", ".join(ability_names) if ability_names else "None"
 
             embed = discord.Embed(
-                title=f"Pokémon Info: {matched_identifier.replace('-', ' ').title()}",
-                color=discord.Color.blue(),
+                title=f"⚡ {matched_identifier.replace('-', ' ').title()}",
+                color=0x3B4CCA,  # Classic Pokémon blue
             )
-            embed.add_field(name="Database ID", value=str(pokemon_id), inline=True)
-            embed.add_field(name="Identifier", value=matched_identifier, inline=True)
-            embed.add_field(name="Possible Abilities", value=abilities_str, inline=False)
+            embed.add_field(name="Type", value=type_str, inline=True)
+            embed.add_field(name="Dex #", value=str(pokemon_id), inline=True)
+            embed.add_field(name="Abilities", value=abilities_str, inline=False)
             embed.add_field(name="Base Stats", value=stats_str, inline=False)
 
             from pathlib import Path
