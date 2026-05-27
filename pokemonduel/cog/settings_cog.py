@@ -34,7 +34,7 @@ class SettingsView(discord.ui.View):
         # Update cache in player_service
         doc = await db[COLLECTION].find_one({"_id": str(interaction.user.id)})
         if doc:
-            await self.player_svc._cache_profile(str(interaction.user.id), doc)
+            await self.player_svc._repo._cache_profile(str(interaction.user.id), doc)
             
         # Re-render image
         data_dir = Path(__file__).parent.parent / "data"
