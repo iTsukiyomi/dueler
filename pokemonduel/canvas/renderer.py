@@ -63,6 +63,20 @@ class BattleRenderer:
         self.palette = palette
         self.data_dir = data_dir
         self.theme = theme.lower()
+        
+        # Resolve virtual gen number for backwards compatibility
+        theme_lower = self.theme.strip()
+        if theme_lower == "firered":
+            self.gen = 3
+        elif theme_lower in ("heartgold", "platinum"):
+            self.gen = 4
+        elif theme_lower == "black":
+            self.gen = 5
+        elif theme_lower in ("x", "sun"):
+            self.gen = 6
+        else:
+            self.gen = 8
+
         self.sprite_dir = data_dir / "img"
         self.asset_loader = AssetLoader(data_dir / "canvas_assets")
         self.fonts = self._load_fonts()
@@ -228,7 +242,7 @@ class BattleRenderer:
 
         color = TYPE_COLORS.get(type_name.lower(), (128, 128, 128, 255))
         font = self.fonts["small_bold"]
-        radius = 0 if self.gen == 2 else 3
+        radius = 3
 
         # Filled rounded rectangle with slight darker border
         draw.rounded_rectangle([x, y, x + width, y + height], radius=radius,
