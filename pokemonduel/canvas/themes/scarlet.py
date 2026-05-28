@@ -206,41 +206,57 @@ class ScarletRenderer(BaseThemeRenderer):
         buf.seek(0)
         return buf
 
-    def render_settings_menu(self, current_theme: str) -> io.BytesIO:
-        width, height = 480, 240
+    def render_moveset(self, pokemon_name: str, moves_data: list[dict],
+                       page: int, total_pages: int, total_moves: int) -> io.BytesIO:
+        return self._render_moveset_table(
+            pokemon_name, moves_data, page, total_pages, total_moves,
+            canvas_bg=(255, 245, 245),
+            header_bg=(220, 40, 60),
+            panel_bg=(255, 255, 255),
+            panel_border=(220, 40, 60),
+            row_alt_bg=(255, 245, 245),
+            text_color=self.palette.text_dark,
+            text_secondary=(160, 64, 80),
+            accent_color=(220, 40, 60),
+            border_radius=8,
+        )
+
+    def render_settings_menu(self, current_theme: str, *, moveset_img: bool = True) -> io.BytesIO:
+        width, height = 480, 280
         canvas = Image.new("RGBA", (width, height), (255, 245, 245))
         draw = ImageDraw.Draw(canvas)
 
-        # Phone App Border
         draw.rectangle([0, 0, width - 1, height - 1], outline=(220, 40, 60), width=4)
-
-        # Rotom settings status bar
         self.renderer._draw_header_bar(draw, 10, 10, width - 10, 30, text="ROTOM SETTINGS APP", bg=(220, 40, 60))
 
-        # Main smartphone grid layout (app tiles)
         self.renderer._draw_classic_panel(draw, 12, 50, width - 12, height - 12, fill=(255, 255, 255), border=(245, 220, 220), radius=8)
 
         font = self.fonts["body_bold"]
         font_sm = self.fonts["small"]
 
-        # Option Tile 1 (UI THEME App Tile)
+        # Option Tile 1: UI THEME
         tile_x, tile_y = 30, 68
-        self.renderer._draw_classic_panel(draw, tile_x, tile_y, tile_x + 120, tile_y + 80, fill=(255, 245, 245), border=(220, 40, 60), radius=8)
-        
-        # Rotom face graphic simulated on tile
-        draw.ellipse([tile_x + 40, tile_y + 15, tile_x + 80, tile_y + 35], fill=(220, 40, 60))
-        draw.text((tile_x + 22, tile_y + 50), "THEME CONG", fill=(160, 64, 80), font=self.fonts["tiny"])
+        self.renderer._draw_classic_panel(draw, tile_x, tile_y, tile_x + 120, tile_y + 40, fill=(255, 245, 245), border=(220, 40, 60), radius=8)
+        draw.text((tile_x + 12, tile_y + 10), "THEME CONFIG", fill=(160, 64, 80), font=self.fonts["small_bold"])
 
-        # Display Selected Theme (smartphone crop display)
-        val_x, val_y = 170, 68
-        self.renderer._draw_classic_panel(draw, val_x, val_y, val_x + 270, val_y + 80, fill=(255, 255, 255), border=(220, 40, 60), radius=8)
-        draw.text((val_x + 24, val_y + 30), current_theme.upper(), fill=self.palette.text_dark, font=font)
+        val_x = 170
+        self.renderer._draw_classic_panel(draw, val_x, tile_y, val_x + 270, tile_y + 40, fill=(255, 255, 255), border=(220, 40, 60), radius=8)
+        draw.text((val_x + 24, tile_y + 10), current_theme.upper(), fill=self.palette.text_dark, font=font)
 
-        # Help Footer text
+        # Option Tile 2: MOVESET DISPLAY
+        tile_y2 = 124
+        self.renderer._draw_classic_panel(draw, tile_x, tile_y2, tile_x + 120, tile_y2 + 40, fill=(255, 245, 245), border=(220, 40, 60), radius=8)
+        draw.text((tile_x + 4, tile_y2 + 10), "MOVESET DISP", fill=(160, 64, 80), font=self.fonts["small_bold"])
+
+        moveset_val = "IMAGE" if moveset_img else "TEXT"
+        self.renderer._draw_classic_panel(draw, val_x, tile_y2, val_x + 270, tile_y2 + 40, fill=(255, 255, 255), border=(220, 40, 60), radius=8)
+        draw.text((val_x + 24, tile_y2 + 10), moveset_val, fill=self.palette.text_dark, font=font)
+
         help_txt = "Rotom: Swipe option dropdown selection below to save changes."
-        draw.text((24, 180), help_txt, fill=(160, 64, 80), font=font_sm)
+        draw.text((24, 220), help_txt, fill=(160, 64, 80), font=font_sm)
 
         buf = io.BytesIO()
         canvas.save(buf, format="PNG")
         buf.seek(0)
         return buf
+

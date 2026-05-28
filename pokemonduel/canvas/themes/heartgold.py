@@ -202,39 +202,57 @@ class HeartGoldRenderer(BaseThemeRenderer):
         buf.seek(0)
         return buf
 
-    def render_settings_menu(self, current_theme: str) -> io.BytesIO:
-        width, height = 480, 240
-        # Warm gold DS background
+    def render_moveset(self, pokemon_name: str, moves_data: list[dict],
+                       page: int, total_pages: int, total_moves: int) -> io.BytesIO:
+        return self._render_moveset_table(
+            pokemon_name, moves_data, page, total_pages, total_moves,
+            canvas_bg=(250, 248, 240),
+            header_bg=(200, 160, 80),
+            panel_bg=(255, 253, 245),
+            panel_border=(200, 160, 80),
+            row_alt_bg=(245, 240, 225),
+            text_color=self.palette.text_dark,
+            text_secondary=(140, 110, 50),
+            accent_color=(220, 180, 60),
+            border_radius=4,
+        )
+
+    def render_settings_menu(self, current_theme: str, *, moveset_img: bool = True) -> io.BytesIO:
+        width, height = 480, 280
         canvas = Image.new("RGBA", (width, height), (250, 245, 230))
         draw = ImageDraw.Draw(canvas)
 
-        # Golden frame
         draw.rectangle([0, 0, width - 1, height - 1], outline=(200, 160, 80), width=4)
-
-        # Top screen header display style
         self.renderer._draw_header_bar(draw, 10, 10, width - 10, 30, text="SETTINGS APP", bg=(200, 160, 80))
 
-        # Bottom touchscreen layout with a 2x3 touch grid of buttons
         self.renderer._draw_classic_panel(draw, 14, 50, width - 14, height - 12, fill=(255, 253, 245), border=(220, 200, 160))
 
-        # Draw grid items simulating touchable areas
         grid_w, grid_h = 138, 48
-        
+
         # Row 1: UI THEME
         rx, ry = 30, 68
         self.renderer._draw_classic_panel(draw, rx, ry, rx + grid_w, ry + grid_h, fill=(200, 160, 80), border=(160, 120, 50), radius=4)
         draw.text((rx + 16, ry + 16), "ACTIVE THEME", fill=(255, 255, 255), font=self.fonts["small_bold"])
 
-        # Display Selected Theme
         tx, ty = 188, 68
         self.renderer._draw_classic_panel(draw, tx, ty, tx + 248, ty + grid_h, fill=(255, 255, 255), border=(200, 160, 80), radius=4)
         draw.text((tx + 24, ty + 16), current_theme.upper(), fill=self.palette.text_dark, font=self.fonts["body_bold"])
 
-        # Labeled Touch Buttons footer help
+        # Row 2: MOVESET DISPLAY
+        rx2, ry2 = 30, 128
+        self.renderer._draw_classic_panel(draw, rx2, ry2, rx2 + grid_w, ry2 + grid_h, fill=(200, 160, 80), border=(160, 120, 50), radius=4)
+        draw.text((rx2 + 10, ry2 + 16), "MOVESET DISPLAY", fill=(255, 255, 255), font=self.fonts["small_bold"])
+
+        tx2, ty2 = 188, 128
+        moveset_val = "IMAGE" if moveset_img else "TEXT"
+        self.renderer._draw_classic_panel(draw, tx2, ty2, tx2 + 248, ty2 + grid_h, fill=(255, 255, 255), border=(200, 160, 80), radius=4)
+        draw.text((tx2 + 24, ty2 + 16), moveset_val, fill=self.palette.text_dark, font=self.fonts["body_bold"])
+
         help_txt = "Tap options dropdown to modify."
-        draw.text((32, 178), help_txt, fill=(160, 140, 110), font=self.fonts["small_bold"])
+        draw.text((32, 228), help_txt, fill=(160, 140, 110), font=self.fonts["small_bold"])
 
         buf = io.BytesIO()
         canvas.save(buf, format="PNG")
         buf.seek(0)
         return buf
+

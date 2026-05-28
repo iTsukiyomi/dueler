@@ -194,39 +194,58 @@ class SunRenderer(BaseThemeRenderer):
         buf.seek(0)
         return buf
 
-    def render_settings_menu(self, current_theme: str) -> io.BytesIO:
-        width, height = 480, 240
+    def render_moveset(self, pokemon_name: str, moves_data: list[dict],
+                       page: int, total_pages: int, total_moves: int) -> io.BytesIO:
+        return self._render_moveset_table(
+            pokemon_name, moves_data, page, total_pages, total_moves,
+            canvas_bg=(255, 250, 240),
+            header_bg=(248, 160, 72),
+            panel_bg=(255, 253, 245),
+            panel_border=(248, 160, 72),
+            row_alt_bg=(248, 240, 225),
+            text_color=self.palette.text_dark,
+            text_secondary=(160, 112, 72),
+            accent_color=(248, 160, 72),
+            border_radius=6,
+        )
+
+    def render_settings_menu(self, current_theme: str, *, moveset_img: bool = True) -> io.BytesIO:
+        width, height = 480, 280
         canvas = Image.new("RGBA", (width, height), (255, 250, 230))
         draw = ImageDraw.Draw(canvas)
 
-        # Tropical borders
         draw.rectangle([0, 0, width - 1, height - 1], outline=(248, 160, 72), width=3)
-
-        # Top screen header display style
         self.renderer._draw_header_bar(draw, 10, 10, width - 10, 30, text="ROTOM PHONE SETTINGS", bg=(248, 160, 72))
 
-        # Bottom touchscreen layout
         self.renderer._draw_classic_panel(draw, 14, 50, width - 14, height - 12, fill=(255, 255, 255), border=(248, 160, 72), radius=6)
 
         font = self.fonts["body_bold"]
-        font_sm = self.fonts["small"]
-
-        # Option selection block
         grid_w, grid_h = 138, 48
+
+        # Option 1: ACTIVE THEME
         rx, ry = 30, 68
         self.renderer._draw_classic_panel(draw, rx, ry, rx + grid_w, ry + grid_h, fill=(248, 160, 72), border=(220, 130, 40), radius=4)
         draw.text((rx + 16, ry + 16), "ACTIVE THEME", fill=(255, 255, 255), font=self.fonts["small_bold"])
 
-        # Display Selected Theme
         tx, ty = 188, 68
         self.renderer._draw_classic_panel(draw, tx, ty, tx + 248, ty + grid_h, fill=(255, 250, 240), border=(248, 160, 72), radius=4)
         draw.text((tx + 24, ty + 16), current_theme.upper(), fill=self.palette.text_dark, font=font)
 
-        # Help hint
+        # Option 2: MOVESET DISPLAY
+        rx2, ry2 = 30, 128
+        self.renderer._draw_classic_panel(draw, rx2, ry2, rx2 + grid_w, ry2 + grid_h, fill=(248, 160, 72), border=(220, 130, 40), radius=4)
+        draw.text((rx2 + 6, ry2 + 16), "MOVESET DISPLAY", fill=(255, 255, 255), font=self.fonts["small_bold"])
+
+        tx2, ty2 = 188, 128
+        moveset_val = "IMAGE" if moveset_img else "TEXT"
+        self.renderer._draw_classic_panel(draw, tx2, ty2, tx2 + 248, ty2 + grid_h, fill=(255, 250, 240), border=(248, 160, 72), radius=4)
+        draw.text((tx2 + 24, ty2 + 16), moveset_val, fill=self.palette.text_dark, font=font)
+
         help_txt = "Rotom: Tap below option dropdown to config Alola settings!"
-        draw.text((32, 178), help_txt, fill=(160, 112, 72), font=self.fonts["small_bold"])
+        draw.text((32, 228), help_txt, fill=(160, 112, 72), font=self.fonts["small_bold"])
 
         buf = io.BytesIO()
         canvas.save(buf, format="PNG")
         buf.seek(0)
         return buf
+

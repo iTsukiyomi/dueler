@@ -207,8 +207,24 @@ class FireRedRenderer(BaseThemeRenderer):
         buf.seek(0)
         return buf
 
-    def render_settings_menu(self, current_theme: str) -> io.BytesIO:
-        width, height = 480, 240
+    def render_moveset(self, pokemon_name: str, moves_data: list[dict],
+                       page: int, total_pages: int, total_moves: int) -> io.BytesIO:
+        return self._render_moveset_table(
+            pokemon_name, moves_data, page, total_pages, total_moves,
+            canvas_bg=self.palette.panel_bg,
+            header_bg=self.palette.header_bg,
+            panel_bg=self.palette.panel_bg,
+            panel_border=self.palette.frame_dark,
+            row_alt_bg=self.palette.panel_bg_dark,
+            text_color=self.palette.text_dark,
+            text_secondary=self.palette.text_mid,
+            accent_color=self.palette.frame_mid,
+            border_radius=0,
+            use_type_color_badges=False,
+        )
+
+    def render_settings_menu(self, current_theme: str, *, moveset_img: bool = True) -> io.BytesIO:
+        width, height = 480, 280
         canvas = Image.new("RGBA", (width, height), self.palette.frame_mid)
         draw = ImageDraw.Draw(canvas)
 
@@ -224,20 +240,22 @@ class FireRedRenderer(BaseThemeRenderer):
         font = self.fonts["body_bold"]
         font_sm = self.fonts["small"]
 
-        # Selection Indicator Cursor Arrow ▶
+        # Option 1: UI THEME
         cursor_y = 66
         draw.text((24, cursor_y), "▶", fill=self.palette.text_dark, font=font)
-
-        # Active Option
         draw.text((48, 64), "UI THEME", fill=self.palette.text_dark, font=font)
-        
-        # Highlight Box for Selected Theme Value
         self.renderer._draw_classic_panel(draw, 220, 60, 440, 90, fill=self.palette.panel_bg, border=self.palette.frame_dark, border_width=1)
         draw.text((230, 64), current_theme.upper(), fill=self.palette.text_dark, font=font)
 
-        # Helpful hint footer inside a box
-        help_txt = "Press dropdown below to switch theme."
-        draw.text((24, 180), help_txt, fill=self.palette.text_mid, font=font_sm)
+        # Option 2: MOVESET DISPLAY
+        draw.text((48, 104), "MOVESET DISPLAY", fill=self.palette.text_dark, font=font)
+        moveset_val = "IMAGE" if moveset_img else "TEXT"
+        self.renderer._draw_classic_panel(draw, 220, 100, 440, 130, fill=self.palette.panel_bg, border=self.palette.frame_dark, border_width=1)
+        draw.text((230, 104), moveset_val, fill=self.palette.text_dark, font=font)
+
+        # Helpful hint footer
+        help_txt = "Press dropdown below to switch options."
+        draw.text((24, 220), help_txt, fill=self.palette.text_mid, font=font_sm)
 
         # Outer border double line
         draw.rectangle([0, 0, width - 1, height - 1], outline=self.palette.frame_dark, width=3)

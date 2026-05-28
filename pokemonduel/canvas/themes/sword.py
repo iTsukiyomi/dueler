@@ -182,35 +182,50 @@ class SwordRenderer(BaseThemeRenderer):
         buf.seek(0)
         return buf
 
-    def render_settings_menu(self, current_theme: str) -> io.BytesIO:
-        width, height = 480, 240
+    def render_moveset(self, pokemon_name: str, moves_data: list[dict],
+                       page: int, total_pages: int, total_moves: int) -> io.BytesIO:
+        return self._render_moveset_table(
+            pokemon_name, moves_data, page, total_pages, total_moves,
+            canvas_bg=(250, 252, 255),
+            header_bg=(32, 96, 192),
+            panel_bg=(255, 255, 255),
+            panel_border=(32, 96, 192),
+            row_alt_bg=(240, 245, 250),
+            text_color=self.palette.text_dark,
+            text_secondary=(64, 96, 144),
+            accent_color=(32, 96, 192),
+            border_radius=6,
+        )
+
+    def render_settings_menu(self, current_theme: str, *, moveset_img: bool = True) -> io.BytesIO:
+        width, height = 480, 280
         canvas = Image.new("RGBA", (width, height), (250, 252, 255))
         draw = ImageDraw.Draw(canvas)
 
-        # Galar blue frame
         draw.rectangle([0, 0, width - 1, height - 1], outline=(32, 96, 192), width=3)
-
-        # Switch style header bar
         self.renderer._draw_header_bar(draw, 10, 10, width - 10, 30, text="SWITCH PREFERENCES", bg=(32, 96, 192))
 
-        # Main Switch list container
         self.renderer._draw_classic_panel(draw, 12, 50, width - 12, height - 12, fill=(255, 255, 255), border=(224, 235, 250), radius=6)
 
         font = self.fonts["body_bold"]
         font_sm = self.fonts["small"]
 
-        # Option list item
+        # Option 1: SYSTEM THEME
         draw.text((36, 76), "SYSTEM THEME", fill=(64, 96, 144), font=font)
-        
-        # Selected option box with bold Switch Galar blue highlights and a chevron › arrow
         self.renderer._draw_classic_panel(draw, 220, 68, 440, 98, fill=(32, 96, 192), border=(16, 48, 96), radius=4)
         draw.text((236, 72), current_theme.upper() + "  ›", fill=(255, 255, 255), font=font)
 
-        # Help hint
+        # Option 2: MOVESET DISPLAY
+        draw.text((36, 120), "MOVESET DISPLAY", fill=(64, 96, 144), font=font)
+        moveset_val = "IMAGE  ›" if moveset_img else "TEXT  ›"
+        self.renderer._draw_classic_panel(draw, 220, 112, 440, 142, fill=(32, 96, 192), border=(16, 48, 96), radius=4)
+        draw.text((236, 116), moveset_val, fill=(255, 255, 255), font=font)
+
         help_txt = "Press option dropdown selection below to change."
-        draw.text((36, 180), help_txt, fill=(120, 140, 160), font=font_sm)
+        draw.text((36, 220), help_txt, fill=(120, 140, 160), font=font_sm)
 
         buf = io.BytesIO()
         canvas.save(buf, format="PNG")
         buf.seek(0)
         return buf
+

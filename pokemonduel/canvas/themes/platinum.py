@@ -185,35 +185,50 @@ class PlatinumRenderer(BaseThemeRenderer):
         buf.seek(0)
         return buf
 
-    def render_settings_menu(self, current_theme: str) -> io.BytesIO:
-        width, height = 480, 240
+    def render_moveset(self, pokemon_name: str, moves_data: list[dict],
+                       page: int, total_pages: int, total_moves: int) -> io.BytesIO:
+        return self._render_moveset_table(
+            pokemon_name, moves_data, page, total_pages, total_moves,
+            canvas_bg=(220, 226, 230),
+            header_bg=(112, 128, 144),
+            panel_bg=(240, 244, 248),
+            panel_border=(112, 128, 144),
+            row_alt_bg=(230, 235, 240),
+            text_color=self.palette.text_dark,
+            text_secondary=(96, 112, 128),
+            accent_color=(112, 128, 144),
+            border_radius=4,
+        )
+
+    def render_settings_menu(self, current_theme: str, *, moveset_img: bool = True) -> io.BytesIO:
+        width, height = 480, 280
         canvas = Image.new("RGBA", (width, height), (220, 226, 230))
         draw = ImageDraw.Draw(canvas)
 
-        # Outer border
         draw.rectangle([0, 0, width - 1, height - 1], outline=(112, 128, 144), width=4)
-
-        # Pokétch app watch bar at top
         self.renderer._draw_header_bar(draw, 10, 10, width - 10, 30, text="POKéTCH OPTIONS", bg=(70, 80, 90))
 
-        # Main options container
         self.renderer._draw_classic_panel(draw, 12, 50, width - 12, height - 42, fill=(240, 244, 248), border=(112, 128, 144))
 
         font = self.fonts["body_bold"]
-        font_sm = self.fonts["small"]
 
-        # Selection Item
+        # Option 1: ACTIVE THEME
         draw.text((24, 64), "ACTIVE THEME", fill=(96, 112, 128), font=font)
-        
-        # Clinical highlight box
         self.renderer._draw_classic_panel(draw, 220, 60, 440, 90, fill=(255, 255, 255), border=(112, 128, 144), border_width=1, radius=2)
         draw.text((230, 64), current_theme.upper(), fill=self.palette.text_dark, font=font)
 
-        # Pokétch watch app overlay at bottom (Dark screen representing Pokétch app)
+        # Option 2: MOVESET DISPLAY
+        draw.text((24, 104), "MOVESET DISPLAY", fill=(96, 112, 128), font=font)
+        moveset_val = "IMAGE" if moveset_img else "TEXT"
+        self.renderer._draw_classic_panel(draw, 220, 100, 440, 130, fill=(255, 255, 255), border=(112, 128, 144), border_width=1, radius=2)
+        draw.text((230, 104), moveset_val, fill=self.palette.text_dark, font=font)
+
+        # Pokétch bottom bar
         self.renderer._draw_classic_panel(draw, 12, height - 36, width - 12, height - 10, fill=(40, 50, 40), border=(112, 128, 144))
-        draw.text((24, height - 28), "POKéTCH: Select theme via dropdown below.", fill=(100, 255, 100), font=self.fonts["tiny"])
+        draw.text((24, height - 28), "POKéTCH: Select options via dropdown below.", fill=(100, 255, 100), font=self.fonts["tiny"])
 
         buf = io.BytesIO()
         canvas.save(buf, format="PNG")
         buf.seek(0)
         return buf
+

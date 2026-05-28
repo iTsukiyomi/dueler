@@ -188,35 +188,51 @@ class BlackRenderer(BaseThemeRenderer):
         buf.seek(0)
         return buf
 
-    def render_settings_menu(self, current_theme: str) -> io.BytesIO:
-        width, height = 480, 240
+    def render_moveset(self, pokemon_name: str, moves_data: list[dict],
+                       page: int, total_pages: int, total_moves: int) -> io.BytesIO:
+        return self._render_moveset_table(
+            pokemon_name, moves_data, page, total_pages, total_moves,
+            canvas_bg=(16, 16, 16),
+            header_bg=(48, 48, 48),
+            header_text_color=(255, 255, 255),
+            panel_bg=(24, 24, 24),
+            panel_border=(255, 255, 255),
+            row_alt_bg=(32, 32, 32),
+            text_color=(255, 255, 255),
+            text_secondary=(180, 180, 180),
+            accent_color=(255, 255, 255),
+            border_radius=0,
+        )
+
+    def render_settings_menu(self, current_theme: str, *, moveset_img: bool = True) -> io.BytesIO:
+        width, height = 480, 280
         canvas = Image.new("RGBA", (width, height), (16, 16, 16))
         draw = ImageDraw.Draw(canvas)
 
-        # White border frame
         draw.rectangle([0, 0, width - 1, height - 1], outline=(255, 255, 255), width=2)
-
-        # Header Title
         self.renderer._draw_header_bar(draw, 10, 10, width - 10, 30, text="C-GEAR SETTINGS", bg=(32, 32, 32))
 
-        # Main panel
         self.renderer._draw_classic_panel(draw, 12, 50, width - 12, height - 12, fill=(24, 24, 24), border=(255, 255, 255), border_width=1)
 
         font = self.fonts["body_bold"]
         font_sm = self.fonts["small"]
 
-        # Theme option
+        # Option 1: UI THEME
         draw.text((24, 64), "UI THEME", fill=(180, 180, 180), font=font)
-        
-        # High contrast white outline highlight box
         self.renderer._draw_classic_panel(draw, 220, 60, 440, 90, fill=(16, 16, 16), border=(255, 255, 255), border_width=1, radius=2)
         draw.text((230, 64), current_theme.upper(), fill=(255, 255, 255), font=font)
 
-        # Help Footer text
+        # Option 2: MOVESET DISPLAY
+        draw.text((24, 104), "MOVESET DISPLAY", fill=(180, 180, 180), font=font)
+        moveset_val = "IMAGE" if moveset_img else "TEXT"
+        self.renderer._draw_classic_panel(draw, 220, 100, 440, 130, fill=(16, 16, 16), border=(255, 255, 255), border_width=1, radius=2)
+        draw.text((230, 104), moveset_val, fill=(255, 255, 255), font=font)
+
         help_txt = "Press dropdown menu below to change."
-        draw.text((24, 180), help_txt, fill=(140, 140, 140), font=font_sm)
+        draw.text((24, 220), help_txt, fill=(140, 140, 140), font=font_sm)
 
         buf = io.BytesIO()
         canvas.save(buf, format="PNG")
         buf.seek(0)
         return buf
+

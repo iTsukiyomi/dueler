@@ -23,6 +23,8 @@ from __future__ import annotations
 
 import logging
 
+import asyncio
+
 import discord
 from discord.ext import commands
 
@@ -106,19 +108,47 @@ def get_legal_moves(pokemon_name: str) -> set[str] | None:
 
 
 class MovesetView(discord.ui.View):
-    """View class for moveset pagination."""
-    
-    def __init__(self, author_id: int, embed: discord.Embed, pages: list[str]) -> None:
+    """View class for moveset pagination — supports both image and text modes."""
+
+    def __init__(
+        self,
+        author_id: int,
+        embed: discord.Embed,
+        pages: list,
+        *,
+        image_mode: bool = False,
+        renderer=None,
+        pokemon_name: str = "",
+        all_moves_data: list | None = None,
+        per_page: int = 10,
+    ) -> None:
         super().__init__(timeout=60.0)
         self.author_id = author_id
         self.embed = embed
         self.pages = pages
         self.current_page = 0
+        # Image mode state
+        self.image_mode = image_mode
+        self.renderer = renderer
+        self.pokemon_name = pokemon_name
+        self.all_moves_data = all_moves_data or []
+        self.per_page = per_page
         self._update_buttons()
 
     def _update_buttons(self) -> None:
         self.prev_btn.disabled = self.current_page == 0
         self.next_btn.disabled = self.current_page == len(self.pages) - 1
+
+    async def _render_image_page(self, page_idx: int) -> discord.File:
+        """Render a moveset page image in a thread (async-dispatcher safe)."""
+        chunk = self.all_moves_data[page_idx * self.per_page : (page_idx + 1) * self.per_page]
+        total_pages = len(self.pages)
+        total_moves = len(self.all_moves_data)
+        buf = await asyncio.to_thread(
+            self.renderer.render_moveset,
+            self.pokemon_name, chunk, page_idx + 1, total_pages, total_moves,
+        )
+        return discord.File(fp=buf, filename="moveset.png")
 
     @discord.ui.button(label="◀ Previous", style=discord.ButtonStyle.blurple)
     async def prev_btn(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
@@ -127,8 +157,14 @@ class MovesetView(discord.ui.View):
             return
         self.current_page -= 1
         self._update_buttons()
-        self.embed.description = self.pages[self.current_page]
-        await interaction.response.edit_message(embed=self.embed, view=self)
+
+        if self.image_mode:
+            file = await self._render_image_page(self.current_page)
+            self.embed.set_image(url="attachment://moveset.png")
+            await interaction.response.edit_message(embed=self.embed, attachments=[file], view=self)
+        else:
+            self.embed.description = self.pages[self.current_page]
+            await interaction.response.edit_message(embed=self.embed, view=self)
 
     @discord.ui.button(label="Next ▶", style=discord.ButtonStyle.blurple)
     async def next_btn(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
@@ -137,8 +173,14 @@ class MovesetView(discord.ui.View):
             return
         self.current_page += 1
         self._update_buttons()
-        self.embed.description = self.pages[self.current_page]
-        await interaction.response.edit_message(embed=self.embed, view=self)
+
+        if self.image_mode:
+            file = await self._render_image_page(self.current_page)
+            self.embed.set_image(url="attachment://moveset.png")
+            await interaction.response.edit_message(embed=self.embed, attachments=[file], view=self)
+        else:
+            self.embed.description = self.pages[self.current_page]
+            await interaction.response.edit_message(embed=self.embed, view=self)
 
 
 class TeambuilderCog(commands.Cog, name="Teambuilder"):
@@ -481,7 +523,7 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
 
         poke = ws["pokemon"]
         pokname = poke["pokname"]
-        
+
         legal_moves_names = get_legal_moves(pokname)
         if not legal_moves_names:
             await ctx.send(f"No learnable movesets found for **{pokname.replace('-', ' ').title()}** in the database. You can teach it any valid move using `;learn`.")
@@ -498,44 +540,85 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
             return
 
         per_page = 10
-        pages = []
         total_pages = (len(moves_data) + per_page - 1) // per_page
-        
-        for i in range(total_pages):
-            chunk = moves_data[i * per_page : (i + 1) * per_page]
-            
-            lines = [
-                "Name             │ Type     │ Category │ Pwr │ Acc",
-                "─────────────────┼──────────┼──────────┼─────┼─────"
-            ]
-            for move in chunk:
-                name = move.get("identifier", "").replace("-", " ").title()[:16]
-                t_id = move.get("type_id", 0)
-                type_name = _TYPE_ID_TO_NAME.get(t_id, "Normal")[:8]
-                
-                dmg_class = move.get("damage_class_id", 1)
-                cat = "Status"
-                if dmg_class == 2:
-                    cat = "Physical"
-                elif dmg_class == 3:
-                    cat = "Special"
-                    
-                pwr = str(move.get("power")) if move.get("power") is not None else "—"
-                acc = str(move.get("accuracy")) if move.get("accuracy") is not None else "—"
-                
-                lines.append(f"{name:<16} │ {type_name:<8} │ {cat:<8} │ {pwr:<3} │ {acc:<3}")
-                
-            page_text = "```plaintext\n" + "\n".join(lines) + f"\n```\nPage {i + 1} of {total_pages} (Total: {len(moves_data)} moves)"
-            pages.append(page_text)
 
-        embed = discord.Embed(
-            title=f"{pokname.replace('-', ' ').title()}'s Learnable Moves",
-            description=pages[0],
-            color=0x3B4CCA,  # Pokémon blue
-        )
-        
-        view = MovesetView(ctx.author.id, embed, pages)
-        await ctx.send(embed=embed, view=view)
+        # Check user preference for image vs text mode
+        await self._player_svc.ensure_profile(str(ctx.author.id), ctx.author.name)
+        profile = await self._player_svc.get_profile(str(ctx.author.id))
+        use_image = profile.get("moveset_img", True) if profile else True
+
+        if use_image:
+            # ── Image mode: render themed moveset table ──
+            theme = profile.get("theme", "firered") if profile else "firered"
+            from ..canvas import BattleRenderer
+            from ..canvas.themes.palette import get_palette
+            from pathlib import Path
+
+            data_dir = Path(__file__).parent.parent / "data"
+            renderer = BattleRenderer(data_dir, palette=get_palette(theme), theme=theme)
+
+            first_chunk = moves_data[:per_page]
+            buf = await asyncio.to_thread(
+                renderer.render_moveset,
+                pokname, first_chunk, 1, total_pages, len(moves_data),
+            )
+            file = discord.File(fp=buf, filename="moveset.png")
+
+            embed = discord.Embed(
+                title=f"{pokname.replace('-', ' ').title()}'s Learnable Moves",
+                color=0x3B4CCA,
+            )
+            embed.set_image(url="attachment://moveset.png")
+
+            # Pages list is just placeholders for page count tracking
+            pages = [None] * total_pages
+            view = MovesetView(
+                ctx.author.id, embed, pages,
+                image_mode=True,
+                renderer=renderer,
+                pokemon_name=pokname,
+                all_moves_data=moves_data,
+                per_page=per_page,
+            )
+            await ctx.send(embed=embed, file=file, view=view)
+        else:
+            # ── Text mode: classic text embed ──
+            pages = []
+            for i in range(total_pages):
+                chunk = moves_data[i * per_page : (i + 1) * per_page]
+
+                lines = [
+                    "Name             │ Type     │ Category │ Pwr │ Acc",
+                    "─────────────────┼──────────┼──────────┼─────┼─────"
+                ]
+                for move in chunk:
+                    name = move.get("identifier", "").replace("-", " ").title()[:16]
+                    t_id = move.get("type_id", 0)
+                    type_name = _TYPE_ID_TO_NAME.get(t_id, "Normal")[:8]
+
+                    dmg_class = move.get("damage_class_id", 1)
+                    cat = "Status"
+                    if dmg_class == 2:
+                        cat = "Physical"
+                    elif dmg_class == 3:
+                        cat = "Special"
+
+                    pwr = str(move.get("power")) if move.get("power") is not None else "—"
+                    acc = str(move.get("accuracy")) if move.get("accuracy") is not None else "—"
+
+                    lines.append(f"{name:<16} │ {type_name:<8} │ {cat:<8} │ {pwr:<3} │ {acc:<3}")
+
+                page_text = "```plaintext\n" + "\n".join(lines) + f"\n```\nPage {i + 1} of {total_pages} (Total: {len(moves_data)} moves)"
+                pages.append(page_text)
+
+            embed = discord.Embed(
+                title=f"{pokname.replace('-', ' ').title()}'s Learnable Moves",
+                description=pages[0],
+                color=0x3B4CCA,
+            )
+
+            view = MovesetView(ctx.author.id, embed, pages)
+            await ctx.send(embed=embed, view=view)
 
     # -- ;iv ---------------------------------------------------------------
 

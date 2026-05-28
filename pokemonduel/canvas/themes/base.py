@@ -17,8 +17,153 @@ class BaseThemeRenderer:
                             type_names: Optional[List[str]] = None) -> io.BytesIO:
         raise NotImplementedError
 
-    def render_settings_menu(self, current_theme: str) -> io.BytesIO:
+    def render_settings_menu(self, current_theme: str, *, moveset_img: bool = True) -> io.BytesIO:
         raise NotImplementedError
+
+    def render_moveset(self, pokemon_name: str, moves_data: list[dict],
+                       page: int, total_pages: int, total_moves: int) -> io.BytesIO:
+        raise NotImplementedError
+
+    # -- Shared moveset table renderer (themed via override params) --------
+
+    _TYPE_ID_TO_NAME = {
+        1: "Normal", 2: "Fighting", 3: "Flying", 4: "Poison", 5: "Ground",
+        6: "Rock", 7: "Bug", 8: "Ghost", 9: "Steel", 10: "Fire",
+        11: "Water", 12: "Grass", 13: "Electric", 14: "Psychic", 15: "Ice",
+        16: "Dragon", 17: "Dark", 18: "Fairy"
+    }
+
+    def _render_moveset_table(
+        self,
+        pokemon_name: str,
+        moves_data: list[dict],
+        page: int,
+        total_pages: int,
+        total_moves: int,
+        *,
+        canvas_bg: tuple,
+        header_bg: tuple,
+        header_text_color: tuple = (255, 255, 255),
+        panel_bg: tuple,
+        panel_border: tuple,
+        row_alt_bg: Optional[tuple] = None,
+        text_color: tuple,
+        text_secondary: tuple,
+        accent_color: tuple,
+        border_radius: int = 0,
+        use_type_color_badges: bool = True,
+    ) -> io.BytesIO:
+        """Shared moveset table renderer called by all theme subclasses.
+
+        Draws a themed paginated table of moves with columns:
+        Name | Type | Category | Power | Accuracy
+        """
+        from PIL import Image, ImageDraw
+
+        width, height = 560, 420
+        canvas = Image.new("RGBA", (width, height), canvas_bg)
+        draw = ImageDraw.Draw(canvas)
+
+        # ── Header bar ──
+        self.renderer._draw_header_bar(
+            draw, 8, 8, width - 8, 28,
+            text=f"{pokemon_name.replace('-', ' ').upper()} — LEARNABLE MOVES",
+            bg=header_bg,
+        )
+
+        # ── Column headers ──
+        col_x = {"name": 20, "type": 190, "cat": 290, "pwr": 400, "acc": 470}
+        hdr_y = 46
+        self.renderer._draw_classic_panel(
+            draw, 8, 40, width - 8, 62,
+            fill=header_bg, border=panel_border, border_width=1, radius=border_radius,
+        )
+        for label, x in [("MOVE", col_x["name"]), ("TYPE", col_x["type"]),
+                          ("CLASS", col_x["cat"]), ("PWR", col_x["pwr"]),
+                          ("ACC", col_x["acc"])]:
+            draw.text((x, hdr_y), label, fill=header_text_color, font=self.fonts["small_bold"])
+
+        # ── Move rows ──
+        row_h = 28
+        start_y = 68
+        cat_labels = {1: "STATUS", 2: "PHYSICAL", 3: "SPECIAL"}
+        cat_short = {1: "STA", 2: "PHY", 3: "SPC"}
+
+        for idx, move in enumerate(moves_data):
+            ry = start_y + idx * row_h
+            # Alternating row backgrounds
+            if row_alt_bg and idx % 2 == 1:
+                self.renderer._draw_classic_panel(
+                    draw, 8, ry, width - 8, ry + row_h,
+                    fill=row_alt_bg, border=row_alt_bg, border_width=0, radius=0,
+                )
+            else:
+                self.renderer._draw_classic_panel(
+                    draw, 8, ry, width - 8, ry + row_h,
+                    fill=panel_bg, border=panel_bg, border_width=0, radius=0,
+                )
+
+            # Move name
+            name = move.get("identifier", "").replace("-", " ").title()
+            if len(name) > 18:
+                name = name[:16] + ".."
+            draw.text((col_x["name"], ry + 6), name, fill=text_color, font=self.fonts["small_bold"])
+
+            # Type badge (small inline)
+            t_id = move.get("type_id", 0)
+            type_name = self._TYPE_ID_TO_NAME.get(t_id, "Normal")
+            if use_type_color_badges:
+                self.renderer._draw_type_badge(
+                    draw, col_x["type"], ry + 4, type_name, width=70, height=18,
+                )
+            else:
+                draw.text((col_x["type"], ry + 6), type_name.upper(), fill=text_secondary, font=self.fonts["small"])
+
+            # Category
+            dmg_class = move.get("damage_class_id", 1)
+            cat = cat_short.get(dmg_class, "STA")
+            cat_full = cat_labels.get(dmg_class, "STATUS")
+            # Color code category text
+            if dmg_class == 2:
+                cat_color = (200, 80, 40)  # Physical orange
+            elif dmg_class == 3:
+                cat_color = (80, 120, 200)  # Special blue
+            else:
+                cat_color = text_secondary
+            draw.text((col_x["cat"], ry + 6), cat_full, fill=cat_color, font=self.fonts["small"])
+
+            # Power
+            pwr = move.get("power")
+            pwr_text = str(pwr) if pwr is not None else "—"
+            draw.text((col_x["pwr"], ry + 6), pwr_text, fill=text_color, font=self.fonts["small"])
+
+            # Accuracy
+            acc = move.get("accuracy")
+            acc_text = str(acc) if acc is not None else "—"
+            draw.text((col_x["acc"], ry + 6), acc_text, fill=text_color, font=self.fonts["small"])
+
+        # ── Bottom border line ──
+        table_bottom = start_y + len(moves_data) * row_h + 4
+        draw.line([(8, table_bottom), (width - 8, table_bottom)], fill=panel_border, width=1)
+
+        # ── Footer: page info ──
+        footer_y = height - 34
+        page_text = f"Page {page} of {total_pages}  •  {total_moves} moves total"
+        pbox = draw.textbbox((0, 0), page_text, font=self.fonts["small"])
+        px = (width - (pbox[2] - pbox[0])) // 2
+        draw.text((px, footer_y), page_text, fill=text_secondary, font=self.fonts["small"])
+
+        # ── Outer frame ──
+        if border_radius == 0:
+            draw.rectangle([0, 0, width - 1, height - 1], outline=panel_border, width=3)
+            draw.rectangle([3, 3, width - 4, height - 4], outline=panel_border, width=1)
+        else:
+            draw.rounded_rectangle([0, 0, width - 1, height - 1], radius=border_radius, outline=panel_border, width=3)
+
+        buf = io.BytesIO()
+        canvas.save(buf, format="PNG")
+        buf.seek(0)
+        return buf
 
     def parse_pokemon_data(self, poke: Any, type_names: Optional[List[str]] = None) -> Dict[str, Any]:
         """Parses a Pokemon dictionary or object into a standard dictionary structure."""

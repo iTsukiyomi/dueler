@@ -58,6 +58,7 @@ class PlayerSchema:
             "active_party_name": None,
             "theme": "firered",
             "gen": 5,
+            "moveset_img": True,
             "created_at": now,
             "updated_at": now,
         }

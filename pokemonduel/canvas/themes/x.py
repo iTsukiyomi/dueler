@@ -202,12 +202,26 @@ class XRenderer(BaseThemeRenderer):
         buf.seek(0)
         return buf
 
-    def render_settings_menu(self, current_theme: str) -> io.BytesIO:
-        width, height = 480, 240
+    def render_moveset(self, pokemon_name: str, moves_data: list[dict],
+                       page: int, total_pages: int, total_moves: int) -> io.BytesIO:
+        return self._render_moveset_table(
+            pokemon_name, moves_data, page, total_pages, total_moves,
+            canvas_bg=(240, 248, 255),
+            header_bg=(96, 144, 192),
+            panel_bg=(255, 255, 255),
+            panel_border=(96, 144, 192),
+            row_alt_bg=(240, 248, 255),
+            text_color=self.palette.text_dark,
+            text_secondary=(80, 112, 144),
+            accent_color=(96, 144, 192),
+            border_radius=6,
+        )
+
+    def render_settings_menu(self, current_theme: str, *, moveset_img: bool = True) -> io.BytesIO:
+        width, height = 480, 280
         canvas = Image.new("RGBA", (width, height), (255, 255, 255))
         draw = ImageDraw.Draw(canvas)
 
-        # Soft blue gradient
         for y in range(height):
             f = y / height
             r = int(240 * (1 - f) + 220 * f)
@@ -216,31 +230,36 @@ class XRenderer(BaseThemeRenderer):
             draw.line([(0, y), (width, y)], fill=(r, g, b, 255))
 
         draw.rectangle([0, 0, width - 1, height - 1], outline=(96, 144, 192), width=3)
-
-        # Header Title
         self.renderer._draw_header_bar(draw, 10, 10, width - 10, 30, text="3DS SYSTEM PREFERENCES", bg=(96, 144, 192))
 
-        # Main panel (App grid layout)
         self.renderer._draw_classic_panel(draw, 12, 50, width - 12, height - 12, fill=(255, 255, 255), border=(160, 192, 224), radius=8)
 
         font = self.fonts["body_bold"]
         font_sm = self.fonts["small"]
 
-        # Option selection App card
+        # Option 1: Theme App
         card_x, card_y = 30, 68
-        self.renderer._draw_classic_panel(draw, card_x, card_y, card_x + 120, card_y + 80, fill=(240, 248, 255), border=(96, 144, 192), radius=6)
-        draw.text((card_x + 20, card_y + 30), "THEME APP", fill=(96, 144, 192), font=self.fonts["small_bold"])
+        self.renderer._draw_classic_panel(draw, card_x, card_y, card_x + 120, card_y + 40, fill=(240, 248, 255), border=(96, 144, 192), radius=6)
+        draw.text((card_x + 14, card_y + 10), "THEME APP", fill=(96, 144, 192), font=self.fonts["small_bold"])
 
-        # Display Selected Theme App Value
-        val_x, val_y = 170, 68
-        self.renderer._draw_classic_panel(draw, val_x, val_y, val_x + 270, val_y + 80, fill=(255, 255, 255), border=(160, 192, 224), radius=6)
-        draw.text((val_x + 24, val_y + 30), current_theme.upper(), fill=self.palette.text_dark, font=font)
+        val_x = 170
+        self.renderer._draw_classic_panel(draw, val_x, card_y, val_x + 270, card_y + 40, fill=(255, 255, 255), border=(160, 192, 224), radius=6)
+        draw.text((val_x + 24, card_y + 10), current_theme.upper(), fill=self.palette.text_dark, font=font)
 
-        # Help Footer text
+        # Option 2: Moveset Display App
+        card_y2 = 124
+        self.renderer._draw_classic_panel(draw, card_x, card_y2, card_x + 120, card_y2 + 40, fill=(240, 248, 255), border=(96, 144, 192), radius=6)
+        draw.text((card_x + 6, card_y2 + 10), "MOVESET DISP", fill=(96, 144, 192), font=self.fonts["small_bold"])
+
+        moveset_val = "IMAGE" if moveset_img else "TEXT"
+        self.renderer._draw_classic_panel(draw, val_x, card_y2, val_x + 270, card_y2 + 40, fill=(255, 255, 255), border=(160, 192, 224), radius=6)
+        draw.text((val_x + 24, card_y2 + 10), moveset_val, fill=self.palette.text_dark, font=font)
+
         help_txt = "Press dropdown select to swap app configurations."
-        draw.text((24, 180), help_txt, fill=(120, 140, 160), font=font_sm)
+        draw.text((24, 220), help_txt, fill=(120, 140, 160), font=font_sm)
 
         buf = io.BytesIO()
         canvas.save(buf, format="PNG")
         buf.seek(0)
         return buf
+
