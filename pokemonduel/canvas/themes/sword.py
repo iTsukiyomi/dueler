@@ -177,7 +177,8 @@ class SwordRenderer(BaseThemeRenderer):
             border_radius=6,
         )
 
-    def render_settings_menu(self, current_theme: str, *, moveset_img: bool = True) -> io.BytesIO:
+    def render_settings_menu(self, current_theme: str, *, moveset_img: bool = True,
+                              help_display: str = "image") -> io.BytesIO:
         width, height = 480, 280
         canvas = Image.new("RGBA", (width, height), (250, 252, 255))
         draw = ImageDraw.Draw(canvas)
@@ -190,14 +191,19 @@ class SwordRenderer(BaseThemeRenderer):
         font = self.fonts["body_bold"]
         font_sm = self.fonts["small"]
 
-        draw.text((36, 76), "SYSTEM THEME", fill=(64, 96, 144), font=font)
-        self.renderer._draw_classic_panel(draw, 220, 68, 440, 98, fill=(32, 96, 192), border=(16, 48, 96), radius=4)
-        draw.text((236, 72), current_theme.upper() + "  ›", fill=(255, 255, 255), font=font)
+        draw.text((36, 68), "SYSTEM THEME", fill=(64, 96, 144), font=font)
+        self.renderer._draw_classic_panel(draw, 220, 62, 440, 88, fill=(32, 96, 192), border=(16, 48, 96), radius=4)
+        draw.text((236, 66), current_theme.upper() + "  ›", fill=(255, 255, 255), font=font)
 
-        draw.text((36, 120), "MOVESET DISPLAY", fill=(64, 96, 144), font=font)
+        draw.text((36, 104), "MOVESET DISPLAY", fill=(64, 96, 144), font=font)
         moveset_val = "IMAGE  ›" if moveset_img else "TEXT  ›"
-        self.renderer._draw_classic_panel(draw, 220, 112, 440, 142, fill=(32, 96, 192), border=(16, 48, 96), radius=4)
-        draw.text((236, 116), moveset_val, fill=(255, 255, 255), font=font)
+        self.renderer._draw_classic_panel(draw, 220, 98, 440, 124, fill=(32, 96, 192), border=(16, 48, 96), radius=4)
+        draw.text((236, 102), moveset_val, fill=(255, 255, 255), font=font)
+
+        draw.text((36, 140), "HELP DISPLAY", fill=(64, 96, 144), font=font)
+        help_val = help_display.upper() + "  ›"
+        self.renderer._draw_classic_panel(draw, 220, 134, 440, 160, fill=(32, 96, 192), border=(16, 48, 96), radius=4)
+        draw.text((236, 138), help_val, fill=(255, 255, 255), font=font)
 
         help_txt = "Press option dropdown selection below to change."
         draw.text((36, 220), help_txt, fill=(120, 140, 160), font=font_sm)
@@ -206,3 +212,18 @@ class SwordRenderer(BaseThemeRenderer):
         canvas.save(buf, format="PNG")
         buf.seek(0)
         return buf
+
+    def render_help_page(self, category: str, commands_list: list[dict],
+                         page: int, total_pages: int) -> io.BytesIO:
+        return self._render_help_table(
+            category, commands_list, page, total_pages,
+            canvas_bg=(250, 252, 255),
+            header_bg=(32, 96, 192),
+            panel_bg=(255, 255, 255),
+            panel_border=(32, 96, 192),
+            row_alt_bg=(240, 245, 250),
+            text_color=self.palette.text_dark,
+            text_secondary=(64, 96, 144),
+            accent_color=(32, 96, 192),
+            border_radius=6,
+        )

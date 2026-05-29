@@ -186,7 +186,8 @@ class SunRenderer(BaseThemeRenderer):
             border_radius=6,
         )
 
-    def render_settings_menu(self, current_theme: str, *, moveset_img: bool = True) -> io.BytesIO:
+    def render_settings_menu(self, current_theme: str, *, moveset_img: bool = True,
+                              help_display: str = "image") -> io.BytesIO:
         width, height = 480, 280
         canvas = Image.new("RGBA", (width, height), (255, 250, 230))
         draw = ImageDraw.Draw(canvas)
@@ -197,24 +198,29 @@ class SunRenderer(BaseThemeRenderer):
         self.renderer._draw_classic_panel(draw, 14, 50, width - 14, height - 12, fill=(255, 255, 255), border=(248, 160, 72), radius=6)
 
         font = self.fonts["body_bold"]
-        grid_w, grid_h = 138, 48
+        grid_w, grid_h = 138, 38
 
-        rx, ry = 30, 68
+        rx, ry = 30, 62
         self.renderer._draw_classic_panel(draw, rx, ry, rx + grid_w, ry + grid_h, fill=(248, 160, 72), border=(220, 130, 40), radius=4)
-        draw.text((rx + 16, ry + 16), "ACTIVE THEME", fill=(255, 255, 255), font=self.fonts["small_bold"])
-
-        tx, ty = 188, 68
+        draw.text((rx + 16, ry + 10), "ACTIVE THEME", fill=(255, 255, 255), font=self.fonts["small_bold"])
+        tx, ty = 188, 62
         self.renderer._draw_classic_panel(draw, tx, ty, tx + 248, ty + grid_h, fill=(255, 250, 240), border=(248, 160, 72), radius=4)
-        draw.text((tx + 24, ty + 16), current_theme.upper(), fill=self.palette.text_dark, font=font)
+        draw.text((tx + 24, ty + 10), current_theme.upper(), fill=self.palette.text_dark, font=font)
 
-        rx2, ry2 = 30, 128
+        rx2, ry2 = 30, 110
         self.renderer._draw_classic_panel(draw, rx2, ry2, rx2 + grid_w, ry2 + grid_h, fill=(248, 160, 72), border=(220, 130, 40), radius=4)
-        draw.text((rx2 + 6, ry2 + 16), "MOVESET DISPLAY", fill=(255, 255, 255), font=self.fonts["small_bold"])
-
-        tx2, ty2 = 188, 128
+        draw.text((rx2 + 6, ry2 + 10), "MOVESET DISPLAY", fill=(255, 255, 255), font=self.fonts["small_bold"])
+        tx2, ty2 = 188, 110
         moveset_val = "IMAGE" if moveset_img else "TEXT"
         self.renderer._draw_classic_panel(draw, tx2, ty2, tx2 + 248, ty2 + grid_h, fill=(255, 250, 240), border=(248, 160, 72), radius=4)
-        draw.text((tx2 + 24, ty2 + 16), moveset_val, fill=self.palette.text_dark, font=font)
+        draw.text((tx2 + 24, ty2 + 10), moveset_val, fill=self.palette.text_dark, font=font)
+
+        rx3, ry3 = 30, 158
+        self.renderer._draw_classic_panel(draw, rx3, ry3, rx3 + grid_w, ry3 + grid_h, fill=(248, 160, 72), border=(220, 130, 40), radius=4)
+        draw.text((rx3 + 16, ry3 + 10), "HELP DISPLAY", fill=(255, 255, 255), font=self.fonts["small_bold"])
+        tx3, ty3 = 188, 158
+        self.renderer._draw_classic_panel(draw, tx3, ty3, tx3 + 248, ty3 + grid_h, fill=(255, 250, 240), border=(248, 160, 72), radius=4)
+        draw.text((tx3 + 24, ty3 + 10), help_display.upper(), fill=self.palette.text_dark, font=font)
 
         help_txt = "Rotom: Tap below option dropdown to config Alola settings!"
         draw.text((32, 228), help_txt, fill=(160, 112, 72), font=self.fonts["small_bold"])
@@ -223,3 +229,19 @@ class SunRenderer(BaseThemeRenderer):
         canvas.save(buf, format="PNG")
         buf.seek(0)
         return buf
+
+    def render_help_page(self, category: str, commands_list: list[dict],
+                         page: int, total_pages: int) -> io.BytesIO:
+        return self._render_help_table(
+            category, commands_list, page, total_pages,
+            canvas_bg=(255, 250, 240),
+            header_bg=(248, 160, 72),
+            panel_bg=(255, 253, 245),
+            panel_border=(248, 160, 72),
+            row_alt_bg=(248, 240, 225),
+            text_color=self.palette.text_dark,
+            text_secondary=(160, 112, 72),
+            accent_color=(248, 160, 72),
+            border_radius=6,
+        )
+

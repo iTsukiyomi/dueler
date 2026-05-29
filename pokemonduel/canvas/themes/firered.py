@@ -203,7 +203,8 @@ class FireRedRenderer(BaseThemeRenderer):
             use_type_color_badges=False,
         )
 
-    def render_settings_menu(self, current_theme: str, *, moveset_img: bool = True) -> io.BytesIO:
+    def render_settings_menu(self, current_theme: str, *, moveset_img: bool = True,
+                              help_display: str = "image") -> io.BytesIO:
         width, height = 480, 280
         canvas = Image.new("RGBA", (width, height), self.palette.frame_mid)
         draw = ImageDraw.Draw(canvas)
@@ -228,6 +229,11 @@ class FireRedRenderer(BaseThemeRenderer):
         self.renderer._draw_classic_panel(draw, 220, 100, 440, 130, fill=self.palette.panel_bg, border=self.palette.frame_dark, border_width=1)
         draw.text((230, 104), moveset_val, fill=self.palette.text_dark, font=font)
 
+        draw.text((48, 144), "HELP DISPLAY", fill=self.palette.text_dark, font=font)
+        help_val = help_display.upper()
+        self.renderer._draw_classic_panel(draw, 220, 140, 440, 170, fill=self.palette.panel_bg, border=self.palette.frame_dark, border_width=1)
+        draw.text((230, 144), help_val, fill=self.palette.text_dark, font=font)
+
         help_txt = "Press dropdown below to switch options."
         draw.text((24, 220), help_txt, fill=self.palette.text_mid, font=font_sm)
 
@@ -238,3 +244,18 @@ class FireRedRenderer(BaseThemeRenderer):
         canvas.save(buf, format="PNG")
         buf.seek(0)
         return buf
+
+    def render_help_page(self, category: str, commands_list: list[dict],
+                         page: int, total_pages: int) -> io.BytesIO:
+        return self._render_help_table(
+            category, commands_list, page, total_pages,
+            canvas_bg=self.palette.panel_bg,
+            header_bg=self.palette.header_bg,
+            panel_bg=self.palette.panel_bg,
+            panel_border=self.palette.frame_dark,
+            row_alt_bg=self.palette.panel_bg_dark,
+            text_color=self.palette.text_dark,
+            text_secondary=self.palette.text_mid,
+            accent_color=self.palette.frame_mid,
+            border_radius=0,
+        )

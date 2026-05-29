@@ -17,11 +17,16 @@ class BaseThemeRenderer:
                             type_names: Optional[List[str]] = None) -> io.BytesIO:
         raise NotImplementedError
 
-    def render_settings_menu(self, current_theme: str, *, moveset_img: bool = True) -> io.BytesIO:
+    def render_settings_menu(self, current_theme: str, *, moveset_img: bool = True,
+                              help_display: str = "image") -> io.BytesIO:
         raise NotImplementedError
 
     def render_moveset(self, pokemon_name: str, moves_data: list[dict],
                        page: int, total_pages: int, total_moves: int) -> io.BytesIO:
+        raise NotImplementedError
+
+    def render_help_page(self, category: str, commands_list: list[dict],
+                         page: int, total_pages: int) -> io.BytesIO:
         raise NotImplementedError
 
 
@@ -136,6 +141,90 @@ class BaseThemeRenderer:
 
         footer_y = height - 34
         page_text = f"Page {page} of {total_pages}  •  {total_moves} moves total"
+        pbox = draw.textbbox((0, 0), page_text, font=self.fonts["small"])
+        px = (width - (pbox[2] - pbox[0])) // 2
+        draw.text((px, footer_y), page_text, fill=text_secondary, font=self.fonts["small"])
+
+        if border_radius == 0:
+            draw.rectangle([0, 0, width - 1, height - 1], outline=panel_border, width=3)
+            draw.rectangle([3, 3, width - 4, height - 4], outline=panel_border, width=1)
+        else:
+            draw.rounded_rectangle([0, 0, width - 1, height - 1], radius=border_radius, outline=panel_border, width=3)
+
+        buf = io.BytesIO()
+        canvas.save(buf, format="PNG")
+        buf.seek(0)
+        return buf
+
+    def _render_help_table(
+        self,
+        category: str,
+        commands_list: list[dict],
+        page: int,
+        total_pages: int,
+        *,
+        canvas_bg: tuple,
+        header_bg: tuple,
+        header_text_color: tuple = (255, 255, 255),
+        panel_bg: tuple,
+        panel_border: tuple,
+        row_alt_bg: Optional[tuple] = None,
+        text_color: tuple,
+        text_secondary: tuple,
+        accent_color: tuple,
+        border_radius: int = 0,
+    ) -> io.BytesIO:
+        """Shared help page renderer called by all theme subclasses."""
+        from PIL import Image, ImageDraw
+
+        width, height = 560, 400
+        canvas = Image.new("RGBA", (width, height), canvas_bg)
+        draw = ImageDraw.Draw(canvas)
+
+        self.renderer._draw_header_bar(
+            draw, 8, 8, width - 8, 28,
+            text=f"HELP — {category.upper()}",
+            bg=header_bg,
+        )
+
+        col_x = {"cmd": 20, "desc": 200}
+        hdr_y = 46
+        self.renderer._draw_classic_panel(
+            draw, 8, 40, width - 8, 62,
+            fill=header_bg, border=panel_border, border_width=1, radius=border_radius,
+        )
+        draw.text((col_x["cmd"], hdr_y), "COMMAND", fill=header_text_color, font=self.fonts["small_bold"])
+        draw.text((col_x["desc"], hdr_y), "DESCRIPTION", fill=header_text_color, font=self.fonts["small_bold"])
+
+        row_h = 30
+        start_y = 68
+
+        for idx, cmd in enumerate(commands_list):
+            ry = start_y + idx * row_h
+            bg = row_alt_bg if (row_alt_bg and idx % 2 == 1) else panel_bg
+            self.renderer._draw_classic_panel(
+                draw, 8, ry, width - 8, ry + row_h,
+                fill=bg, border=bg, border_width=0, radius=0,
+            )
+
+            name = cmd.get("name", "")
+            usage = cmd.get("usage", "")
+            desc = cmd.get("desc", "")
+
+            cmd_text = f";{usage}" if usage else f";{name}"
+            if len(cmd_text) > 22:
+                cmd_text = cmd_text[:20] + ".."
+            draw.text((col_x["cmd"], ry + 7), cmd_text, fill=accent_color, font=self.fonts["small_bold"])
+
+            if len(desc) > 46:
+                desc = desc[:44] + ".."
+            draw.text((col_x["desc"], ry + 7), desc, fill=text_color, font=self.fonts["small"])
+
+        table_bottom = start_y + len(commands_list) * row_h + 4
+        draw.line([(8, table_bottom), (width - 8, table_bottom)], fill=panel_border, width=1)
+
+        footer_y = height - 34
+        page_text = f"Page {page} of {total_pages}  •  Use ◀ ▶ to navigate"
         pbox = draw.textbbox((0, 0), page_text, font=self.fonts["small"])
         px = (width - (pbox[2] - pbox[0])) // 2
         draw.text((px, footer_y), page_text, fill=text_secondary, font=self.fonts["small"])

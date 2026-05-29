@@ -195,7 +195,8 @@ class ScarletRenderer(BaseThemeRenderer):
             border_radius=8,
         )
 
-    def render_settings_menu(self, current_theme: str, *, moveset_img: bool = True) -> io.BytesIO:
+    def render_settings_menu(self, current_theme: str, *, moveset_img: bool = True,
+                              help_display: str = "image") -> io.BytesIO:
         width, height = 480, 280
         canvas = Image.new("RGBA", (width, height), (255, 245, 245))
         draw = ImageDraw.Draw(canvas)
@@ -208,21 +209,25 @@ class ScarletRenderer(BaseThemeRenderer):
         font = self.fonts["body_bold"]
         font_sm = self.fonts["small"]
 
-        tile_x, tile_y = 30, 68
-        self.renderer._draw_classic_panel(draw, tile_x, tile_y, tile_x + 120, tile_y + 40, fill=(255, 245, 245), border=(220, 40, 60), radius=8)
-        draw.text((tile_x + 12, tile_y + 10), "THEME CONFIG", fill=(160, 64, 80), font=self.fonts["small_bold"])
-
+        tile_x, tile_y = 30, 62
+        self.renderer._draw_classic_panel(draw, tile_x, tile_y, tile_x + 120, tile_y + 34, fill=(255, 245, 245), border=(220, 40, 60), radius=8)
+        draw.text((tile_x + 12, tile_y + 8), "THEME CONFIG", fill=(160, 64, 80), font=self.fonts["small_bold"])
         val_x = 170
-        self.renderer._draw_classic_panel(draw, val_x, tile_y, val_x + 270, tile_y + 40, fill=(255, 255, 255), border=(220, 40, 60), radius=8)
-        draw.text((val_x + 24, tile_y + 10), current_theme.upper(), fill=self.palette.text_dark, font=font)
+        self.renderer._draw_classic_panel(draw, val_x, tile_y, val_x + 270, tile_y + 34, fill=(255, 255, 255), border=(220, 40, 60), radius=8)
+        draw.text((val_x + 24, tile_y + 8), current_theme.upper(), fill=self.palette.text_dark, font=font)
 
-        tile_y2 = 124
-        self.renderer._draw_classic_panel(draw, tile_x, tile_y2, tile_x + 120, tile_y2 + 40, fill=(255, 245, 245), border=(220, 40, 60), radius=8)
-        draw.text((tile_x + 4, tile_y2 + 10), "MOVESET DISP", fill=(160, 64, 80), font=self.fonts["small_bold"])
-
+        tile_y2 = 106
+        self.renderer._draw_classic_panel(draw, tile_x, tile_y2, tile_x + 120, tile_y2 + 34, fill=(255, 245, 245), border=(220, 40, 60), radius=8)
+        draw.text((tile_x + 4, tile_y2 + 8), "MOVESET DISP", fill=(160, 64, 80), font=self.fonts["small_bold"])
         moveset_val = "IMAGE" if moveset_img else "TEXT"
-        self.renderer._draw_classic_panel(draw, val_x, tile_y2, val_x + 270, tile_y2 + 40, fill=(255, 255, 255), border=(220, 40, 60), radius=8)
-        draw.text((val_x + 24, tile_y2 + 10), moveset_val, fill=self.palette.text_dark, font=font)
+        self.renderer._draw_classic_panel(draw, val_x, tile_y2, val_x + 270, tile_y2 + 34, fill=(255, 255, 255), border=(220, 40, 60), radius=8)
+        draw.text((val_x + 24, tile_y2 + 8), moveset_val, fill=self.palette.text_dark, font=font)
+
+        tile_y3 = 150
+        self.renderer._draw_classic_panel(draw, tile_x, tile_y3, tile_x + 120, tile_y3 + 34, fill=(255, 245, 245), border=(220, 40, 60), radius=8)
+        draw.text((tile_x + 8, tile_y3 + 8), "HELP DISPLAY", fill=(160, 64, 80), font=self.fonts["small_bold"])
+        self.renderer._draw_classic_panel(draw, val_x, tile_y3, val_x + 270, tile_y3 + 34, fill=(255, 255, 255), border=(220, 40, 60), radius=8)
+        draw.text((val_x + 24, tile_y3 + 8), help_display.upper(), fill=self.palette.text_dark, font=font)
 
         help_txt = "Rotom: Swipe option dropdown selection below to save changes."
         draw.text((24, 220), help_txt, fill=(160, 64, 80), font=font_sm)
@@ -231,3 +236,18 @@ class ScarletRenderer(BaseThemeRenderer):
         canvas.save(buf, format="PNG")
         buf.seek(0)
         return buf
+
+    def render_help_page(self, category: str, commands_list: list[dict],
+                         page: int, total_pages: int) -> io.BytesIO:
+        return self._render_help_table(
+            category, commands_list, page, total_pages,
+            canvas_bg=(255, 245, 245),
+            header_bg=(220, 40, 60),
+            panel_bg=(255, 255, 255),
+            panel_border=(220, 40, 60),
+            row_alt_bg=(255, 245, 245),
+            text_color=self.palette.text_dark,
+            text_secondary=(160, 64, 80),
+            accent_color=(220, 40, 60),
+            border_radius=8,
+        )

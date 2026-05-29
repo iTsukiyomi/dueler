@@ -38,6 +38,7 @@ async def setup(bot):
     from .cog.economy_cog import EconomyCog
     from .cog.admin_cog import AdminCog
     from .cog.settings_cog import SettingsCog
+    from .cog.help_cog import HelpCog
 
     cogs = [
         PokemonDuel(bot),
@@ -46,6 +47,7 @@ async def setup(bot):
         EconomyCog(bot),
         AdminCog(bot),
         SettingsCog(bot),
+        HelpCog(bot),
     ]
 
     for cog in cogs:

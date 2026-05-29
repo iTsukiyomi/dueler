@@ -196,7 +196,8 @@ class XRenderer(BaseThemeRenderer):
             border_radius=6,
         )
 
-    def render_settings_menu(self, current_theme: str, *, moveset_img: bool = True) -> io.BytesIO:
+    def render_settings_menu(self, current_theme: str, *, moveset_img: bool = True,
+                              help_display: str = "image") -> io.BytesIO:
         width, height = 480, 280
         canvas = Image.new("RGBA", (width, height), (255, 255, 255))
         draw = ImageDraw.Draw(canvas)
@@ -216,21 +217,25 @@ class XRenderer(BaseThemeRenderer):
         font = self.fonts["body_bold"]
         font_sm = self.fonts["small"]
 
-        card_x, card_y = 30, 68
-        self.renderer._draw_classic_panel(draw, card_x, card_y, card_x + 120, card_y + 40, fill=(240, 248, 255), border=(96, 144, 192), radius=6)
-        draw.text((card_x + 14, card_y + 10), "THEME APP", fill=(96, 144, 192), font=self.fonts["small_bold"])
-
+        card_x, card_y = 30, 62
+        self.renderer._draw_classic_panel(draw, card_x, card_y, card_x + 120, card_y + 34, fill=(240, 248, 255), border=(96, 144, 192), radius=6)
+        draw.text((card_x + 14, card_y + 8), "THEME APP", fill=(96, 144, 192), font=self.fonts["small_bold"])
         val_x = 170
-        self.renderer._draw_classic_panel(draw, val_x, card_y, val_x + 270, card_y + 40, fill=(255, 255, 255), border=(160, 192, 224), radius=6)
-        draw.text((val_x + 24, card_y + 10), current_theme.upper(), fill=self.palette.text_dark, font=font)
+        self.renderer._draw_classic_panel(draw, val_x, card_y, val_x + 270, card_y + 34, fill=(255, 255, 255), border=(160, 192, 224), radius=6)
+        draw.text((val_x + 24, card_y + 8), current_theme.upper(), fill=self.palette.text_dark, font=font)
 
-        card_y2 = 124
-        self.renderer._draw_classic_panel(draw, card_x, card_y2, card_x + 120, card_y2 + 40, fill=(240, 248, 255), border=(96, 144, 192), radius=6)
-        draw.text((card_x + 6, card_y2 + 10), "MOVESET DISP", fill=(96, 144, 192), font=self.fonts["small_bold"])
-
+        card_y2 = 106
+        self.renderer._draw_classic_panel(draw, card_x, card_y2, card_x + 120, card_y2 + 34, fill=(240, 248, 255), border=(96, 144, 192), radius=6)
+        draw.text((card_x + 6, card_y2 + 8), "MOVESET DISP", fill=(96, 144, 192), font=self.fonts["small_bold"])
         moveset_val = "IMAGE" if moveset_img else "TEXT"
-        self.renderer._draw_classic_panel(draw, val_x, card_y2, val_x + 270, card_y2 + 40, fill=(255, 255, 255), border=(160, 192, 224), radius=6)
-        draw.text((val_x + 24, card_y2 + 10), moveset_val, fill=self.palette.text_dark, font=font)
+        self.renderer._draw_classic_panel(draw, val_x, card_y2, val_x + 270, card_y2 + 34, fill=(255, 255, 255), border=(160, 192, 224), radius=6)
+        draw.text((val_x + 24, card_y2 + 8), moveset_val, fill=self.palette.text_dark, font=font)
+
+        card_y3 = 150
+        self.renderer._draw_classic_panel(draw, card_x, card_y3, card_x + 120, card_y3 + 34, fill=(240, 248, 255), border=(96, 144, 192), radius=6)
+        draw.text((card_x + 10, card_y3 + 8), "HELP DISPLAY", fill=(96, 144, 192), font=self.fonts["small_bold"])
+        self.renderer._draw_classic_panel(draw, val_x, card_y3, val_x + 270, card_y3 + 34, fill=(255, 255, 255), border=(160, 192, 224), radius=6)
+        draw.text((val_x + 24, card_y3 + 8), help_display.upper(), fill=self.palette.text_dark, font=font)
 
         help_txt = "Press dropdown select to swap app configurations."
         draw.text((24, 220), help_txt, fill=(120, 140, 160), font=font_sm)
@@ -239,3 +244,18 @@ class XRenderer(BaseThemeRenderer):
         canvas.save(buf, format="PNG")
         buf.seek(0)
         return buf
+
+    def render_help_page(self, category: str, commands_list: list[dict],
+                         page: int, total_pages: int) -> io.BytesIO:
+        return self._render_help_table(
+            category, commands_list, page, total_pages,
+            canvas_bg=(240, 248, 255),
+            header_bg=(96, 144, 192),
+            panel_bg=(255, 255, 255),
+            panel_border=(96, 144, 192),
+            row_alt_bg=(240, 248, 255),
+            text_color=self.palette.text_dark,
+            text_secondary=(80, 112, 144),
+            accent_color=(96, 144, 192),
+            border_radius=6,
+        )

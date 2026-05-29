@@ -256,6 +256,9 @@ IMG_QI_WS_TTL = 3600
 IMG_QI_SEARCH_KEY = "img:qi:search:{user_id}:{pokname}"
 IMG_QI_SEARCH_TTL = 3600
 
+IMG_HELP_KEY = "img:help:{user_id}:{category}:{page}"
+IMG_HELP_TTL = 3600
+
 
 def _prepare_datetimes(data: Any) -> Any:
     """Serialize all datetime objects in dictionaries/lists to ISO format strings."""
@@ -321,20 +324,21 @@ async def get_player_profile(user_id: str) -> Optional[dict]:
 
 
 async def set_player_profile(user_id: str, doc: dict) -> None:
-    """Cache player profile in Redis and invalidate its related settings/profile/qi images."""
+    """Cache player profile in Redis and invalidate its related settings/profile/qi/help images."""
     key = PLAYER_PROFILE_KEY.format(user_id=user_id)
     try:
         await invalidate_settings_image(user_id)
         await invalidate_profile_image(user_id)
         await invalidate_qi_ws_image(user_id)
         await invalidate_all_qi_search_images(user_id)
+        await invalidate_all_help_images(user_id)
         await cache_set(key, _prepare_datetimes(doc), ttl=PLAYER_PROFILE_TTL)
     except Exception as e:
         log.warning("Failed to set player profile cache for %s: %s", user_id, e)
 
 
 async def invalidate_player_profile(user_id: str) -> None:
-    """Remove player profile from cache and invalidate related settings/profile/qi images."""
+    """Remove player profile from cache and invalidate related settings/profile/qi/help images."""
     key = PLAYER_PROFILE_KEY.format(user_id=user_id)
     try:
         await cache_delete(key)
@@ -342,6 +346,7 @@ async def invalidate_player_profile(user_id: str) -> None:
         await invalidate_profile_image(user_id)
         await invalidate_qi_ws_image(user_id)
         await invalidate_all_qi_search_images(user_id)
+        await invalidate_all_help_images(user_id)
     except Exception as e:
         log.warning("Failed to invalidate player profile cache for %s: %s", user_id, e)
 
@@ -547,4 +552,29 @@ async def invalidate_qi_search_image(user_id: str, pokname: str) -> None:
 async def invalidate_all_qi_search_images(user_id: str) -> None:
     """Invalidate all cached search qi cards for a user."""
     pattern = f"img:qi:search:{user_id}:*"
+    await cache_invalidate_pattern(pattern)
+
+
+async def get_help_image(user_id: str, category: str, page: int) -> Optional[bytes]:
+    """Retrieve cached help page image bytes."""
+    return await cache_get_bytes(IMG_HELP_KEY.format(user_id=user_id, category=category, page=page))
+
+
+async def set_help_image(user_id: str, category: str, page: int, data: bytes) -> None:
+    """Cache help page image bytes."""
+    await cache_set_bytes(
+        IMG_HELP_KEY.format(user_id=user_id, category=category, page=page),
+        data,
+        ttl=IMG_HELP_TTL
+    )
+
+
+async def invalidate_help_image(user_id: str, category: str, page: int) -> None:
+    """Invalidate a specific cached help page image."""
+    await cache_delete(IMG_HELP_KEY.format(user_id=user_id, category=category, page=page))
+
+
+async def invalidate_all_help_images(user_id: str) -> None:
+    """Invalidate all cached help images for a user."""
+    pattern = f"img:help:{user_id}:*"
     await cache_invalidate_pattern(pattern)

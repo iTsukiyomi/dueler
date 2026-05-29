@@ -21,6 +21,7 @@ class SettingsView(discord.ui.View):
         """Re-render the settings image and edit the original message."""
         theme = profile.get("theme", "firered")
         moveset_img = profile.get("moveset_img", True)
+        help_display = profile.get("help_display", "image")
 
         cached_img = await cache.get_settings_image(str(interaction.user.id))
         if cached_img:
@@ -28,7 +29,7 @@ class SettingsView(discord.ui.View):
         else:
             data_dir = Path(__file__).parent.parent / "data"
             renderer = BattleRenderer(data_dir, palette=get_palette(theme), theme=theme)
-            img_buf = renderer.render_settings_menu(theme, moveset_img=moveset_img)
+            img_buf = renderer.render_settings_menu(theme, moveset_img=moveset_img, help_display=help_display)
             await cache.set_settings_image(str(interaction.user.id), img_buf.getvalue())
 
         file = discord.File(fp=img_buf, filename="settings.png")
@@ -120,6 +121,29 @@ class SettingsView(discord.ui.View):
         new_val = select.values[0] == "image"
         await self._update_field(interaction, "moveset_img", new_val, "moveset display")
 
+    @discord.ui.select(
+        placeholder="Help Display Mode...",
+        min_values=1,
+        max_values=1,
+        options=[
+            discord.SelectOption(label="Image Mode", value="image", description="Themed help menu image", emoji="🖼️"),
+            discord.SelectOption(label="Text Mode", value="text", description="Classic text embed", emoji="📝"),
+        ],
+        row=2
+    )
+    async def select_help_display(self, interaction: discord.Interaction, select: discord.ui.Select):
+        if interaction.user.id != self.ctx.author.id:
+            await interaction.response.send_message("This is not your settings menu.", ephemeral=True)
+            return
+
+        profile = await self.player_svc.get_profile(str(interaction.user.id))
+        if not profile:
+            await interaction.response.send_message("Profile not found.", ephemeral=True)
+            return
+
+        new_val = select.values[0]
+        await self._update_field(interaction, "help_display", new_val, "help display")
+
 
 class SettingsCog(commands.Cog, name="Settings"):
     """User preferences and settings."""
@@ -143,6 +167,7 @@ class SettingsCog(commands.Cog, name="Settings"):
 
         theme = profile.get("theme", "firered")
         moveset_img = profile.get("moveset_img", True)
+        help_display = profile.get("help_display", "image")
 
         cached_img = await cache.get_settings_image(str(ctx.author.id))
         if cached_img:
@@ -150,7 +175,7 @@ class SettingsCog(commands.Cog, name="Settings"):
         else:
             data_dir = Path(__file__).parent.parent / "data"
             renderer = BattleRenderer(data_dir, palette=get_palette(theme), theme=theme)
-            img_buf = renderer.render_settings_menu(theme, moveset_img=moveset_img)
+            img_buf = renderer.render_settings_menu(theme, moveset_img=moveset_img, help_display=help_display)
             await cache.set_settings_image(str(ctx.author.id), img_buf.getvalue())
 
         file = discord.File(fp=img_buf, filename="settings.png")

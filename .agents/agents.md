@@ -91,3 +91,5 @@ Every inter-agent handoff must include:
 - Commits authored by agents must be prefixed with the agent codename, e.g.
   `[BackendCore] fix: offload Pillow render to thread pool`.
 - Keep codebase clean: no comments at the top of files, only comments for complex logic simplified to humanized 1-liners. Only keep docstrings for classes, methods, or functions if they are complex (mandatory for Discord commands).
+- Always use cache for generated images. If underlying data changes, invalidate and re-cache.
+

@@ -184,7 +184,8 @@ class BlackRenderer(BaseThemeRenderer):
             border_radius=0,
         )
 
-    def render_settings_menu(self, current_theme: str, *, moveset_img: bool = True) -> io.BytesIO:
+    def render_settings_menu(self, current_theme: str, *, moveset_img: bool = True,
+                              help_display: str = "image") -> io.BytesIO:
         width, height = 480, 280
         canvas = Image.new("RGBA", (width, height), (16, 16, 16))
         draw = ImageDraw.Draw(canvas)
@@ -198,13 +199,17 @@ class BlackRenderer(BaseThemeRenderer):
         font_sm = self.fonts["small"]
 
         draw.text((24, 64), "UI THEME", fill=(180, 180, 180), font=font)
-        self.renderer._draw_classic_panel(draw, 220, 60, 440, 90, fill=(16, 16, 16), border=(255, 255, 255), border_width=1, radius=2)
+        self.renderer._draw_classic_panel(draw, 220, 60, 440, 86, fill=(16, 16, 16), border=(255, 255, 255), border_width=1, radius=2)
         draw.text((230, 64), current_theme.upper(), fill=(255, 255, 255), font=font)
 
-        draw.text((24, 104), "MOVESET DISPLAY", fill=(180, 180, 180), font=font)
+        draw.text((24, 100), "MOVESET DISPLAY", fill=(180, 180, 180), font=font)
         moveset_val = "IMAGE" if moveset_img else "TEXT"
-        self.renderer._draw_classic_panel(draw, 220, 100, 440, 130, fill=(16, 16, 16), border=(255, 255, 255), border_width=1, radius=2)
-        draw.text((230, 104), moveset_val, fill=(255, 255, 255), font=font)
+        self.renderer._draw_classic_panel(draw, 220, 96, 440, 122, fill=(16, 16, 16), border=(255, 255, 255), border_width=1, radius=2)
+        draw.text((230, 100), moveset_val, fill=(255, 255, 255), font=font)
+
+        draw.text((24, 136), "HELP DISPLAY", fill=(180, 180, 180), font=font)
+        self.renderer._draw_classic_panel(draw, 220, 132, 440, 158, fill=(16, 16, 16), border=(255, 255, 255), border_width=1, radius=2)
+        draw.text((230, 136), help_display.upper(), fill=(255, 255, 255), font=font)
 
         help_txt = "Press dropdown menu below to change."
         draw.text((24, 220), help_txt, fill=(140, 140, 140), font=font_sm)
@@ -213,3 +218,19 @@ class BlackRenderer(BaseThemeRenderer):
         canvas.save(buf, format="PNG")
         buf.seek(0)
         return buf
+
+    def render_help_page(self, category: str, commands_list: list[dict],
+                         page: int, total_pages: int) -> io.BytesIO:
+        return self._render_help_table(
+            category, commands_list, page, total_pages,
+            canvas_bg=(16, 16, 16),
+            header_bg=(48, 48, 48),
+            header_text_color=(255, 255, 255),
+            panel_bg=(24, 24, 24),
+            panel_border=(255, 255, 255),
+            row_alt_bg=(32, 32, 32),
+            text_color=(255, 255, 255),
+            text_secondary=(180, 180, 180),
+            accent_color=(255, 255, 255),
+            border_radius=0,
+        )

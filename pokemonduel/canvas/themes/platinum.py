@@ -179,7 +179,8 @@ class PlatinumRenderer(BaseThemeRenderer):
             border_radius=4,
         )
 
-    def render_settings_menu(self, current_theme: str, *, moveset_img: bool = True) -> io.BytesIO:
+    def render_settings_menu(self, current_theme: str, *, moveset_img: bool = True,
+                              help_display: str = "image") -> io.BytesIO:
         width, height = 480, 280
         canvas = Image.new("RGBA", (width, height), (220, 226, 230))
         draw = ImageDraw.Draw(canvas)
@@ -192,13 +193,17 @@ class PlatinumRenderer(BaseThemeRenderer):
         font = self.fonts["body_bold"]
 
         draw.text((24, 64), "ACTIVE THEME", fill=(96, 112, 128), font=font)
-        self.renderer._draw_classic_panel(draw, 220, 60, 440, 90, fill=(255, 255, 255), border=(112, 128, 144), border_width=1, radius=2)
+        self.renderer._draw_classic_panel(draw, 220, 60, 440, 86, fill=(255, 255, 255), border=(112, 128, 144), border_width=1, radius=2)
         draw.text((230, 64), current_theme.upper(), fill=self.palette.text_dark, font=font)
 
-        draw.text((24, 104), "MOVESET DISPLAY", fill=(96, 112, 128), font=font)
+        draw.text((24, 100), "MOVESET DISPLAY", fill=(96, 112, 128), font=font)
         moveset_val = "IMAGE" if moveset_img else "TEXT"
-        self.renderer._draw_classic_panel(draw, 220, 100, 440, 130, fill=(255, 255, 255), border=(112, 128, 144), border_width=1, radius=2)
-        draw.text((230, 104), moveset_val, fill=self.palette.text_dark, font=font)
+        self.renderer._draw_classic_panel(draw, 220, 96, 440, 122, fill=(255, 255, 255), border=(112, 128, 144), border_width=1, radius=2)
+        draw.text((230, 100), moveset_val, fill=self.palette.text_dark, font=font)
+
+        draw.text((24, 136), "HELP DISPLAY", fill=(96, 112, 128), font=font)
+        self.renderer._draw_classic_panel(draw, 220, 132, 440, 158, fill=(255, 255, 255), border=(112, 128, 144), border_width=1, radius=2)
+        draw.text((230, 136), help_display.upper(), fill=self.palette.text_dark, font=font)
 
         self.renderer._draw_classic_panel(draw, 12, height - 36, width - 12, height - 10, fill=(40, 50, 40), border=(112, 128, 144))
         draw.text((24, height - 28), "POKéTCH: Select options via dropdown below.", fill=(100, 255, 100), font=self.fonts["tiny"])
@@ -207,3 +212,18 @@ class PlatinumRenderer(BaseThemeRenderer):
         canvas.save(buf, format="PNG")
         buf.seek(0)
         return buf
+
+    def render_help_page(self, category: str, commands_list: list[dict],
+                         page: int, total_pages: int) -> io.BytesIO:
+        return self._render_help_table(
+            category, commands_list, page, total_pages,
+            canvas_bg=(220, 226, 230),
+            header_bg=(112, 128, 144),
+            panel_bg=(240, 244, 248),
+            panel_border=(112, 128, 144),
+            row_alt_bg=(230, 235, 240),
+            text_color=self.palette.text_dark,
+            text_secondary=(96, 112, 128),
+            accent_color=(112, 128, 144),
+            border_radius=4,
+        )

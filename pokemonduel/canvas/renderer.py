@@ -687,11 +687,12 @@ class BattleRenderer:
         theme_renderer = get_theme_renderer(self.theme, self)
         return theme_renderer.render_trainer_card(username, player_id, rank, elo, wins, losses, wallet, active_team, avatar_bytes, party_pokemon)
 
-    def render_settings_menu(self, current_theme: str, *, moveset_img: bool = True) -> io.BytesIO:
+    def render_settings_menu(self, current_theme: str, *, moveset_img: bool = True,
+                              help_display: str = "image") -> io.BytesIO:
         """Render a classic settings menu image."""
         from .themes import get_theme_renderer
         theme_renderer = get_theme_renderer(self.theme, self)
-        return theme_renderer.render_settings_menu(current_theme, moveset_img=moveset_img)
+        return theme_renderer.render_settings_menu(current_theme, moveset_img=moveset_img, help_display=help_display)
 
     def render_moveset(self, pokemon_name: str, moves_data: list[dict],
                        page: int, total_pages: int, total_moves: int) -> io.BytesIO:
@@ -699,3 +700,10 @@ class BattleRenderer:
         from .themes import get_theme_renderer
         theme_renderer = get_theme_renderer(self.theme, self)
         return theme_renderer.render_moveset(pokemon_name, moves_data, page, total_pages, total_moves)
+
+    def render_help_page(self, category: str, commands_list: list[dict],
+                         page: int, total_pages: int) -> io.BytesIO:
+        """Render a themed help page image."""
+        from .themes import get_theme_renderer
+        theme_renderer = get_theme_renderer(self.theme, self)
+        return theme_renderer.render_help_page(category, commands_list, page, total_pages)
