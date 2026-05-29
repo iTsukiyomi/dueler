@@ -3,9 +3,9 @@ from ..misc import NonVolatileEffect, Metronome, ExpiringEffect, ExpiringItem, H
 
 
 class DuelPokemonInit:
-    """Pokemon initialization."""
 
     def __init__(self, **kwargs):
+        """Initialize a DuelPokemon with stats, status states, and battle flags."""
         self.pokemon_id = kwargs['pokemon_id']
         self._name = kwargs['name']
         self._nickname = kwargs['nickname']
@@ -93,10 +93,8 @@ class DuelPokemonInit:
 
         self.can_move = True
         self.has_moved = False
-        # Boolean - stores whether this poke swapped in this turn, and should not have the next_turn function be called.
         self.swapped_in = False
         self.ever_sent_out = False
-        # Boolean - stores whether this poke should attempt to mega evolve this turn.
         self.should_mega_evolve = False
 
         self.last_move = None
@@ -122,11 +120,8 @@ class DuelPokemonInit:
         self.rage = False
         self.mind_reader = ExpiringItem()
         self.destiny_bond = False
-        # ExpiringEffect - stores whether destiny bond is on cooldown and cannot be executed.
         self.destiny_bond_cooldown = ExpiringEffect(0)
-        # Boolean - stores whether or not this poke is prevented from switching out. This does not prevent moves that swap the target or user.
         self.trapping = False
-        # Boolean - stores whether or not this poke is under the effect of ingrain. This does not prevent moves that swap the user, but does prevent target swaps.
         self.ingrain = False
         self.infatuated = None
         self.aqua_ring = False
@@ -134,13 +129,10 @@ class DuelPokemonInit:
         self.dive = False
         self.dig = False
         self.fly = False
-        # Boolean - stores whether or not this poke is in a semi-invulnerable state from shadow force or phantom force.
         self.shadow_force = False
-        # ExpiringEffect - stores how long this poke cannot be hit by critical hits due to lucky chant.
         self.lucky_chant = ExpiringEffect(0)
         self.grounded_by_move = False
         self.charge = ExpiringEffect(0)
-        # ExpiringEffect - stores the number of turns pokes cannot fall asleep.
         self.uproar = ExpiringEffect(0)
         self.magic_coat = False
         self.power_trick = False
@@ -191,9 +183,7 @@ class DuelPokemonInit:
         self.lansat_berry_ate = False
         self.micle_berry_ate = False
         self.tar_shot = False
-        # ExpiringEffect - stores the number of turns this pokemon is lowering the opponent's speed at the end of every turn.
         self.syrup_bomb = ExpiringEffect(0)
-        # Int - stores the number of times this pokemon has been hit this battle, and does NOT reset when switching out.
         self.num_hits = 0
 
         self.flash_fire = False

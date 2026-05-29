@@ -19,7 +19,6 @@ ABILITY_JSON_PATH = Path(__file__).parent.parent.parent / 'data' / 'abilities.js
 MOVES_JSON_PATH = Path(__file__).parent.parent.parent / 'data' / 'moves.json'
 POKE_ABILITIES_JSON_PATH = Path(__file__).parent.parent.parent / 'data' / 'poke_abilities.json'
 
-# Data caches.
 _PFILE_DATA = None
 _PSTATS_DATA = None
 _FORMS_DATA = None
@@ -34,7 +33,6 @@ _PNAME_TO_FORM_ID = None
 
 
 def normalize_id(text: str) -> str:
-    """Centralized ID normalization - removes spaces, hyphens, underscores"""
     return (
         text.lower()
         .replace(" ", "")
@@ -78,7 +76,6 @@ def _build_nature_lookup():
     return _NATURE_LOOKUP
 
 def get_nature_id(nature_name: str) -> int:
-    """Get nature ID from name"""
     natures = _load_natures_data()
     norm = normalize_id(nature_name)
     for n in natures:
@@ -87,7 +84,6 @@ def get_nature_id(nature_name: str) -> int:
     return 1
 
 def get_nature_for_role(role: str, counter: MoveCounter, base_stats: Dict, types: Set[str]) -> str:
-    """Select appropriate nature based on role and stats"""
     nature_lookup = _build_nature_lookup()
 
     atk = base_stats.get('atk', 100)
@@ -96,7 +92,7 @@ def get_nature_for_role(role: str, counter: MoveCounter, base_stats: Dict, types
     def_stat = base_stats.get('def', 100)
     spd = base_stats.get('spd', 100)
 
-    # Trick Room users need -Speed nature.
+    # Trick Room users require negative Speed nature.
     if counter.get('trickroom', 0) > 0:
         if counter.get('Physical', 0) >= counter.get('Special', 0):
             return nature_lookup.get(('atk', 'spe'), 'Brave')
@@ -194,7 +190,6 @@ _MOVE_DATA = None
 DAMAGE_CLASS = {1: 'Status', 2: 'Physical', 3: 'Special'}
 
 def _get_move_data():
-    """Load and normalize move data from moves.json"""
     global _MOVE_DATA
     if _MOVE_DATA is not None:
         return _MOVE_DATA
@@ -219,7 +214,6 @@ def _get_move_data():
 
 @lru_cache(maxsize=2048)
 def _get_move_info(move_identifier: str):
-    """Get move data from moves.json by identifier (cached)"""
     move_id = move_identifier.lower().replace(' ', '-').replace('_', '')
     move_data = _get_move_data()
 
@@ -229,12 +223,12 @@ def _get_move_info(move_identifier: str):
         return move_data[move_id.replace('-', '')]
     return None
 
-# Manual alias overrides for sets.json names whose word order or spelling does not align with the kebab-case identifiers in forms.json. These are evaluated *before* heuristic matching so we always pick the canonical form.
+# Map non-standard sets.json names to forms.json identifiers.
 _SETS_NAME_ALIASES = {
     'taurospaldeaaqua':    'tauros-aqua-paldea',
     'taurospaldeablaze':   'tauros-blaze-paldea',
     'taurospaldeacombat':  'tauros-paldea',
-    # Squawkabilly cosmetic plumage variants — only the base form ships in forms.json.
+    # Map Squawkabilly variants to the base species.
     'squawkabillywhite':   'squawkabilly',
     'squawkabillyblue':    'squawkabilly',
     'squawkabillyyellow':  'squawkabilly',
@@ -249,7 +243,6 @@ _SETS_NAME_ALIASES = {
 
 
 def _build_pname_to_form_id_map():
-    """Build mapping from sets.json pokemon names to forms.json IDs"""
     global _PNAME_TO_FORM_ID
     if _PNAME_TO_FORM_ID is not None:
         return _PNAME_TO_FORM_ID
@@ -260,7 +253,7 @@ def _build_pname_to_form_id_map():
 
     valid_ptype_ids = {pt.get('id') for pt in ptypes}
 
-    # Index forms by their kebab-case identifier so alias lookups are O(1). When multiple entries share an identifier (e.g. ``ursaluna``), prefer the one with a valid ptypes record so downstream lookups don't fail.
+    # Index forms by identifier, prioritizing those with valid types.
     forms_by_iden: Dict[str, dict] = {}
     for entry in forms:
         iden = entry.get('identifier', '')
@@ -307,7 +300,6 @@ def _build_pname_to_form_id_map():
                 form_id = entry.get('id')
                 pokemon_id = entry.get('pokemon_id', form_id)
 
-                # Only consider if ptypes has an entry for this pokemon.
                 if pokemon_id in valid_ptype_ids or form_id in valid_ptype_ids:
                     best_match = form_id
                     best_base_id = pokemon_id
@@ -347,7 +339,6 @@ TYPE_NAME_TO_ID = {
 TYPE_ID_TO_NAME = {v: k for k, v in TYPE_NAME_TO_ID.items()}
 
 def get_pokemon_id_and_types(pokemon_name: str) -> Tuple[int, List[int]]:
-    """Get pokemon ID and type IDs from forms.json and ptypes.json"""
     ptypes = _load_ptypes_data()
 
     pname_map = _build_pname_to_form_id_map()
@@ -367,7 +358,6 @@ def get_pokemon_id_and_types(pokemon_name: str) -> Tuple[int, List[int]]:
     return 1, [1]
 
 def get_ability_id(ability_name: str) -> int:
-    """Get ability ID from ability name"""
     abilities = _load_ability_data()
     search_name = ability_name.lower().replace(' ', '').replace('-', '').replace('_', '')
     for ab in abilities:
@@ -377,7 +367,6 @@ def get_ability_id(ability_name: str) -> int:
     return 1
 
 def get_pokemon_base_stats(pokemon_name: str) -> Dict[str, int]:
-    """Get base stats for a pokemon by name"""
     pfile = _load_pfile_data()
     pstats = _load_pstats_data()
 
@@ -386,7 +375,7 @@ def get_pokemon_base_stats(pokemon_name: str) -> Dict[str, int]:
     for entry in pfile:
         if entry.get('identifier', '').replace('-', '').replace(' ', '') == pokemon_id:
             pid = entry.get('id')
-            # Get stats (index 0=hp, 1=atk, 2=def, 3=spa, 4=spd, 5=spe).
+            # Stats ordered as: HP, Atk, Def, SpA, SpD, Spe.
             for stat_entry in pstats:
                 if stat_entry.get('pokemon_id') == pid:
                     stats = stat_entry.get('stats', [])
@@ -401,7 +390,6 @@ def get_pokemon_base_stats(pokemon_name: str) -> Dict[str, int]:
     return {'hp': 50, 'atk': 50, 'def': 50, 'spa': 50, 'spd': 50, 'spe': 50}
 
 def get_type_effectiveness(attack_type: int, defend_types: List[int]) -> float:
-    """Get type effectiveness multiplier"""
     teff = _load_teff_data()
     multiplier = 1.0
     for dt in defend_types:
@@ -452,7 +440,6 @@ MOVE_ENFORCEMENT_CHECKERS = {
 
 
 class MoveCounter:
-    """Tracks move properties for decision making"""
 
     def __init__(self):
         self.counts = {}
@@ -470,7 +457,6 @@ class MoveCounter:
 
 
 class RandomTeamGenerator:
-    """Generates random Pokemon teams using Showdown logic"""
 
     def __init__(self, seed: Optional[int] = None):
         if seed is not None:
@@ -482,7 +468,6 @@ class RandomTeamGenerator:
         self._move_power_cache = {}
 
     def _load_sets(self) -> Dict:
-        """Load sets.json"""
         with open(SETS_JSON_PATH, 'r') as f:
             return json.load(f)
 
@@ -498,20 +483,17 @@ class RandomTeamGenerator:
         return random.randint(1, denominator) <= numerator
 
     def fast_pop(self, lst: List, index: int):
-        """Remove element at index efficiently"""
         lst[index] = lst[-1]
         lst.pop()
 
 
     def get_level(self, pokemon_name: str) -> int:
-        """Get level from sets.json"""
         if pokemon_name in self.sets_data:
             return self.sets_data[pokemon_name].get('level', 50)
         return 50
 
 
     def get_move_type(self, move_id: str, species_types: List[str], abilities: List[str], tera_type: str) -> str:
-        """Get the type of a move considering abilities and tera"""
         move_id = move_id.lower().replace(' ', '-')
 
         if move_id == 'terablast':
@@ -527,11 +509,9 @@ class RandomTeamGenerator:
                 return 'Normal'
             return move_type
 
-        # Fallback to Normal if not found.
         return 'Normal'
 
     def get_move_category(self, move_id: str) -> str:
-        """Get move category (Physical/Special/Status) from moves.json (cached)"""
         if move_id in self._move_category_cache:
             return self._move_category_cache[move_id]
         move_id_norm = move_id.lower().replace(' ', '-')
@@ -541,7 +521,6 @@ class RandomTeamGenerator:
         return result
 
     def get_move_power(self, move_id: str) -> Optional[int]:
-        """Get move base power from moves.json (cached)"""
         if move_id in self._move_power_cache:
             return self._move_power_cache[move_id]
         move_id_norm = move_id.lower().replace(' ', '-')
@@ -554,7 +533,6 @@ class RandomTeamGenerator:
     def query_moves(self, moves: Set[str], species_types: List[str], tera_type: str, abilities: List[str],
                     # pyrefly: ignore [bad-function-definition]
                     base_stats: Dict = None) -> MoveCounter:
-        """Analyze what moves do"""
         counter = MoveCounter()
         types_set = set(t.lower() for t in species_types)
 
@@ -563,7 +541,6 @@ class RandomTeamGenerator:
 
         categories = {'Physical': 0, 'Special': 0, 'Status': 0}
 
-        # For stat-based category resolution.
         base_atk = (base_stats.get('atk', 100) if base_stats else 100)
         base_spa = (base_stats.get('spa', 100) if base_stats else 100)
 
@@ -574,7 +551,6 @@ class RandomTeamGenerator:
             move_power = move_data.get('power') if move_data else None
             move_category = move_data.get('category', 'Status') if move_data else 'Status'
 
-            # Stat-based category resolution for certain moves.
             if move_id in ['terablast', 'photongeyser', 'shellsidearm', 'terapagos', 'terapagos']:
                 if base_atk > base_spa:
                     move_category = 'Physical'
@@ -584,7 +560,6 @@ class RandomTeamGenerator:
             if move_id in ['eruption', 'waterspout', 'dragonenergy', 'lastrespects']:
                 move_power = 150
 
-            # Track categories using real move data (and stat-based resolution).
             categories[move_category] += 1
             counter.add(move_category)
 
@@ -598,13 +573,11 @@ class RandomTeamGenerator:
                     counter.add('stabtera')
                 counter.damaging_moves.add(move_id)
 
-            # Coverage moves (non-STAB damaging) count toward type buckets but not for STAB moves
             # pyrefly: ignore [unsupported-operation]
             elif move_power and move_power > 0 and move_id not in NO_STAB:
                 counter.add(move_type.title() if move_type else 'Normal')
                 counter.damaging_moves.add(move_id)
 
-            # NO_STAB damaging moves - still count for type buckets and coverage
             # pyrefly: ignore [unsupported-operation]
             if move_power and move_power > 0 and move_id in NO_STAB:
                 counter.damaging_moves.add(move_id)
@@ -650,7 +623,6 @@ class RandomTeamGenerator:
             if move_priority > 0:
                 counter.add('priority')
 
-            # Skill Link (only multi-hit moves).
             if move_id in ['bulletseed', 'pinmissile', 'iciclespear', 'rockblast']:
                 counter.add('skilllink')
 
@@ -662,7 +634,6 @@ class RandomTeamGenerator:
 
 
     def incompatible_moves(self, moves: Set[str], move_pool: List[str], moves_a: str, moves_b: str):
-        """Remove incompatible moves from pool"""
         move_array_a = [moves_a] if isinstance(moves_a, str) else moves_a
         move_array_b = [moves_b] if isinstance(moves_b, str) else moves_b
 
@@ -687,12 +658,11 @@ class RandomTeamGenerator:
     def cull_move_pool(self, types: Set[str], moves: Set[str], abilities: List[str],
                        counter: MoveCounter, move_pool: List[str], team_details: Dict,
                        species: Dict, is_lead: bool, tera_type: str, role: str):
-        """Remove incompatible moves from pool based on team needs"""
 
         if len(moves) + len(move_pool) <= self.max_move_count:
             return
 
-        # If we have two unfilled moves and only one unpaired move, cull the unpaired move.
+        # Cull unpaired moves if slots are limited.
         if len(moves) == self.max_move_count - 2:
             unpaired_moves = list(move_pool)
             for pair in MOVE_PAIRS:
@@ -803,7 +773,6 @@ class RandomTeamGenerator:
     def random_moveset(self, types: Set[str], abilities: List[str], team_details: Dict,
                       species: Dict, is_lead: bool, move_pool: List[str], tera_type: str,
                       role: str) -> List[str]:
-        """Generate 4 moves for a Pokemon"""
         moves = set()
         counter = self.query_moves(moves, list(types), tera_type, abilities, species.get('base_stats', {}))
         self.cull_move_pool(types, moves, abilities, counter, move_pool, team_details,
@@ -819,12 +788,11 @@ class RandomTeamGenerator:
                 move_pool, moves, abilities, types, counter, species
             )
 
-        # Tera Blast for Tera Blast users (only if terablast is actually in pool).
+        # Enforce Tera Blast if the role calls for it.
         if role == 'Tera Blast user' and 'terablast' in move_pool:
             counter = self.add_move('terablast', moves, types, abilities, team_details, species,
                                     is_lead, move_pool, tera_type, role)
         elif role == 'Tera Blast user' and 'terablast' not in move_pool:
-            # Role label doesn't match available moves - fallback to setup role behavior.
             pass
 
         species_id = species.get('id', '')
@@ -853,7 +821,6 @@ class RandomTeamGenerator:
             required_moves = ['behemothbash']
         elif species_id == 'zamazentacrowned':
             required_moves = ['behemothbash']
-        # Note: palkia does NOT have a required move in Showdown.
 
         for moveid in required_moves:
             if moveid in move_pool and len(moves) < self.max_move_count:
@@ -902,7 +869,7 @@ class RandomTeamGenerator:
             counter = self.add_move('spore', moves, types, abilities, team_details, species,
                                     is_lead, move_pool, tera_type, role)
 
-        # STAB priority for certain roles - check actual priority > 0 AND basePower > 0 AND STAB.
+        # Add priority STAB moves for specific roles.
         if role in ['Bulky Attacker', 'Bulky Setup', 'Wallbreaker'] or species.get('id') in PRIORITY_POKEMON:
             priority_moves = []
             for moveid in move_pool:
@@ -911,7 +878,6 @@ class RandomTeamGenerator:
                     move_priority = move_data.get('priority', 0)
                     move_power = move_data.get('power')
                     move_type = self.get_move_type(moveid, list(types), abilities, tera_type)
-                    # Check priority > 0, basePower >= 60, and STAB
                     # pyrefly: ignore [unsupported-operation]
                     if move_priority > 0 and move_power and move_power >= 60 and move_type in types:
                         priority_moves.append(moveid)
@@ -920,7 +886,7 @@ class RandomTeamGenerator:
                 counter = self.add_move(moveid, moves, types, abilities, team_details, species,
                                         is_lead, move_pool, tera_type, role)
 
-        # Enforce STAB for each type - but only if we have room.
+        # Enforce STAB if slots are available.
         if len(moves) < self.max_move_count:
             for type_name in types:
                 if len(moves) >= self.max_move_count:
@@ -937,7 +903,7 @@ class RandomTeamGenerator:
                     counter = self.add_move(moveid, moves, types, abilities, team_details, species,
                                             is_lead, move_pool, tera_type, role)
 
-        # Tera STAB - only for Tera Blast users or specific roles that benefit.
+        # Tera STAB for Tera Blast users or primary offensive roles.
         if not counter.get('stabtera') and role in ['Tera Blast user', 'Fast Attacker', 'Bulky Attacker', 'Wallbreaker']:
             tera_stab_moves = []
             for moveid in move_pool:
@@ -1001,8 +967,6 @@ class RandomTeamGenerator:
                 counter = self.add_move(moveid, moves, types, abilities, team_details, species,
                                         is_lead, move_pool, tera_type, role)
 
-        # Coverage if only one attack (simplified - could add more logic).
-
         has_choice_item = role in ['Wallbreaker', 'Fast Attacker'] and counter.get('setup', 0) == 0 and counter.get('Status', 0) == 0
         while len(moves) < self.max_move_count and move_pool:
             if len(moves) + len(move_pool) <= self.max_move_count:
@@ -1019,7 +983,6 @@ class RandomTeamGenerator:
             counter = self.add_move(moveid, moves, types, abilities, team_details, species,
                                     is_lead, move_pool, tera_type, role)
 
-            # Check move pairs.
             for pair in MOVE_PAIRS:
                 if moveid == pair[0] and pair[1] in move_pool:
                     counter = self.add_move(pair[1], moves, types, abilities, team_details, species,
@@ -1035,7 +998,6 @@ class RandomTeamGenerator:
                            abilities: List[str], counter: MoveCounter, team_details: Dict,
                            # pyrefly: ignore [bad-function-definition]
                            species: Dict, role: str, is_lead: bool, move_pool: List[str] = None) -> bool:
-        """Check if ability should be culled"""
 
         if ability in ['Chlorophyll', 'Solar Power']:
             return not team_details.get('sun')
@@ -1063,12 +1025,12 @@ class RandomTeamGenerator:
         if ability == 'Reckless':
             return counter.get('recoil', 0) == 0
         if ability == 'Sheer Force':
-            return counter.get('sheerforce', 0) == 0  # Cull if no Sheer Force moves.
+            return counter.get('sheerforce', 0) == 0
         if ability == 'No Guard':
             inaccurate_moves = ['dynamicpunch', 'stoneedge', 'zapcannon', 'focusblast', 'hurricane', 'thunder', 'blizzard']
             return all(m not in moves for m in inaccurate_moves)
         if ability == 'Flash Fire':
-            # Keep Flash Fire only for Pokemon weak to Fire.
+            # Keep Flash Fire only if weak to Fire.
             fire_type_id = TYPE_NAME_TO_ID.get('fire', 10)
             fire_eff = get_type_effectiveness(fire_type_id, [TYPE_NAME_TO_ID.get(t, 1) for t in types])
             return fire_eff <= 1.0
@@ -1079,7 +1041,7 @@ class RandomTeamGenerator:
         if ability == 'Stall':
             return role not in ['Bulky Support']
         if ability == 'Contrary':
-            # Check if any Contrary move is available in pool to add later.
+            # Cull Contrary if no Contrary moves are in pool/moveset.
             has_contrary_move = any(m in CONTRARY_MOVES for m in moves)
             has_contrary_pool = (move_pool is not None and any(m in CONTRARY_MOVES for m in move_pool))
             return not has_contrary_move and not has_contrary_pool
@@ -1091,7 +1053,6 @@ class RandomTeamGenerator:
     def get_ability(self, types: Set[str], moves: Set[str], abilities: List[str],
                    counter: MoveCounter, team_details: Dict, species: Dict,
                    is_lead: bool, tera_type: str, role: str) -> str:
-        """Select ability"""
 
         if len(abilities) <= 1:
             return abilities[0]
@@ -1217,7 +1178,6 @@ class RandomTeamGenerator:
             return 'Life Orb'
         if ability == 'Anger Shell':
             return self.sample(['Expert Belt', 'Lum Berry', 'Scope Lens', 'Sitrus Berry'])
-        # Note: Clear Amulet is for doubles, skipping for singles.
         if counter.get('skilllink', 0) > 0 and ability != 'Skill Link' and species.get('id') != 'breloom':
             return 'Loaded Dice'
         if ability == 'Unburden':
@@ -1243,11 +1203,8 @@ class RandomTeamGenerator:
     def get_item(self, ability: str, types: Set[str], moves: Set[str],
                 counter: MoveCounter, team_details: Dict, species: Dict,
                 is_lead: bool, tera_type: str, role: str) -> str:
-        """Get item for singles"""
 
-        life_orb_reqs = all(m not in moves for m in ['flamecharge', 'nuzzle', 'rapidspin'])
-
-        # Choice items - only if mostly attacking moves AND no setup/status moves.
+        # Assign Choice items if moveset is purely offensive.
         if counter.get('Physical', 0) >= 3 and counter.get('setup', 0) == 0 and counter.get('Status', 0) == 0 and all(m not in moves for m in ['dragontail', 'fakeout', 'firstimpression', 'flamecharge', 'rapidspin', 'trailblaze']):
             base_atk = species.get('base_stats', {}).get('atk', 100)
             base_spe = species.get('base_stats', {}).get('spe', 100)
@@ -1264,7 +1221,7 @@ class RandomTeamGenerator:
         if counter.get('speedsetup', 0) > 0 and counter.get('physicalsetup', 0) == 0 and role == 'Bulky Setup':
             return 'Weakness Policy'
 
-        # AV check after Choice items - exclude all offensive and fast support roles.
+        # Assign Assault Vest if no status moves and role is appropriate.
         if counter.get('Status', 0) == 0 and role not in ['Fast Attacker', 'Fast Support', 'Fast Setup', 'Fast Bulky Setup', 'Wallbreaker', 'Tera Blast user', 'Bulky Setup', 'Setup Sweeper']:
             return 'Assault Vest'
 
@@ -1274,7 +1231,7 @@ class RandomTeamGenerator:
         if 'substitute' in moves:
             return 'Leftovers'
 
-        # Rocky Helmet for physically bulky Pokemon without recovery (only Bulky roles, not offensive).
+        # Give Rocky Helmet to physically bulky roles without recovery.
         rocky_helmet_roles = ['Bulky Support', 'Bulky Attacker', 'AV Pivot']
         if role in rocky_helmet_roles and 'Steel' in types and counter.get('recovery', 0) == 0 and ability not in ['Magic Guard', 'Wonder Guard']:
             return 'Rocky Helmet'
@@ -1340,7 +1297,6 @@ class RandomTeamGenerator:
 
     # pyrefly: ignore [bad-function-definition]
     def random_set(self, pokemon_name: str, team_details: Dict = None, is_lead: bool = False) -> Dict:
-        """Generate a random set for a Pokemon"""
 
         if team_details is None:
             team_details = {}
@@ -1379,7 +1335,7 @@ class RandomTeamGenerator:
 
         base_stats = get_pokemon_base_stats(pokemon_name)
         species_dict = {'id': pokemon_name, 'name': pokemon_name, 'base_stats': base_stats}
-        # Add nfe (not fully evolved) check from sets.json.
+        # Check if not fully evolved.
         if species_data.get('nfe'):
             species_dict['nfe'] = True
 
@@ -1407,7 +1363,7 @@ class RandomTeamGenerator:
                                 species_dict, is_lead,
                                 tera_type, role)
 
-        # Handle empty string for Acrobatics users (no item) Note: priority_item == '' is falsy, so we need explicit check.
+        # Acrobatics users get no item.
         if priority_item == '':
             item = ''
         elif not item:
@@ -1438,7 +1394,7 @@ class RandomTeamGenerator:
         nature_id = get_nature_id(nature)
 
         ivs = {'hp': 31, 'atk': 31, 'def': 31, 'spa': 31, 'spd': 31, 'spe': 31}
-        # Trick Room users need 0 Speed IVs, 0 Atk IV only for pure special attackers.
+        # Optimize Trick Room and special attacker IVs.
         if 'trickroom' in moves:
             ivs['spe'] = 0
             if counter.get('Physical', 0) == 0:
@@ -1471,7 +1427,6 @@ class RandomTeamGenerator:
 
     def get_evs(self, role: str, base_stats: Dict, counter: MoveCounter,
                 types: Set[str], ability: str, item: str, moves: List[str]) -> Dict:
-        """Generate appropriate EVs based on role and stats"""
         hp = 0
         atk = 0
         def_stat = 0
@@ -1486,7 +1441,7 @@ class RandomTeamGenerator:
         base_spd = base_stats.get('spd', 100)
         base_hp = base_stats.get('hp', 100)
 
-        # Trick Room - reset everything and use minimum speed.
+        # Optimize Trick Room stats.
         if 'trickroom' in moves:
             spe = 4
             hp = 252
@@ -1502,7 +1457,6 @@ class RandomTeamGenerator:
                 spa = 252
                 spe = 252
 
-        # Fast Attacker - speed + offense.
         elif 'Fast' in role:
             if counter.get('Physical', 0) >= counter.get('Special', 0):
                 atk = 252
@@ -1591,7 +1545,6 @@ class RandomTeamGenerator:
 
     # pyrefly: ignore [bad-function-definition]
     def get_pokemon_pool(self, team: List[Dict] = None, force_type: str = None) -> Tuple[Dict, List]:
-        """Get available Pokemon pool"""
 
         if team is None:
             team = []
@@ -1614,7 +1567,6 @@ class RandomTeamGenerator:
 
     # pyrefly: ignore [bad-function-definition]
     def generate_team(self, team_size: int = 6, exclude_team: List[Dict] = None) -> List[Dict]:
-        """Generate a random team"""
 
         team = []
         team_details = {
@@ -1624,7 +1576,6 @@ class RandomTeamGenerator:
             'types': {},
             'weaknesses': set(),
             'resistances': set(),
-            # Base species tracking to prevent same base Pokemon (different formes).
             'base_species': set(),
         }
 
@@ -1666,9 +1617,8 @@ class RandomTeamGenerator:
             if base_pokemon in excluded_bases or base_pokemon in team_details.get('base_species', set()):
                 continue
 
-            # Determine if this Pokemon should be a lead.
             pokemon_name_normalized = pokemon_name.lower().replace('-', '').replace(' ', '')
-            is_lead = (leads_remaining > 0 and len(team) == 0)  # Only first Pokemon is lead.
+            is_lead = (leads_remaining > 0 and len(team) == 0)
             if is_lead and any(pokemon_name_normalized == n.lower().replace('-', '').replace(' ', '') for n in NO_LEAD_POKEMON):
                 continue
 
@@ -1735,20 +1685,17 @@ class RandomTeamGenerator:
                     'immune': immune_count
                 }
 
-            # Type weakness check - reject if too many team members are weak to same type.
+            # Avoid clustering type weaknesses across the team.
             type_chart = team_details.get('type_chart', {})
             type_fail = False
             # pyrefly: ignore [missing-attribute]
             for type_name, chart in type_chart.items():
                 if chart.get('weak', 0) >= 3 and chart.get('weak', 0) > 0:
-                    # Would exceed 3 weak members - check if this Pokemon adds another weakness.
                     p_types = [TYPE_ID_TO_NAME.get(tid, 'normal') for tid in pokemon_set.get('type_ids', [])]
                     # pyrefly: ignore [missing-attribute]
                     for attack_type in type_chart.keys():
-                        # If this Pokemon is weak to attack_type and team is already at limit
                         # pyrefly: ignore [bad-index]
                         if type_chart[attack_type].get('weak', 0) >= 3:
-                            # Check if this Pokemon is also weak.
                             attack_type_id = TYPE_NAME_TO_ID.get(attack_type.title(), 0)
                             if attack_type_id > 0:
                                 eff = get_type_effectiveness(attack_type_id, pokemon_set.get('type_ids', []))
@@ -1762,11 +1709,9 @@ class RandomTeamGenerator:
                 base_species_pool.append(pokemon_name)
                 continue
 
-            # Role count check.
             role_counts = team_details.get('role_counts', {})
             current_role = pokemon_set.get('role', '')
 
-            # Avoid too many of same role
             # pyrefly: ignore [missing-attribute]
             if role_counts.get(current_role, 0) >= 4:
                 base_species_pool.append(pokemon_name)
@@ -1795,14 +1740,12 @@ class RandomTeamGenerator:
 
 # pyrefly: ignore [bad-function-definition]
 def generate_random_team(team_size: int = 6, seed: int = None) -> List[Dict]:
-    """Generate a random Pokemon team"""
     generator = RandomTeamGenerator(seed=seed)
     return generator.generate_team(team_size)
 
 
 # pyrefly: ignore [bad-function-definition]
 def generate_two_teams(seed: int = None) -> Tuple[List[Dict], List[Dict]]:
-    """Generate two random teams for battle"""
     generator = RandomTeamGenerator(seed=seed)
     team1 = generator.generate_team(6)
     team2 = generator.generate_team(6, exclude_team=team1)
@@ -1810,13 +1753,9 @@ def generate_two_teams(seed: int = None) -> Tuple[List[Dict], List[Dict]]:
 
 
 def convert_team_to_raw_data(team: List[Dict], team_name: str = "Random Team") -> List[Dict]:
-    """
-    Convert generated team to raw_data format compatible with pokemon.create().
-    This produces the dict format expected by the async create() function.
-    """
     forms_data = _load_forms_data()
     ptypes_data = _load_ptypes_data()
-    valid_ptype_ids = {pt.get('id') for pt in ptypes_data}
+    valid_ptype_ids = {pt.get('id') for ptypes_data in [ptypes_data] for pt in ptypes_data}
 
     id_to_identifier = {}
     for entry in forms_data:
@@ -1824,9 +1763,7 @@ def convert_team_to_raw_data(team: List[Dict], team_name: str = "Random Team") -
         pokemon_id = entry.get('pokemon_id', form_id)
         identifier = entry.get('identifier', '')
 
-        # Only consider entries with valid ptypes.
         if pokemon_id in valid_ptype_ids or form_id in valid_ptype_ids:
-            # Only store if not already stored (first match is fine).
             if form_id not in id_to_identifier:
                 id_to_identifier[form_id] = identifier
 
@@ -1839,17 +1776,15 @@ def convert_team_to_raw_data(team: List[Dict], team_name: str = "Random Team") -
         item = pokemon.get('item', 'Leftovers')
         item = item.replace(' ', '-').replace("'", "").lower()
 
-        # Get the proper pokemon name from forms.json using pokemon_id But if the ID is 1 (default fallback), use the sets.json name directly because ID 1 maps to Bulbasaur in forms.json regardless of actual Pokemon.
+        # Use proper name from forms.json or original sets name if ID is 1.
         pokemon_id = pokemon.get('pokemon_id', 1)
         if pokemon_id == 1:
-            # ID 1 is the fallback - use the original sets.json name.
             proper_name = pokemon['pokemon_name']
             base_pokemon_id = 1
         else:
             proper_name = id_to_identifier.get(pokemon_id, pokemon['pokemon_name'])
             base_pokemon_id = pokemon_id
 
-        # Find ability index by matching ability name to poke_abilities.
         selected_ability = pokemon.get('ability', '')
         ability_index = 0
 
@@ -1861,7 +1796,6 @@ def convert_team_to_raw_data(team: List[Dict], team_name: str = "Random Team") -
         ability_id_to_name = {ab.get('id'): ab.get('identifier', '').lower().replace('-', '').replace(' ', '')
                             for ab in abilities_data}
 
-        # Find index of selected ability.
         normalized_selected = selected_ability.lower().replace('-', '').replace(' ', '')
         for i, pa in enumerate(pokemon_abilities):
             ability_name = ability_id_to_name.get(pa.get('ability_id'), '')

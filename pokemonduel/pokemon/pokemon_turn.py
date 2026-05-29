@@ -3,15 +3,9 @@ from ..enums import Ability, ElementType
 
 
 class DuelPokemonTurn:
-    """Pokemon turn-based logic."""
 
     def next_turn(self, otherpoke, battle):
-        """
-        Updates this pokemon for a new turn.
-
-        `otherpoke` may be None if the opponent fainted the previous turn.
-        Returns a formatted message.
-        """
+        """Process end-of-turn status updates, ability effects, terrain/weather damage, and healing."""
         msg = ""
         self.has_moved = False
         if not self.swapped_in:
@@ -76,7 +70,6 @@ class DuelPokemonTurn:
         # pyrefly: ignore [missing-attribute]
         msg += self.nv.next_turn(battle)
 
-        # Volatile status turn progression
         # pyrefly: ignore [missing-attribute]
         prev_disab_move = self.disable.item
         # pyrefly: ignore [missing-attribute]
@@ -142,8 +135,6 @@ class DuelPokemonTurn:
             # pyrefly: ignore [missing-attribute]
             self.held_item.last_used = None
 
-
-        # Abilities
         # pyrefly: ignore [missing-attribute]
         if self.ability() == Ability.SPEED_BOOST and not self.swapped_in:
             # pyrefly: ignore [missing-attribute]
@@ -379,7 +370,7 @@ class DuelPokemonTurn:
             if self.form("Zygarde-complete"):
                 # pyrefly: ignore [missing-attribute]
                 msg += f"{self.name} is at full power!\n"
-                # Janky way to raise the current HP of this poke, as it's new form has a higher HP stat. Note, this is NOT healing.
+                # Adjust current HP to match Zygarde-Complete form's higher HP stat.
                 # pyrefly: ignore [missing-attribute]
                 new_hp = round((((2 * self.base_stats["Zygarde-complete"][0] + self.hpiv + (self.hpev / 4)) * self.level) / 100) + self.level + 10)
                 self.hp = new_hp - (self.starting_hp - self.hp)
@@ -402,29 +393,24 @@ class DuelPokemonTurn:
             # pyrefly: ignore [missing-attribute]
             self.form("Cherrim")
 
-        #Bad Dreams
         # pyrefly: ignore [missing-attribute]
         if otherpoke is not None and otherpoke.ability() == Ability.BAD_DREAMS and self.nv.sleep():
             # pyrefly: ignore [missing-attribute]
             msg += self.damage(self.starting_hp // 8, battle, source=f"{otherpoke.name}'s bad dreams")
-        #Leech seed
         # pyrefly: ignore [missing-attribute]
         if self.leech_seed and otherpoke is not None:
             damage = self.starting_hp // 8
             # pyrefly: ignore [missing-attribute]
             msg += self.damage(damage, battle, attacker=otherpoke, drain_heal_ratio=1, source="leech seed")
-        #Curse
         # pyrefly: ignore [missing-attribute]
         if self.curse:
             # pyrefly: ignore [missing-attribute]
             msg += self.damage(self.starting_hp // 4, battle, source="its curse")
-        #Syrup bomb
         # pyrefly: ignore [missing-attribute]
         if self.syrup_bomb.active() and otherpoke is not None:
             # pyrefly: ignore [missing-attribute]
             msg += self.append_speed(-1, attacker=otherpoke, source="its syrup coating")
 
-        #Weather damages
         # pyrefly: ignore [missing-attribute]
         if self.ability() == Ability.OVERCOAT:
             pass
@@ -454,7 +440,6 @@ class DuelPokemonTurn:
                 # pyrefly: ignore [missing-attribute]
                 msg += self.damage(self.starting_hp // 16, battle, source="the hail")
 
-        #Bind
         # pyrefly: ignore [missing-attribute]
         if self.bind.next_turn():
             # pyrefly: ignore [missing-attribute]
@@ -467,7 +452,6 @@ class DuelPokemonTurn:
             else:
                 # pyrefly: ignore [missing-attribute]
                 msg += self.damage(self.starting_hp // 8, battle, source=f"{otherpoke.name}'s bind")
-        #Ingrain
         # pyrefly: ignore [missing-attribute]
         if self.ingrain:
             heal = self.starting_hp // 16
@@ -476,7 +460,6 @@ class DuelPokemonTurn:
                 heal = int(heal * 1.3)
             # pyrefly: ignore [missing-attribute]
             msg += self.heal(heal, source="ingrain")
-        #Aqua Ring
         # pyrefly: ignore [missing-attribute]
         if self.aqua_ring:
             heal = self.starting_hp // 16
@@ -485,20 +468,18 @@ class DuelPokemonTurn:
                 heal = int(heal * 1.3)
             # pyrefly: ignore [missing-attribute]
             msg += self.heal(heal, source="aqua ring")
-        #Octolock
         # pyrefly: ignore [missing-attribute]
         if self.octolock and otherpoke is not None:
             # pyrefly: ignore [missing-attribute]
             msg += self.append_defense(-1, attacker=self, source=f"{otherpoke.name}'s octolock")
             # pyrefly: ignore [missing-attribute]
             msg += self.append_spdef(-1, attacker=self, source=f"{otherpoke.name}'s octolock")
-        #Grassy Terrain
         # pyrefly: ignore [missing-attribute]
         if battle.terrain.item == "grassy" and self.grounded(battle) and not self.heal_block.active():
             # pyrefly: ignore [missing-attribute]
             msg += self.heal(self.starting_hp // 16, source="grassy terrain")
 
-        # Goes at the end so everything in this func that checks it handles it correctly.
+        # Reset swapped_in status at the end of the turn updates.
         self.swapped_in = False
         # pyrefly: ignore [missing-attribute]
         msg += self.held_item.activate_end_of_turn(battle)

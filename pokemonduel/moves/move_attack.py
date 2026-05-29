@@ -3,14 +3,9 @@ from ..enums import Ability, DamageClass, ElementType
 
 
 class MoveAttack:
-    """Attack calculation and execution."""
 
     def attack(self, attacker, defender, battle):
-        """
-        Attacks the defender using this move.
-
-        Returns a string of formatted results of this attack and the number of hits this move did.
-        """
+        """Execute attack hits, calculate crit/damage multipliers, and apply damage/recoil."""
         msg = ""
         # pyrefly: ignore [missing-attribute]
         current_type = self.get_type(attacker, defender, battle)
@@ -57,11 +52,10 @@ class MoveAttack:
         for hit in range(hits):
             if defender.hp == 0:
                 break
-            # Explosion faints the user first, but should still do damage after death. Future sight still needs to hit after the attacker dies. Mind blown still needs to hit after the attacker dies.
+            # Allow damage from specific moves like Explosion or Future Sight even if the attacker has fainted.
             if attacker.hp == 0 and self.effect not in (8, 149, 420, 444):
                 break
 
-            # Critical hit chance
             # pyrefly: ignore [missing-attribute]
             critical_stage = self.crit_rate
             if attacker.held_item in ("scope-lens", "razor-claw"):
@@ -90,12 +84,10 @@ class MoveAttack:
                 critical = False
             if defender.lucky_chant.active():
                 critical = False
-            # Confusion never crits
             # pyrefly: ignore [missing-attribute]
             if self.id == 0xCFCF:
                 critical = False
 
-            # Stats
             # pyrefly: ignore [missing-attribute]
             if self.damage_class == DamageClass.PHYSICAL:
                 damage_class = DamageClass.PHYSICAL
@@ -141,9 +133,7 @@ class MoveAttack:
                     move=self
                 )
 
-            # Use the user's defense instead of attack for the attack stat.
             if self.effect == 426:
-                # This does not pass critical, otherwise it would crop the wrong direction.
                 a = attacker.get_defense(
                     battle,
                     ignore_stages=defender.ability(attacker=attacker, move=self) == Ability.UNAWARE
@@ -178,7 +168,7 @@ class MoveAttack:
                 # pyrefly: ignore [missing-attribute]
                 raise ValueError(f"{self.name} has no power and no override.")
 
-            # Check accuracy on each hit WARNING: If there is something BEFORE this in the loop which adds to msg (like "A critical hit") it MUST be after this block, or it will appear even after "misses" from this move.
+            # Check accuracy on subsequent hits unless the attacker has Skill Link.
             if hit > 0 and not attacker.ability() == Ability.SKILL_LINK:
                 if self.effect == 105:
                     # pyrefly: ignore [missing-attribute]
@@ -186,7 +176,6 @@ class MoveAttack:
                         hits = hit
                         break
                     power *= 1 + hit
-                # Only checks if loaded dice did not activate.
                 if self.effect == 484 and attacker.held_item != "loaded-dice":
                     # pyrefly: ignore [missing-attribute]
                     if not self.check_hit(attacker, defender, battle):
@@ -212,7 +201,6 @@ class MoveAttack:
 
             damage = damage * random.randint(85, 100) // 100
 
-
             if current_type in attacker.type_ids:
                 if attacker.ability() == Ability.ADAPTABILITY:
                     damage *= 2
@@ -229,7 +217,6 @@ class MoveAttack:
             ):
                 damage *= .5
 
-            # Aurora Veil, Light Screen, Reflect do not stack but all reduce incoming damage in some way.
             if not critical and attacker.ability() != Ability.INFILTRATOR:
                 if defender.owner.aurora_veil.active():
                     damage *= .5
@@ -304,7 +291,6 @@ class MoveAttack:
             damage *= random.uniform(0.85, 1)
             damage = max(1, int(damage))
 
-            # Cannot lower the target's HP below 1.
             if self.effect == 102:
                 damage = min(damage, defender.hp - 1)
 

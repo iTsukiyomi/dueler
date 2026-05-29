@@ -23,7 +23,7 @@ class DuelPokemon(
 
 
 async def create(ctx, raw_data: dict):
-    """Creates a new DuelPokemon object using the raw data provided."""
+    """Create a new DuelPokemon instance from a raw data dictionary."""
     pn = raw_data["pokname"]
     nick = raw_data["poknick"]
     hpiv = min(31, raw_data["hpiv"])
@@ -77,7 +77,7 @@ async def create(ctx, raw_data: dict):
         nature_stat_deltas[inc_stat] = 1.1
         disliked_flavor = flavor_map[dec_stat]
 
-    # Deform pokes that are formed into battle forms that they should not start off in.
+    # Reset battle-only forms to their base species on initialization.
     if pn == "Mimikyu-busted":
         pn = "Mimikyu"
     if pn in ("Cramorant-gorging", "Cramorant-gulping"):
@@ -155,13 +155,13 @@ async def create(ctx, raw_data: dict):
 
     form_info = await find_one(ctx, "forms", {"identifier": pn.lower()})
 
-    # If the primary lookup misses, scan all forms for a matching identifier (covers alternate-form names that only appear under a slightly different key).
+    # Scan all forms for a matching identifier if primary lookup misses.
     if form_info is None:
         all_forms = await find(ctx, "forms", {"identifier": pn.lower()})
         if all_forms:
             form_info = all_forms[0]
 
-    # Last-resort fallbacks: try a normalised (separator-stripped) match and a token-substring match. This protects us from sets.json names that arrive here with non-canonical formatting (e.g. ``taurospaldeaaqua`` instead of ``tauros-aqua-paldea``).
+    # Normalise separators and run token substring matching for non-canonical format fallbacks.
     if form_info is None:
         all_forms = await find(ctx, "forms", {})
         norm_pn = pn.lower().replace("-", "").replace(" ", "").replace("_", "")
@@ -204,13 +204,12 @@ async def create(ctx, raw_data: dict):
                     type_ids_entry = alt_entry
                     break
 
-    #List of type ids
     # pyrefly: ignore [unsupported-operation]
     type_ids = type_ids_entry["types"]
 
     stats_entry = await find_one(ctx, "pokemon_stats", {"pokemon_id": form_info["pokemon_id"]})
     if stats_entry is None:
-        # No pokemon_stats entry for this form id. Try the species' base id (e.g. an alt form whose stats only live under the default pokemon_id).
+        # Fall back to base form ID if the alternate form has no unique stat entry.
         base_iden = form_info.get("identifier", "").split("-")[0]
         base_form = await find_one(ctx, "forms", {"identifier": base_iden})
         if base_form is not None:
@@ -328,7 +327,7 @@ async def create(ctx, raw_data: dict):
     for f_name in extra_forms:
         f_info = await find_one(ctx, "forms", {"identifier": f_name.lower()})
         if f_info is None:
-            # Extra form is not in forms.json – reuse the main pokémon's stats so downstream code that indexes ``base_stats[f_name]`` (e.g. form-change handlers) doesn't crash.
+            # Reuse base stats for extra forms not present in database to avoid lookup crashes.
             base_stats[f_name] = stats
             continue
         f_stats_entry = await find_one(
@@ -345,7 +344,6 @@ async def create(ctx, raw_data: dict):
 
     try:
         ab_id = ab_ids[ab_index]
-    # Should never happen, but better safe than sorry.
     except IndexError:
         ab_id = ab_ids[0]
 
@@ -372,7 +370,7 @@ async def create(ctx, raw_data: dict):
     ):
         name = pn.lower().split("-")[0]
         base_form = await find_one(ctx, "forms", {"identifier": name})
-        # Some species (e.g. ``gouging-fire``) end with a suffix from the Arceus/Silvally plate list but their *base species* is not a standalone form in forms.json. Fall back to the current form's pokemon_id when the naive ``split('-')[0]`` lookup misses.
+        # Fall back to current form ID if base name split fails to match forms.json.
         if base_form is None:
             pid = form_info["pokemon_id"]
         else:
@@ -381,11 +379,11 @@ async def create(ctx, raw_data: dict):
         pid = form_info["pokemon_id"]
 
     can_still_evolve = bool(await find_one(ctx, "pfile", {"evolves_from_species_id": pid}))
-    # Unreleased pokemon that is treated like a form in the bot, monkeypatch fix.
+    # Monkeypatch evolves-from lookup for Floette-Eternal.
     if pn == "Floette-eternal":
         can_still_evolve = False
 
-    # This stat can (/has to) be calculated ahead of time, as it does not change between forms. If transform copied HP, I would probably take up drinking...
+    # Calculate HP beforehand as it remains constant across form changes.
     pokemonHp = round((((2 * pokemonHp + hpiv + (hpev / 4)) * plevel) / 100) + plevel + 10)
 
     hitem = await find_one(ctx, "items", {"identifier": hitem})
@@ -395,7 +393,6 @@ async def create(ctx, raw_data: dict):
 
     weight_form = await find_one(ctx, "forms", {"identifier": pn.lower()})
     if weight_form is None:
-        # Fall back to the already-resolved ``form_info`` (which may have been picked via the alias/token fallbacks earlier in this fn).
         weight_form = form_info
     weight = weight_form.get("weight") if weight_form is not None else None
     if weight is None:

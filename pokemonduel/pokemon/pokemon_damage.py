@@ -3,16 +3,9 @@ from ..enums import Ability, DamageClass, ElementType
 
 
 class DuelPokemonDamage:
-    """Pokemon damage and healing logic."""
 
     def faint(self, battle, *, move=None, attacker=None, source: str=""):
-        """
-        Sets a pokemon's HP to zero and cleans it up.
-
-        If a pokemon takes damage equal to its HP, use damage instead.
-        This method ignores focus sash and sturdy, forcing the pokemon to faint.
-        Returns a formatted message.
-        """
+        """Set a Pokemon's HP to zero and trigger fainted-state effects."""
         msg = ""
         self.hp = 0
         if source:
@@ -48,28 +41,19 @@ class DuelPokemonDamage:
         return msg
 
     def damage(self, damage, battle, *, move=None, move_type=None, attacker=None, critical=False, drain_heal_ratio=None, source: str=""):
-        """
-        Applies a certain amount of damage to this pokemon.
-
-        Returns a formatted message.
-        """
+        """Apply damage to this Pokemon."""
         msgadd, _ = self._damage(damage, battle, move=move, move_type=move_type, attacker=attacker, critical=critical, drain_heal_ratio=drain_heal_ratio, source=source)
         return msgadd
 
     def _damage(self, damage, battle, *, move=None, move_type=None, attacker=None, critical=False, drain_heal_ratio=None, source: str=""):
-        """
-        Applies a certain amount of damage to this pokemon.
-
-        Returns a formatted message and the amount of damage actually dealt.
-        """
+        """Process damage calculations, protection, abilities, items, and status triggers."""
         msg = ""
-        # Don't go through with an attack if the poke is already dead. If this is a bad idea for *some* reason, make sure to add an `attacker is self` check to INNARDS_OUT.
+        # Prevent processing if the target is already fainted.
         if self.hp <= 0:
             return "", 0
         previous_hp = self.hp
         damage = max(1, damage)
 
-        # Magic guard
         # pyrefly: ignore [missing-attribute]
         if self.ability(attacker=attacker, move=move) == Ability.MAGIC_GUARD and move is None and attacker is not self:
             return f"{self.name}'s magic guard protected it from damage!\n", 0
@@ -80,7 +64,6 @@ class DuelPokemonDamage:
             # pyrefly: ignore [missing-attribute]
             and (attacker is None or attacker.ability() != Ability.INFILTRATOR)
         ):
-            # Is_affected_by_substitute should be a superset of is_sound_based, but it's better to check both to be sure.
             msg += f"{self.name}'s substitute took {damage} damage{source}!\n"
             new_hp = max(0, self.substitute - damage)
             true_damage = self.substitute - new_hp
@@ -126,7 +109,6 @@ class DuelPokemonDamage:
                 msg += f"{self.name} held on using its focus band!\n"
                 damage = self.hp - 1
 
-        # Apply the damage
         # pyrefly: ignore [missing-attribute]
         dropped_below_half = self.hp > self.starting_hp / 2
         # pyrefly: ignore [missing-attribute]
@@ -346,14 +328,13 @@ class DuelPokemonDamage:
                     msg += self.nv.apply_status("b-poison", battle, attacker=attacker, source=f"{attacker.name}'s toxic chain")
                 # pyrefly: ignore [missing-attribute]
                 if attacker.held_item == "shell-bell":
-                    # Shell bell does not trigger when a move is buffed by sheer force.
+                    # Shell Bell does not trigger if the move is boosted by Sheer Force.
                     # pyrefly: ignore [missing-attribute]
                     if attacker.ability() != Ability.SHEER_FORCE or move.effect_chance is None:
                         msg += attacker.heal(damage // 8, source="its shell bell")
             # pyrefly: ignore [missing-attribute]
             msg += self.held_item.activate_on_damage(damage, attacker, move, battle)
 
-        # Retreat
         # pyrefly: ignore [missing-attribute]
         if dropped_below_half and sum(x.hp > 0 for x in self.owner.party) > 1:
             # pyrefly: ignore [missing-attribute]
@@ -367,7 +348,6 @@ class DuelPokemonDamage:
                 # pyrefly: ignore [missing-attribute]
                 msg += self.remove(battle)
 
-        # Gulp Missile
         # pyrefly: ignore [missing-attribute]
         if attacker is not None and self._name in ("Cramorant-gulping", "Cramorant-gorging") and self.owner.has_alive_pokemon():
             prey = "pikachu" if self._name == "Cramorant-gorging" else "arrokuda"
@@ -382,14 +362,12 @@ class DuelPokemonDamage:
                     # pyrefly: ignore [missing-attribute]
                     msg += attacker.nv.apply_status("paralysis", battle, attacker=self, source=f"{self.name} spitting out its {prey}")
 
-        # Berries
         # pyrefly: ignore [missing-attribute]
         if self.held_item.should_eat_berry_damage(attacker):
             # pyrefly: ignore [missing-attribute]
             msg += self.held_item.eat_berry(attacker=attacker, move=move)
 
         if move is not None and attacker is not None and move.makes_contact(attacker):
-            # Affects ATTACKER
             # pyrefly: ignore [missing-attribute]
             if attacker.held_item != "protective-pads":
                 # pyrefly: ignore [missing-attribute]
@@ -455,7 +433,6 @@ class DuelPokemonDamage:
                     # pyrefly: ignore [missing-attribute]
                     msg += attacker.append_speed(-1, attacker=self, source=f"touching {self.name}'s tangled hair")
 
-            # Pickpocket is not included in the protective pads protection.
             if (
                 # pyrefly: ignore [missing-attribute]
                 self.ability() == Ability.PICKPOCKET
@@ -474,7 +451,6 @@ class DuelPokemonDamage:
                     attacker.held_item.transfer(self.held_item)
                     # pyrefly: ignore [missing-attribute]
                     msg += f"{attacker.name}'s {self.held_item.name} was stolen!\n"
-            # Affects DEFENDER
             # pyrefly: ignore [missing-attribute]
             if attacker.ability() == Ability.POISON_TOUCH:
                 if random.randint(1, 100) <= 30:
@@ -504,19 +480,13 @@ class DuelPokemonDamage:
         return msg, true_damage
 
     def heal(self, health, *, source: str=""):
-        """
-        Heals a pokemon by a certain amount.
-
-        Handles heal-affecting items and abilities, and keeping health within bounds.
-        Returns a formatted message.
-        """
+        """Heal this Pokemon by the specified amount, honoring heal blocks."""
         msg = ""
         health = max(1, int(health))
-        #greater than is used to prevent zygarde's hp incresing form from losing its extra health
+        # Check avoids capping HP for Zygarde-Complete form.
         # pyrefly: ignore [missing-attribute]
         if self.hp >= self.starting_hp:
             return msg
-        # Safety to prevent errors from ""reviving"" pokes.
         if self.hp == 0:
             return msg
         # pyrefly: ignore [missing-attribute]
@@ -531,11 +501,7 @@ class DuelPokemonDamage:
         return msg
 
     def confuse(self, *, attacker=None, move=None, source=""):
-        """
-        Attempts to confuse this poke.
-
-        Returns a formatted message.
-        """
+        """Attempt to apply confusion status to this Pokemon."""
         if self.substitute and (move is None or move.is_affected_by_substitute()):
             return ""
         # pyrefly: ignore [missing-attribute]
@@ -556,11 +522,7 @@ class DuelPokemonDamage:
         return msg
 
     def flinch(self, *, attacker=None, move=None, source=""):
-        """
-        Attepts to flinch this poke.
-
-        Returns a formatted message.
-        """
+        """Attempt to apply flinch status to this Pokemon."""
         msg = ""
         if self.substitute and (move is None or move.is_affected_by_substitute()):
             return ""
@@ -578,11 +540,7 @@ class DuelPokemonDamage:
         return msg
 
     def infatuate(self, attacker, *, move=None, source=""):
-        """
-        Attepts to cause attacker to infatuate this poke.
-
-        Returns a formatted message.
-        """
+        """Attempt to apply infatuation status toward the attacker."""
         msg = ""
         if source:
             source = f" from {source}"

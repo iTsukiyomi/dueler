@@ -4,193 +4,166 @@ from ..enums import Ability, ElementType, DamageClass
 
 
 class DuelPokemonSendOut:
-    """Pokemon send out and remove logic."""
 
     def send_out(self, otherpoke, battle):
-            """
-            Initalize a poke upon first sending it out.
+        """Initialize status, hazards, items, and abilities on switch-in."""
+        self.ever_sent_out = True
+        self.flinched = False
 
-            otherpoke may be None, if two pokes are sent out at the same time and the first is killed in the send out process.
-            Returns a formatted message.
-            """
-            self.ever_sent_out = True
+        # Process Illusion before generating send-out message.
+        # pyrefly: ignore [missing-attribute]
+        illusion_options = [x for x in self.owner.party if x is not self and x.hp > 0]
+        # pyrefly: ignore [missing-attribute]
+        if self.ability() == Ability.ILLUSION and illusion_options:
+            self.illusion__name = self._name
+            self.illusion_name = self.name
+            self._name = illusion_options[-1]._name
+            self.name = illusion_options[-1].name
 
-            self.flinched = False
-
-            # This has to go BEFORE the send out message, and not in send_out_ability as it only
-            # applies on send out, not when abilities are changed, and it changes the send out msg.
+        if self._name == "Pikachu":
+            msg = f"{self.name}, I choose you!\n"
+        else:
             # pyrefly: ignore [missing-attribute]
-            illusion_options = [x for x in self.owner.party if x is not self and x.hp > 0]
-            # pyrefly: ignore [missing-attribute]
-            if self.ability() == Ability.ILLUSION and illusion_options:
-                self.illusion__name = self._name
-                self.illusion_name = self.name
-                self._name = illusion_options[-1]._name
-                self.name = illusion_options[-1].name
+            msg = f"{self.owner.name} sent out {self.name}!\n"
 
-            if self._name == "Pikachu":
-                msg = f"{self.name}, I choose you!\n"
-            else:
-                # pyrefly: ignore [missing-attribute]
-                msg = f"{self.owner.name} sent out {self.name}!\n"
+        if otherpoke is not None:
+            otherpoke.trapping = False
+            otherpoke.octolock = False
+            otherpoke.bind.set_turns(0)
 
-            if otherpoke is not None:
-                otherpoke.trapping = False
-                otherpoke.octolock = False
-                otherpoke.bind.set_turns(0)
+        # pyrefly: ignore [missing-attribute]
+        if self.owner.baton_pass is not None:
+            msg += f"{self.name} carries on the baton!\n"
+            # pyrefly: ignore [missing-attribute]
+            self.owner.baton_pass.apply(self)
+            # pyrefly: ignore [missing-attribute]
+            self.owner.baton_pass = None
 
-            #Baton Pass
+        # pyrefly: ignore [missing-attribute]
+        if self.owner.next_substitute:
             # pyrefly: ignore [missing-attribute]
-            if self.owner.baton_pass is not None:
-                msg += f"{self.name} carries on the baton!\n"
-                # pyrefly: ignore [missing-attribute]
-                self.owner.baton_pass.apply(self)
-                # pyrefly: ignore [missing-attribute]
-                self.owner.baton_pass = None
+            self.substitute = self.owner.next_substitute
+            # pyrefly: ignore [missing-attribute]
+            self.owner.next_substitute = 0
 
-            #Shed Tail
+        # Grounded Poison-types absorb toxic spikes on entry.
+        # pyrefly: ignore [missing-attribute]
+        if self.owner.toxic_spikes and self.grounded(battle) and ElementType.POISON in self.type_ids:
             # pyrefly: ignore [missing-attribute]
-            if self.owner.next_substitute:
+            self.owner.toxic_spikes = 0
+            msg += f"{self.name} absorbed the toxic spikes!\n"
+        # pyrefly: ignore [missing-attribute]
+        if self.held_item != "heavy-duty-boots":
+            # pyrefly: ignore [missing-attribute]
+            if self.grounded(battle):
                 # pyrefly: ignore [missing-attribute]
-                self.substitute = self.owner.next_substitute
+                if self.owner.spikes:
+                    # pyrefly: ignore [missing-attribute]
+                    damage = self.starting_hp // (10 - (2 * self.owner.spikes))
+                    # pyrefly: ignore [missing-attribute]
+                    msg += self.damage(damage, battle, source="spikes")
                 # pyrefly: ignore [missing-attribute]
-                self.owner.next_substitute = 0
+                if self.owner.toxic_spikes == 1:
+                    # pyrefly: ignore [missing-attribute]
+                    msg += self.nv.apply_status("poison", battle, source="toxic spikes")
+                # pyrefly: ignore [missing-attribute]
+                elif self.owner.toxic_spikes == 2:
+                    # pyrefly: ignore [missing-attribute]
+                    msg += self.nv.apply_status("b-poison", battle, source="toxic spikes")
+                # pyrefly: ignore [missing-attribute]
+                if self.owner.sticky_web:
+                    # pyrefly: ignore [missing-attribute]
+                    msg += self.append_speed(-1, source="the sticky web")
+            # pyrefly: ignore [missing-attribute]
+            if self.owner.stealth_rock:
+                # pyrefly: ignore [missing-attribute]
+                effective = self.effectiveness(ElementType.ROCK, battle)
+                if effective:
+                    # pyrefly: ignore [missing-attribute]
+                    damage = self.starting_hp // (32 // (4 * effective))
+                    # pyrefly: ignore [missing-attribute]
+                    msg += self.damage(int(damage), battle, source="stealth rock")
 
-            #Entry hazards
-            #Special case for clearing toxic spikes, still happens even with heavy duty boots
-            # pyrefly: ignore [missing-attribute]
-            if self.owner.toxic_spikes and self.grounded(battle) and ElementType.POISON in self.type_ids:
-                # pyrefly: ignore [missing-attribute]
-                self.owner.toxic_spikes = 0
-                msg += f"{self.name} absorbed the toxic spikes!\n"
-            # pyrefly: ignore [missing-attribute]
-            if self.held_item != "heavy-duty-boots":
-                #Grounded entry hazards
-                # pyrefly: ignore [missing-attribute]
-                if self.grounded(battle):
-                    #Spikes
-                    # pyrefly: ignore [missing-attribute]
-                    if self.owner.spikes:
-                        #1/8 -> 1/4
-                        # pyrefly: ignore [missing-attribute]
-                        damage = self.starting_hp // (10 - (2 * self.owner.spikes))
-                        # pyrefly: ignore [missing-attribute]
-                        msg += self.damage(damage, battle, source="spikes")
-                    #Toxic spikes
-                    # pyrefly: ignore [missing-attribute]
-                    if self.owner.toxic_spikes == 1:
-                        # pyrefly: ignore [missing-attribute]
-                        msg += self.nv.apply_status("poison", battle, source="toxic spikes")
-                    # pyrefly: ignore [missing-attribute]
-                    elif self.owner.toxic_spikes == 2:
-                        # pyrefly: ignore [missing-attribute]
-                        msg += self.nv.apply_status("b-poison", battle, source="toxic spikes")
-                    #Sticky web
-                    # pyrefly: ignore [missing-attribute]
-                    if self.owner.sticky_web:
-                        # pyrefly: ignore [missing-attribute]
-                        msg += self.append_speed(-1, source="the sticky web")
-                #Non-grounded entry hazards
-                # pyrefly: ignore [missing-attribute]
-                if self.owner.stealth_rock:
-                    # pyrefly: ignore [missing-attribute]
-                    effective = self.effectiveness(ElementType.ROCK, battle)
-                    if effective:
-                        # damage = 1/8 max hp * effectiveness
-                        # pyrefly: ignore [missing-attribute]
-                        damage = self.starting_hp // (32 // (4 * effective))
-                        # pyrefly: ignore [missing-attribute]
-                        msg += self.damage(int(damage), battle, source="stealth rock")
+        if self.hp > 0:
+            msg += self.send_out_ability(otherpoke, battle)
 
-            if self.hp > 0:
-                msg += self.send_out_ability(otherpoke, battle)
+        # pyrefly: ignore [missing-attribute]
+        if self.owner.healing_wish:
+            used = False
+            # pyrefly: ignore [missing-attribute]
+            if self.hp != self.starting_hp:
+                used = True
+                # pyrefly: ignore [missing-attribute]
+                self.hp = self.starting_hp
+            # pyrefly: ignore [missing-attribute]
+            if self.nv.current:
+                used = True
+                # pyrefly: ignore [missing-attribute]
+                self.nv.reset()
+            if used:
+                # pyrefly: ignore [missing-attribute]
+                self.owner.healing_wish = False
+                msg += f"{self.name} was restored by healing wish!\n"
+        # pyrefly: ignore [missing-attribute]
+        if self.owner.lunar_dance:
+            used = False
+            # pyrefly: ignore [missing-attribute]
+            if self.hp != self.starting_hp:
+                used = True
+                # pyrefly: ignore [missing-attribute]
+                self.hp = self.starting_hp
+            # pyrefly: ignore [missing-attribute]
+            if self.nv.current:
+                used = True
+                # pyrefly: ignore [missing-attribute]
+                self.nv.reset()
+            not_at_full_pp = [move for move in self.moves if move.pp != move.starting_pp]
+            if not_at_full_pp:
+                used = True
+                for move in not_at_full_pp:
+                    move.pp = move.starting_pp
+            if used:
+                # pyrefly: ignore [missing-attribute]
+                self.owner.lunar_dance = False
+                msg += f"{self.name} was restored by lunar dance\n"
 
-            #Restoration
+        # pyrefly: ignore [missing-attribute]
+        if self.held_item == "air-balloon" and not self.grounded(battle):
+            msg += f"{self.name} floats in the air with its air balloon!\n"
+        if self.held_item == "electric-seed" and battle.terrain.item == "electric":
             # pyrefly: ignore [missing-attribute]
-            if self.owner.healing_wish:
-                used = False
-                # pyrefly: ignore [missing-attribute]
-                if self.hp != self.starting_hp:
-                    used = True
-                    # pyrefly: ignore [missing-attribute]
-                    self.hp = self.starting_hp
-                # pyrefly: ignore [missing-attribute]
-                if self.nv.current:
-                    used = True
-                    # pyrefly: ignore [missing-attribute]
-                    self.nv.reset()
-                if used:
-                    # pyrefly: ignore [missing-attribute]
-                    self.owner.healing_wish = False
-                    msg += f"{self.name} was restored by healing wish!\n"
+            msg += self.append_defense(1, attacker=self, source="its electric seed")
             # pyrefly: ignore [missing-attribute]
-            if self.owner.lunar_dance:
-                used = False
-                # pyrefly: ignore [missing-attribute]
-                if self.hp != self.starting_hp:
-                    used = True
-                    # pyrefly: ignore [missing-attribute]
-                    self.hp = self.starting_hp
-                # pyrefly: ignore [missing-attribute]
-                if self.nv.current:
-                    used = True
-                    # pyrefly: ignore [missing-attribute]
-                    self.nv.reset()
-                not_at_full_pp = [move for move in self.moves if move.pp != move.starting_pp]
-                if not_at_full_pp:
-                    used = True
-                    for move in not_at_full_pp:
-                        move.pp = move.starting_pp
-                if used:
-                    # pyrefly: ignore [missing-attribute]
-                    self.owner.lunar_dance = False
-                    msg += f"{self.name} was restored by lunar dance\n"
-
-            # Items
+            self.held_item.use()
+        if self.held_item == "psychic-seed" and battle.terrain.item == "psychic":
             # pyrefly: ignore [missing-attribute]
-            if self.held_item == "air-balloon" and not self.grounded(battle):
-                msg += f"{self.name} floats in the air with its air balloon!\n"
-            if self.held_item == "electric-seed" and battle.terrain.item == "electric":
-                # pyrefly: ignore [missing-attribute]
-                msg += self.append_defense(1, attacker=self, source="its electric seed")
-                # pyrefly: ignore [missing-attribute]
-                self.held_item.use()
-            if self.held_item == "psychic-seed" and battle.terrain.item == "psychic":
-                # pyrefly: ignore [missing-attribute]
-                msg += self.append_spdef(1, attacker=self, source="its psychic seed")
-                # pyrefly: ignore [missing-attribute]
-                self.held_item.use()
-            if self.held_item == "misty-seed" and battle.terrain.item == "misty":
-                # pyrefly: ignore [missing-attribute]
-                msg += self.append_spdef(1, attacker=self, source="its misty seed")
-                # pyrefly: ignore [missing-attribute]
-                self.held_item.use()
-            if self.held_item == "grassy-seed" and battle.terrain.item == "grassy":
-                # pyrefly: ignore [missing-attribute]
-                msg += self.append_defense(1, attacker=self, source="its grassy seed")
-                # pyrefly: ignore [missing-attribute]
-                self.held_item.use()
+            msg += self.append_spdef(1, attacker=self, source="its psychic seed")
             # pyrefly: ignore [missing-attribute]
-            msg += self.held_item.activate_on_switch_in(battle)
-            return msg
+            self.held_item.use()
+        if self.held_item == "misty-seed" and battle.terrain.item == "misty":
+            # pyrefly: ignore [missing-attribute]
+            msg += self.append_spdef(1, attacker=self, source="its misty seed")
+            # pyrefly: ignore [missing-attribute]
+            self.held_item.use()
+        if self.held_item == "grassy-seed" and battle.terrain.item == "grassy":
+            # pyrefly: ignore [missing-attribute]
+            msg += self.append_defense(1, attacker=self, source="its grassy seed")
+            # pyrefly: ignore [missing-attribute]
+            self.held_item.use()
+        # pyrefly: ignore [missing-attribute]
+        msg += self.held_item.activate_on_switch_in(battle)
+        return msg
 
     def send_out_ability(self, otherpoke, battle):
-        """
-        Initalize this poke's ability.
-
-        otherpoke may be None.
-        Returns a formatted message.
-        """
+        """Activate entry abilities like weather, terrain, Intimidate, and Forecast."""
         msg = ""
 
-        #Imposter (sus)
         # pyrefly: ignore [missing-attribute]
         if self.ability() == Ability.IMPOSTER and otherpoke is not None and not otherpoke.substitute and otherpoke.illusion_name is None:
             msg += f"{self.name} transformed into {otherpoke._name}!\n"
             # pyrefly: ignore [missing-attribute]
             self.transform(otherpoke)
 
-        #Weather
         # pyrefly: ignore [missing-attribute]
         if self.ability() == Ability.DRIZZLE:
             msg += battle.weather.set("rain", self)
@@ -213,7 +186,6 @@ class DuelPokemonSendOut:
         if self.ability() == Ability.DELTA_STREAM:
             msg += battle.weather.set("h-wind", self)
 
-        #Terrain
         # pyrefly: ignore [missing-attribute]
         if self.ability() == Ability.GRASSY_SURGE:
             msg += battle.terrain.set("grassy", self)
@@ -227,7 +199,6 @@ class DuelPokemonSendOut:
         if self.ability() == Ability.PSYCHIC_SURGE:
             msg += battle.terrain.set("psychic", self)
 
-        # Message only
         # pyrefly: ignore [missing-attribute]
         if self.ability() == Ability.MOLD_BREAKER:
             msg += f"{self.name} breaks the mold!\n"
@@ -511,11 +482,7 @@ class DuelPokemonSendOut:
         return msg
 
     def remove(self, battle, *, fainted=False):
-        """
-        Clean up a poke when it is removed from battle.
-
-        Returns a formatted message of anything that happened while switching out.
-        """
+        """Reset temporary battle conditions and restore base stats when switching out."""
         msg = ""
         if not fainted:
             # pyrefly: ignore [missing-attribute]
@@ -561,7 +528,7 @@ class DuelPokemonSendOut:
             self.owner.current_pokemon = None
         if battle.weather.recheck_ability_weather():
             msg += "The weather cleared!\n"
-        # Look up base stats for the current form name. If the form is missing from the table (e.g. a rare regional/mega variant whose key differs from the engine's ``_name``), fall back to the starting name. If that's also missing, keep the live stats and log a warning instead of crashing the whole battle — this is what was causing the ``KeyError: 'moltres'`` / ``'dewgong'`` crashes in self-play.
+        # Fall back to base name stats to avoid KeyError crashes with regional/mega form variants.
         _stats_key = None
         # pyrefly: ignore [missing-attribute]
         if self._name in self.base_stats:
