@@ -1,24 +1,6 @@
-"""
-pokemonduel.core.cache
-======================
-Async Redis connection manager using redis.asyncio.
-
-Reads ``REDIS_URL`` from environment variables.  Provides a singleton
-Redis client with connection pooling, automatic reconnection, and
-typed helper methods for the caching patterns used throughout the bot:
-
-- **Key-value caching** (player profiles, team data)
-- **Sorted sets** (Elo leaderboard)
-- **Hashes** (active battle state)
-- **Lists / queues** (matchmaking FIFO)
-
-Security: Connection strings are never hardcoded.  If ``REDIS_URL``
-is not set, the bot runs in **degraded mode** with caching disabled
-(all cache methods return ``None`` / no-op).
-"""
-
 from __future__ import annotations
 
+from datetime import datetime, timezone
 import json
 import logging
 import os
@@ -56,7 +38,7 @@ async def connect() -> Optional[aioredis.Redis]:
 
     _pool = aioredis.from_url(
         url,
-        decode_responses=False,  # we handle encoding ourselves
+        decode_responses=False,
         max_connections=20,
         socket_connect_timeout=5,
         socket_timeout=5,
@@ -90,10 +72,6 @@ async def close() -> None:
         _pool = None
         _available = False
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Typed helper methods
-# ─────────────────────────────────────────────────────────────────────────────
 
 async def cache_get(key: str) -> Optional[dict]:
     """Retrieve a JSON-serialised value from Redis."""
@@ -135,8 +113,6 @@ async def cache_invalidate_pattern(pattern: str) -> None:
         if cursor == 0:
             break
 
-
-# -- Sorted sets (leaderboard) ---------------------------------------------
 
 async def zset_upsert(key: str, member: str, score: float) -> None:
     """Add or update a member in a sorted set."""
@@ -180,8 +156,6 @@ async def zset_remove(key: str, member: str) -> None:
     await r.zrem(key, member)
 
 
-# -- Hashes (battle state) -------------------------------------------------
-
 async def hash_set(key: str, mapping: dict, *, ttl: int = 3600) -> None:
     """Store a flat dict as a Redis hash with TTL."""
     r = get_redis()
@@ -215,8 +189,6 @@ async def hash_delete(key: str) -> None:
         return
     await r.delete(key)
 
-
-# -- Lists / queues (matchmaking) ------------------------------------------
 
 async def queue_push(key: str, value: str) -> None:
     """Append a value to the tail of a list (FIFO)."""
@@ -254,3 +226,325 @@ async def queue_length(key: str) -> int:
         return 0
     # pyrefly: ignore [not-async]
     return await r.llen(key)
+
+
+# Cache keys templates & TTLs (seconds)
+PLAYER_PROFILE_KEY = "player:{user_id}"
+PLAYER_PROFILE_TTL = 300
+
+GUILD_SETTINGS_KEY = "guild:{guild_id}"
+GUILD_SETTINGS_TTL = 600
+
+WORKSPACE_KEY = "workspace:{user_id}"
+WORKSPACE_TTL = 3600
+
+ACTIVE_PARTY_KEY = "active_party:{user_id}"
+ACTIVE_PARTY_TTL = 900
+
+LEADERBOARD_KEY = "leaderboard:elo"
+
+# Image Cache keys & TTLs
+IMG_SETTINGS_KEY = "img:settings:{user_id}"
+IMG_SETTINGS_TTL = 3600
+
+IMG_PROFILE_KEY = "img:profile:{user_id}"
+IMG_PROFILE_TTL = 3600
+
+IMG_QI_WS_KEY = "img:qi:ws:{user_id}"
+IMG_QI_WS_TTL = 3600
+
+IMG_QI_SEARCH_KEY = "img:qi:search:{user_id}:{pokname}"
+IMG_QI_SEARCH_TTL = 3600
+
+
+def _prepare_datetimes(data: Any) -> Any:
+    """Serialize all datetime objects in dictionaries/lists to ISO format strings."""
+    if isinstance(data, dict):
+        return {k: _prepare_datetimes(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [_prepare_datetimes(item) for item in data]
+    elif isinstance(data, datetime):
+        return data.isoformat()
+    return data
+
+
+def _restore_datetimes(data: Any) -> Any:
+    """Recursively deserialize ISO format strings back to datetime objects for known datetime keys."""
+    if isinstance(data, dict):
+        new_dict = {}
+        for k, v in data.items():
+            if isinstance(k, str) and (k == "created_at" or k == "updated_at" or k.endswith("_at")) and isinstance(v, str):
+                try:
+                    val_str = v
+                    if val_str.endswith("Z"):
+                        val_str = val_str[:-1] + "+00:00"
+                    new_dict[k] = datetime.fromisoformat(val_str)
+                except ValueError:
+                    new_dict[k] = v
+            else:
+                new_dict[k] = _restore_datetimes(v)
+        return new_dict
+    elif isinstance(data, list):
+        return [_restore_datetimes(item) for item in data]
+    return data
+
+
+async def cache_get_bytes(key: str) -> Optional[bytes]:
+    """Retrieve a raw bytes value from Redis."""
+    r = get_redis()
+    if r is None:
+        return None
+    raw = await r.get(key)
+    return raw
+
+
+async def cache_set_bytes(key: str, value: bytes, *, ttl: int = 3600) -> None:
+    """Store a raw bytes value in Redis with a TTL (seconds)."""
+    r = get_redis()
+    if r is None:
+        return
+    await r.set(key, value, ex=ttl)
+
+
+# High-level caching/invalidation helpers
+
+async def get_player_profile(user_id: str) -> Optional[dict]:
+    """Fetch cached player profile from Redis."""
+    key = PLAYER_PROFILE_KEY.format(user_id=user_id)
+    try:
+        data = await cache_get(key)
+        if data is not None:
+            return _restore_datetimes(data)
+    except Exception as e:
+        log.warning("Failed to retrieve player profile cache for %s: %s", user_id, e)
+    return None
+
+
+async def set_player_profile(user_id: str, doc: dict) -> None:
+    """Cache player profile in Redis and invalidate its related settings/profile/qi images."""
+    key = PLAYER_PROFILE_KEY.format(user_id=user_id)
+    try:
+        await invalidate_settings_image(user_id)
+        await invalidate_profile_image(user_id)
+        await invalidate_qi_ws_image(user_id)
+        await invalidate_all_qi_search_images(user_id)
+        await cache_set(key, _prepare_datetimes(doc), ttl=PLAYER_PROFILE_TTL)
+    except Exception as e:
+        log.warning("Failed to set player profile cache for %s: %s", user_id, e)
+
+
+async def invalidate_player_profile(user_id: str) -> None:
+    """Remove player profile from cache and invalidate related settings/profile/qi images."""
+    key = PLAYER_PROFILE_KEY.format(user_id=user_id)
+    try:
+        await cache_delete(key)
+        await invalidate_settings_image(user_id)
+        await invalidate_profile_image(user_id)
+        await invalidate_qi_ws_image(user_id)
+        await invalidate_all_qi_search_images(user_id)
+    except Exception as e:
+        log.warning("Failed to invalidate player profile cache for %s: %s", user_id, e)
+
+
+async def get_guild_settings(guild_id: str) -> Optional[dict]:
+    """Fetch cached guild settings from Redis."""
+    key = GUILD_SETTINGS_KEY.format(guild_id=guild_id)
+    try:
+        data = await cache_get(key)
+        if data is not None:
+            return _restore_datetimes(data)
+    except Exception as e:
+        log.warning("Failed to retrieve guild settings cache for %s: %s", guild_id, e)
+    return None
+
+
+async def set_guild_settings(guild_id: str, doc: dict) -> None:
+    """Cache guild settings in Redis."""
+    key = GUILD_SETTINGS_KEY.format(guild_id=guild_id)
+    try:
+        await cache_set(key, _prepare_datetimes(doc), ttl=GUILD_SETTINGS_TTL)
+    except Exception as e:
+        log.warning("Failed to set guild settings cache for %s: %s", guild_id, e)
+
+
+async def invalidate_guild_settings(guild_id: str) -> None:
+    """Remove guild settings from Redis."""
+    key = GUILD_SETTINGS_KEY.format(guild_id=guild_id)
+    try:
+        await cache_delete(key)
+    except Exception as e:
+        log.warning("Failed to delete guild settings cache for %s: %s", guild_id, e)
+
+
+async def get_workspace(user_id: str) -> Optional[dict]:
+    """Fetch workspace state for a user."""
+    key = WORKSPACE_KEY.format(user_id=user_id)
+    try:
+        data = await cache_get(key)
+        if data is not None:
+            return _restore_datetimes(data)
+    except Exception as e:
+        log.warning("Failed to retrieve workspace cache for %s: %s", user_id, e)
+    return None
+
+
+async def set_workspace(user_id: str, doc: dict) -> None:
+    """Cache workspace state in Redis and invalidate the workspace qi card image."""
+    key = WORKSPACE_KEY.format(user_id=user_id)
+    try:
+        await invalidate_qi_ws_image(user_id)
+        await cache_set(key, _prepare_datetimes(doc), ttl=WORKSPACE_TTL)
+    except Exception as e:
+        log.warning("Failed to set workspace cache for %s: %s", user_id, e)
+
+
+async def invalidate_workspace(user_id: str) -> None:
+    """Remove workspace state from Redis and invalidate workspace qi card image."""
+    key = WORKSPACE_KEY.format(user_id=user_id)
+    try:
+        await cache_delete(key)
+        await invalidate_qi_ws_image(user_id)
+    except Exception as e:
+        log.warning("Failed to delete workspace cache for %s: %s", user_id, e)
+
+
+async def get_active_party(user_id: str) -> Optional[list[dict]]:
+    """Fetch cached active party list for a user."""
+    key = ACTIVE_PARTY_KEY.format(user_id=user_id)
+    try:
+        data = await cache_get(key)
+        if data is not None:
+            return _restore_datetimes(data)
+    except Exception as e:
+        log.warning("Failed to retrieve active party cache for %s: %s", user_id, e)
+    return None
+
+
+async def set_active_party(user_id: str, party: list[dict]) -> None:
+    """Cache active party list in Redis and invalidate the profile trainer card image."""
+    key = ACTIVE_PARTY_KEY.format(user_id=user_id)
+    try:
+        await invalidate_profile_image(user_id)
+        await cache_set(key, _prepare_datetimes(party), ttl=ACTIVE_PARTY_TTL)
+    except Exception as e:
+        log.warning("Failed to set active party cache for %s: %s", user_id, e)
+
+
+async def invalidate_active_party(user_id: str) -> None:
+    """Remove active party list from Redis and invalidate the profile trainer card image."""
+    key = ACTIVE_PARTY_KEY.format(user_id=user_id)
+    try:
+        await cache_delete(key)
+        await invalidate_profile_image(user_id)
+    except Exception as e:
+        log.warning("Failed to delete active party cache for %s: %s", user_id, e)
+
+
+# Leaderboard helpers
+
+async def update_leaderboard_score(user_id: str, score: float) -> None:
+    """Add or update a member score on the Elo leaderboard."""
+    try:
+        await zset_upsert(LEADERBOARD_KEY, str(user_id), score)
+    except Exception as e:
+        log.warning("Failed to update leaderboard score for %s: %s", user_id, e)
+
+
+async def remove_from_leaderboard(user_id: str) -> None:
+    """Remove a member from the Elo leaderboard."""
+    try:
+        await zset_remove(LEADERBOARD_KEY, str(user_id))
+    except Exception as e:
+        log.warning("Failed to remove from leaderboard score for %s: %s", user_id, e)
+
+
+async def get_leaderboard_top(offset: int, limit: int) -> list[tuple[str, float]]:
+    """Return top players from the leaderboard."""
+    try:
+        return await zset_top(LEADERBOARD_KEY, count=offset + limit)
+    except Exception as e:
+        log.warning("Failed to fetch top leaderboard: %s", e)
+        return []
+
+
+async def get_leaderboard_rank(user_id: str) -> Optional[int]:
+    """Return the 1-based rank of a user on the leaderboard."""
+    try:
+        rank = await zset_rank(LEADERBOARD_KEY, str(user_id))
+        if rank is not None:
+            return rank + 1
+    except Exception as e:
+        log.warning("Failed to fetch rank for %s: %s", user_id, e)
+    return None
+
+
+# Image helpers
+
+async def get_settings_image(user_id: str) -> Optional[bytes]:
+    """Retrieve cached settings menu image bytes."""
+    return await cache_get_bytes(IMG_SETTINGS_KEY.format(user_id=user_id))
+
+
+async def set_settings_image(user_id: str, data: bytes) -> None:
+    """Cache settings menu image bytes."""
+    await cache_set_bytes(IMG_SETTINGS_KEY.format(user_id=user_id), data, ttl=IMG_SETTINGS_TTL)
+
+
+async def invalidate_settings_image(user_id: str) -> None:
+    """Invalidate cached settings menu image."""
+    await cache_delete(IMG_SETTINGS_KEY.format(user_id=user_id))
+
+
+async def get_profile_image(user_id: str) -> Optional[bytes]:
+    """Retrieve cached trainer card image bytes."""
+    return await cache_get_bytes(IMG_PROFILE_KEY.format(user_id=user_id))
+
+
+async def set_profile_image(user_id: str, data: bytes) -> None:
+    """Cache trainer card image bytes."""
+    await cache_set_bytes(IMG_PROFILE_KEY.format(user_id=user_id), data, ttl=IMG_PROFILE_TTL)
+
+
+async def invalidate_profile_image(user_id: str) -> None:
+    """Invalidate cached trainer card image."""
+    await cache_delete(IMG_PROFILE_KEY.format(user_id=user_id))
+
+
+async def get_qi_ws_image(user_id: str) -> Optional[bytes]:
+    """Retrieve cached workspace qi card image bytes."""
+    return await cache_get_bytes(IMG_QI_WS_KEY.format(user_id=user_id))
+
+
+async def set_qi_ws_image(user_id: str, data: bytes) -> None:
+    """Cache workspace qi card image bytes."""
+    await cache_set_bytes(IMG_QI_WS_KEY.format(user_id=user_id), data, ttl=IMG_QI_WS_TTL)
+
+
+async def invalidate_qi_ws_image(user_id: str) -> None:
+    """Invalidate cached workspace qi card image."""
+    await cache_delete(IMG_QI_WS_KEY.format(user_id=user_id))
+
+
+async def get_qi_search_image(user_id: str, pokname: str) -> Optional[bytes]:
+    """Retrieve cached search qi card image bytes."""
+    return await cache_get_bytes(IMG_QI_SEARCH_KEY.format(user_id=user_id, pokname=pokname.lower().strip()))
+
+
+async def set_qi_search_image(user_id: str, pokname: str, data: bytes) -> None:
+    """Cache search qi card image bytes."""
+    await cache_set_bytes(
+        IMG_QI_SEARCH_KEY.format(user_id=user_id, pokname=pokname.lower().strip()),
+        data,
+        ttl=IMG_QI_SEARCH_TTL
+    )
+
+
+async def invalidate_qi_search_image(user_id: str, pokname: str) -> None:
+    """Invalidate cached search qi card image."""
+    await cache_delete(IMG_QI_SEARCH_KEY.format(user_id=user_id, pokname=pokname.lower().strip()))
+
+
+async def invalidate_all_qi_search_images(user_id: str) -> None:
+    """Invalidate all cached search qi cards for a user."""
+    pattern = f"img:qi:search:{user_id}:*"
+    await cache_invalidate_pattern(pattern)

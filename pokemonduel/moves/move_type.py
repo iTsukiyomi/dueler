@@ -42,7 +42,7 @@ class MoveType:
             if battle.weather.get() in ("h-rain", "rain"):
                 return ElementType.WATER
         if self.effect == 136:
-            # Uses starting IVs as its own IVs should be used even if transformed
+            # Uses starting IVs as its own IVs should be used even if transformed.
             type_idx = attacker.starting_hpiv % 2
             type_idx += 2 * (attacker.starting_atkiv % 2)
             type_idx += 4 * (attacker.starting_defiv % 2)
@@ -165,6 +165,6 @@ class MoveType:
                 return ElementType.WATER
             if attacker._name == "Tauros-blaze-paldea":
                 return ElementType.FIRE
-        
+
         # pyrefly: ignore [missing-attribute]
         return self.type

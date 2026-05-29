@@ -1,16 +1,3 @@
-"""
-pokemonduel.cog.party_cog
-==========================
-Party management commands — create, load, list, delete saved teams, and customize active slots.
-
-Commands:
-    ;party create <name> <showdown_paste>
-    ;party load <name>
-    ;party list
-    ;party delete <name>
-    ;party add <slot>
-"""
-
 from __future__ import annotations
 
 import logging
@@ -32,7 +19,6 @@ class PartyCog(commands.Cog, name="Party"):
         self._team_svc = TeamService()
         self._player_svc = PlayerService()
 
-    # -- Group root --------------------------------------------------------
 
     @commands.group(name="party", invoke_without_command=True)
     async def party(self, ctx: commands.Context):
@@ -40,7 +26,6 @@ class PartyCog(commands.Cog, name="Party"):
         if ctx.invoked_subcommand is None:
             await self._list_impl(ctx)
 
-    # -- Implementation Details ---------------------------------------------
 
     async def _create_impl(self, ctx: commands.Context, name: str, paste: str) -> None:
         await self._player_svc.ensure_profile(str(ctx.author.id), ctx.author.name)
@@ -75,7 +60,7 @@ class PartyCog(commands.Cog, name="Party"):
         embed = discord.Embed(
             title=f"Team \"{name}\" Created",
             description=desc,
-            color=0x4CAF50,  # Classic green
+            color=0x4CAF50,
         )
         embed.set_footer(text=f"Load with: ;party load {name}")
         await ctx.send(embed=embed)
@@ -97,7 +82,7 @@ class PartyCog(commands.Cog, name="Party"):
         embed = discord.Embed(
             title=f"Team \"{name}\" Loaded",
             description="This team is now your active party for battles.",
-            color=0x4CAF50,  # Classic green
+            color=0x4CAF50,
         )
         await ctx.send(embed=embed)
 
@@ -109,7 +94,7 @@ class PartyCog(commands.Cog, name="Party"):
             embed = discord.Embed(
                 title="No Teams Saved",
                 description="Create a team with `;party create <name> <showdown_paste>`",
-                color=0x3B4CCA,  # Pokémon blue
+                color=0x3B4CCA,
             )
             await ctx.send(embed=embed)
             return
@@ -128,7 +113,7 @@ class PartyCog(commands.Cog, name="Party"):
         embed = discord.Embed(
             title=f"{ctx.author.name}'s Teams",
             description="\n".join(lines),
-            color=0x3B4CCA,  # Pokémon blue
+            color=0x3B4CCA,
         )
         embed.set_footer(text="⭐ = active party  |  ;party load <name> to switch")
         await ctx.send(embed=embed)
@@ -146,11 +131,10 @@ class PartyCog(commands.Cog, name="Party"):
 
         embed = discord.Embed(
             title=f"Team \"{name}\" Deleted",
-            color=0x505868,  # Classic dark grey
+            color=0x505868,
         )
         await ctx.send(embed=embed)
 
-    # -- Subcommands --------------------------------------------------------
 
     @party.command(name="create")
     async def party_create(self, ctx: commands.Context, name: str, *, paste: str):
@@ -209,14 +193,12 @@ class PartyCog(commands.Cog, name="Party"):
 
         party = await self._team_svc.load_active_party(str(ctx.author.id))
         if party is None:
-            # Try to load from legacy config
             from ..config import get_legacy_config
             cfg = get_legacy_config()
             party = await cfg.member(ctx.author).party()
             if not party:
                 party = []
 
-        # Pad party with default slots up to the requested slot if it's smaller
         while len(party) < slot:
             party.append({
                 "id": 0,
@@ -238,18 +220,15 @@ class PartyCog(commands.Cog, name="Party"):
                 "skin": None,
             })
 
-        # Overwrite the slot
         party[slot - 1] = ws["pokemon"].copy()
 
-        # Update in database under "__active__"
+        # Update in database under "__active__".
         await self._team_svc.save_active_party(str(ctx.author.id), party)
 
-        # Double-write to legacy config
         from ..config import get_legacy_config
         cfg = get_legacy_config()
         await cfg.member(ctx.author).party.set(party)
 
-        # Update the workspace metadata
         ws["slot_idx"] = slot - 1
         ws["team_name"] = active_party_name or "custom"
         await tb_cog._workspace_repo.set(str(ctx.author.id), ws)
@@ -259,7 +238,7 @@ class PartyCog(commands.Cog, name="Party"):
         embed = discord.Embed(
             title="Added to Party",
             description=f"Added **{pokemon_name.replace('-', ' ').title()}** to slot {slot} of {team_display}.",
-            color=0x4CAF50,  # Classic green
+            color=0x4CAF50,
         )
         await ctx.send(embed=embed)
 
@@ -271,7 +250,7 @@ class PartyCog(commands.Cog, name="Party"):
 
         party = await self._team_svc.load_active_party(str(member.id))
         if party is None:
-            # Fallback to legacy config
+            # Fallback to legacy config.
             from ..config import get_legacy_config
             cfg = get_legacy_config()
             party = await cfg.member(member).party()
@@ -352,10 +331,9 @@ class PartyCog(commands.Cog, name="Party"):
 
         await self._player_svc.ensure_profile(str(ctx.author.id), ctx.author.name)
 
-        # 1. Fetch current active party
         party = await self._team_svc.load_active_party(str(ctx.author.id))
         if party is None:
-            # Fallback to legacy config
+            # Fallback to legacy config.
             from ..config import get_legacy_config
             cfg = get_legacy_config()
             party = await cfg.member(ctx.author).party()
@@ -369,7 +347,7 @@ class PartyCog(commands.Cog, name="Party"):
             await ctx.send(embed=embed)
             return
 
-        # 2. Check if a team with this name already exists
+        # 2. Check if a team with this name already exists.
         existing_team = await self._team_svc.get_team(str(ctx.author.id), name)
         if existing_team is not None:
             embed = discord.Embed(
@@ -380,10 +358,9 @@ class PartyCog(commands.Cog, name="Party"):
             await ctx.send(embed=embed)
             return
 
-        # 3. Save the team in db with that name
+        # 3. Save the team in db with that name.
         try:
             await self._team_svc.create_from_raw(str(ctx.author.id), name, party)
-            # Also set this newly saved team as active (which updates active_party_name)
             await self._player_svc.set_active_party(str(ctx.author.id), name)
         except ValueError as exc:
             embed = discord.Embed(
@@ -397,11 +374,10 @@ class PartyCog(commands.Cog, name="Party"):
         embed = discord.Embed(
             title="Team Saved",
             description=f"Your active party has been saved as **{name}**.",
-            color=0x4CAF50,  # Classic green
+            color=0x4CAF50,
         )
         await ctx.send(embed=embed)
 
-    # -- Top-level Legacy Aliases --------------------------------------------
 
     @commands.command(name="pcreate", aliases=["partycreate"], hidden=True)
     async def pcreate_alias(self, ctx: commands.Context, name: str, *, paste: str):

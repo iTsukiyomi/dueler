@@ -1,12 +1,3 @@
-"""
-pokemonduel.repositories.team_repository
-=========================================
-CRUD interface for team / party documents.
-
-Team names are normalised to lowercase + stripped whitespace before
-any database operation, enforced by :class:`TeamSchema.create`.
-"""
-
 from __future__ import annotations
 
 import logging
@@ -104,7 +95,6 @@ class TeamRepository:
             }
         )
 
-    # -- Indexes -----------------------------------------------------------
 
     async def ensure_indexes(self) -> None:
         """Create indexes if they don't already exist."""

@@ -1,26 +1,6 @@
-"""
-pokemonduel.cog.teambuilder_cog
-================================
-Individual Pokémon customisation commands — select, learn, IV/EV,
-nature, ability, item, and quick-info display.
-
-All commands operate on a per-user "workspace" Pokémon that is loaded
-by ;select and persisted back to the active team on save.
-
-Commands:
-    ;select <name_or_slot>
-    ;learn <slot_1_to_4> <move_name>
-    ;moveset
-    ;iv <stat> <value>
-    ;evs <stat> <value>
-    ;nature <nature_name>
-    ;ability [name | switch]
-    ;item <item_name>
-    ;qi  (quick info)
-"""
-
 from __future__ import annotations
 
+import io
 import logging
 
 import asyncio
@@ -31,6 +11,7 @@ from discord.ext import commands
 from ..core.registry import MOVES, NATURES, ITEMS, ABILITIES, FORMS, POKE_ABILITIES, LEARNSETS
 from ..services.team_service import TeamService
 from ..services.player_service import PlayerService
+from ..core import cache
 
 log = logging.getLogger("dueler.cog.teambuilder")
 
@@ -51,43 +32,38 @@ _TYPE_ID_TO_NAME = {
 }
 
 
-# -- Helpers -----------------------------------------------------------
-
 def resolve_form_identifier(target_name: str) -> str | None:
     """Resolve a user-provided name to a canonical form identifier from FORMS."""
     norm = target_name.strip().lower()
-    
-    # 1. Exact match with hyphens/spaces
+
     for sep in ["-", " ", ""]:
         k = norm.replace(" ", sep)
         form = FORMS.get(k)
         if form is not None:
             return form["identifier"]
-    
-    # 2. Stripped exact match or prefix/substring match
+
     stripped_target = norm.replace("-", "").replace(" ", "").replace("_", "")
     best_match = None
-    
+
     for entry in FORMS.all:
         iden = entry.get("identifier", "").lower()
         stripped_iden = iden.replace("-", "").replace(" ", "").replace("_", "")
-        
+
         if stripped_iden == stripped_target:
             return entry["identifier"]
-        
+
         if stripped_iden.startswith(stripped_target):
             best_match = entry["identifier"]
-            
+
     if best_match:
         return best_match
-        
-    # Contains match
+
     for entry in FORMS.all:
         iden = entry.get("identifier", "").lower()
         stripped_iden = iden.replace("-", "").replace(" ", "").replace("_", "")
         if stripped_target in stripped_iden:
             return entry["identifier"]
-            
+
     return None
 
 
@@ -99,12 +75,11 @@ def get_legal_moves(pokemon_name: str) -> set[str] | None:
         base_name = pokemon_name.split("-")[0]
         base_key = base_name.lower().replace("-", "").replace(" ", "").replace("_", "")
         record = LEARNSETS.get(base_key)
-        
+
     if record and "value" in record:
         moves_list = record["value"]
         return {m.lower().replace(" ", "-").replace("_", "-") for m in moves_list}
     return None
-
 
 
 class MovesetView(discord.ui.View):
@@ -127,7 +102,6 @@ class MovesetView(discord.ui.View):
         self.embed = embed
         self.pages = pages
         self.current_page = 0
-        # Image mode state
         self.image_mode = image_mode
         self.renderer = renderer
         self.pokemon_name = pokemon_name
@@ -190,12 +164,10 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
         self.bot = bot
         self._team_svc = TeamService()
         self._player_svc = PlayerService()
-        # Per-user workspace: {user_id: {"team_name": str, "slot_idx": int | None, "pokemon": dict}}
         self._workspace: dict[str, dict] = {}
         from ..repositories.workspace_repository import WorkspaceRepository
         self._workspace_repo = WorkspaceRepository()
 
-    # -- Helpers -----------------------------------------------------------
 
     async def get_user_workspace(self, user_id: str) -> Optional[dict]:
         """Get the workspace for a user (checking memory first, then database/cache repository)."""
@@ -226,7 +198,7 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
         if ws is None:
             return
 
-        # Always save workspace to repository (MongoDB + Redis cache)
+        # Always save workspace to repository (MongoDB + Redis cache).
         await self._workspace_repo.set(str(ctx.author.id), ws)
 
         if ws.get("slot_idx") is None:
@@ -234,7 +206,7 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
 
         party = await self._team_svc.load_active_party(str(ctx.author.id))
         if party is None:
-            # Fallback to legacy config
+            # Fallback to legacy config.
             from ..config import get_legacy_config
             cfg = get_legacy_config()
             party = await cfg.member(ctx.author).party()
@@ -246,15 +218,13 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
 
         party[ws["slot_idx"]] = ws["pokemon"]
 
-        # Save to database under "__active__"
+        # Save to database under "__active__".
         await self._team_svc.save_active_party(str(ctx.author.id), party)
 
-        # Double-write to legacy config
         from ..config import get_legacy_config
         cfg = get_legacy_config()
         await cfg.member(ctx.author).party.set(party)
 
-    # -- ;select -----------------------------------------------------------
 
     @commands.command(name="select")
     async def select(self, ctx: commands.Context, *, target: str):
@@ -311,11 +281,10 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
                 description=f"Slot {slot_num} of team **{team_name}**\n"
                             "Use `;learn`, `;iv`, `;evs`, `;nature`, `;ability`, `;item` to customise.\n"
                             "Use `;qi` to view full details.",
-                color=0xFFCB05,  # Pokémon yellow
+                color=0xFFCB05,
             )
             await ctx.send(embed=embed)
         else:
-            # Resolve name from FORMS
             matched_identifier = resolve_form_identifier(target)
             if not matched_identifier:
                 await ctx.send(f"Pokémon **{target}** not found in the forms database.")
@@ -366,11 +335,10 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
                             "Use `;learn`, `;iv`, `;evs`, `;nature`, `;ability`, `;item` to customise.\n"
                             "Use `;party add <slot>` to insert it into your active team.\n"
                             "Use `;qi` to view full details.",
-                color=0xFFCB05,  # Pokémon yellow
+                color=0xFFCB05,
             )
             await ctx.send(embed=embed)
 
-    # -- ;learn ------------------------------------------------------------
 
     @commands.command(name="learn")
     async def learn(self, ctx: commands.Context, slot: int, *, move_name: str):
@@ -393,17 +361,16 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
             return
 
         poke = ws["pokemon"]
-        # Strict learnset validation
         legal_moves = get_legal_moves(poke["pokname"])
         if legal_moves is not None:
-            # Enforce check
+            # Enforce check.
             norm_check = norm.replace("-", "").replace("_", "")
             matched_move = None
             for lm in legal_moves:
                 if lm.replace("-", "").replace("_", "") == norm_check:
                     matched_move = lm
                     break
-            
+
             if matched_move is None:
                 await ctx.send(f"**{poke['pokname'].replace('-', ' ').title()}** cannot learn **{move_name}**.")
                 return
@@ -424,11 +391,10 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
                 title="Move Learned",
                 description=f"**{poke['pokname'].replace('-', ' ').title()}** learned **{norm.replace('-', ' ').title()}** in slot {slot}.\n"
                             f"Power: {power}",
-                color=0x4CAF50,  # Classic green
+                color=0x4CAF50,
             )
         )
 
-    # -- ;ability ----------------------------------------------------------
 
     @commands.command(name="ability")
     async def ability(self, ctx: commands.Context, *, arg: str = "switch"):
@@ -475,12 +441,12 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
             new_idx = (curr_idx + 1) % len(records)
             poke["ability_index"] = new_idx
             await self._save_workspace(ctx)
-            
+
             selected_ab = ab_options[new_idx]
             await ctx.send(
                 embed=discord.Embed(
                     description=f"Switched ability of **{poke['pokname'].replace('-', ' ').title()}** to **{selected_ab['identifier'].replace('-', ' ').title()}** (slot {new_idx + 1}).",
-                    color=0x4CAF50,  # Classic green
+                    color=0x4CAF50,
                 )
             )
         else:
@@ -488,31 +454,30 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
             if target_norm not in legal_names:
                 ab_found = ABILITIES.get(target_norm)
                 if ab_found is None:
-                    # check contains
+                    # Check contains.
                     for key, val in ABILITIES._by_key.items():
                         if target_norm in str(key):
                             ab_found = val
                             target_norm = str(key)
                             break
-                
+
                 if ab_found is None or target_norm not in legal_names:
                     options_str = ", ".join(opt["identifier"].replace("-", " ").title() for opt in ab_options)
                     await ctx.send(f"**{poke['pokname'].replace('-', ' ').title()}** cannot have the ability **{arg}**. Legal options: {options_str}")
                     return
-            
+
             matched_idx = legal_names.index(target_norm)
             poke["ability_index"] = matched_idx
             await self._save_workspace(ctx)
-            
+
             selected_ab = ab_options[matched_idx]
             await ctx.send(
                 embed=discord.Embed(
                     description=f"Set ability of **{poke['pokname'].replace('-', ' ').title()}** to **{selected_ab['identifier'].replace('-', ' ').title()}**.",
-                    color=0x4CAF50,  # Classic green
+                    color=0x4CAF50,
                 )
             )
 
-    # -- ;moveset ----------------------------------------------------------
 
     @commands.command(name="moveset")
     async def moveset(self, ctx: commands.Context):
@@ -542,13 +507,12 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
         per_page = 10
         total_pages = (len(moves_data) + per_page - 1) // per_page
 
-        # Check user preference for image vs text mode
+        # Check user preference for image vs text mode.
         await self._player_svc.ensure_profile(str(ctx.author.id), ctx.author.name)
         profile = await self._player_svc.get_profile(str(ctx.author.id))
         use_image = profile.get("moveset_img", True) if profile else True
 
         if use_image:
-            # ── Image mode: render themed moveset table ──
             theme = profile.get("theme", "firered") if profile else "firered"
             from ..canvas import BattleRenderer
             from ..canvas.themes.palette import get_palette
@@ -570,7 +534,6 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
             )
             embed.set_image(url="attachment://moveset.png")
 
-            # Pages list is just placeholders for page count tracking
             pages = [None] * total_pages
             view = MovesetView(
                 ctx.author.id, embed, pages,
@@ -582,7 +545,6 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
             )
             await ctx.send(embed=embed, file=file, view=view)
         else:
-            # ── Text mode: classic text embed ──
             pages = []
             for i in range(total_pages):
                 chunk = moves_data[i * per_page : (i + 1) * per_page]
@@ -620,7 +582,6 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
             view = MovesetView(ctx.author.id, embed, pages)
             await ctx.send(embed=embed, view=view)
 
-    # -- ;iv ---------------------------------------------------------------
 
     @commands.command(name="iv")
     async def iv(self, ctx: commands.Context, stat: str, value: int):
@@ -649,11 +610,10 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
         await ctx.send(
             embed=discord.Embed(
                 description=f"**{ws['pokemon']['pokname'].replace('-', ' ').title()}** {stat.upper()} IV set to **{value}**.",
-                color=0x4CAF50,  # Classic green
+                color=0x4CAF50,
             )
         )
 
-    # -- ;evs --------------------------------------------------------------
 
     @commands.command(name="evs")
     async def evs(self, ctx: commands.Context, stat: str, value: int):
@@ -694,11 +654,10 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
             embed=discord.Embed(
                 description=f"**{poke['pokname'].replace('-', ' ').title()}** {stat.upper()} EV set to **{value}**.\n"
                             f"Total EVs: {new_total}/510",
-                color=0x4CAF50,  # Classic green
+                color=0x4CAF50,
             )
         )
 
-    # -- ;nature -----------------------------------------------------------
 
     @commands.command(name="nature")
     async def nature(self, ctx: commands.Context, *, nature_name: str):
@@ -726,11 +685,10 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
             embed=discord.Embed(
                 description=f"**{ws['pokemon']['pokname'].replace('-', ' ').title()}** nature set to **{norm.capitalize()}**.\n"
                             f"(+stat_id={inc}, -stat_id={dec})",
-                color=0x4CAF50,  # Classic green
+                color=0x4CAF50,
             )
         )
 
-    # -- ;item -------------------------------------------------------------
 
     @commands.command(name="item")
     async def item(self, ctx: commands.Context, *, item_name: str):
@@ -754,11 +712,10 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
         await ctx.send(
             embed=discord.Embed(
                 description=f"**{ws['pokemon']['pokname'].replace('-', ' ').title()}** is now holding **{norm}**.",
-                color=0x4CAF50,  # Classic green
+                color=0x4CAF50,
             )
         )
 
-    # -- ;qi (quick info) --------------------------------------------------
 
     @commands.command(name="qi", aliases=["quickinfo", "pokemoninfo"])
     async def quick_info(self, ctx: commands.Context, *, poke: str | None = None):
@@ -772,12 +729,16 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
         await self._player_svc.ensure_profile(str(ctx.author.id), ctx.author.name)
         profile = await self._player_svc.get_profile(str(ctx.author.id))
         theme = profile.get("theme", "firered") if profile else "firered"
-        
+
         from ..canvas import BattleRenderer
         from ..canvas.themes.palette import get_palette
         from pathlib import Path
         data_dir = Path(__file__).parent.parent / "data"
         renderer = BattleRenderer(data_dir, palette=get_palette(theme), theme=theme)
+
+        user_id = str(ctx.author.id)
+        cached_img = None
+        matched_identifier = None
 
         if poke is None:
             ws = await self._load_workspace(ctx)
@@ -787,6 +748,8 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
             slot_text = str(ws['slot_idx'] + 1) if ws.get('slot_idx') is not None else "Workspace"
             team_text = ws.get('team_name', 'Unknown')
             footer_text = f"Team: {team_text} │ Slot: {slot_text}"
+
+            cached_img = await cache.get_qi_ws_image(user_id)
         else:
             from ..core.registry import FORMS
             matched_identifier = resolve_form_identifier(poke)
@@ -798,7 +761,7 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
             if form_info is None:
                 await ctx.send(f"Error: form info not found for {matched_identifier}.")
                 return
-                
+
             poke_data = {
                 "pokname": matched_identifier,
                 "hpiv": 31, "atkiv": 31, "defiv": 31, "spatkiv": 31, "spdefiv": 31, "speediv": 31,
@@ -810,37 +773,47 @@ class TeambuilderCog(commands.Cog, name="Teambuilder"):
             }
             footer_text = "Search Result"
 
-        # Resolve types for the card
+            cached_img = await cache.get_qi_search_image(user_id, matched_identifier)
+
         pokname = poke_data.get("pokname", "")
         type_names = renderer._get_type_names(pokname)
 
-        try:
-            import asyncio
-            loop = asyncio.get_running_loop()
-            img_buf = await loop.run_in_executor(
-                None,
-                renderer.render_pokemon_card,
-                poke_data,
-                ctx.author.name,
-                type_names
-            )
-            file = discord.File(fp=img_buf, filename="pokemon_card.png")
+        if cached_img:
+            img_buf = io.BytesIO(cached_img)
+        else:
+            try:
+                import asyncio
+                loop = asyncio.get_running_loop()
+                img_buf = await loop.run_in_executor(
+                    None,
+                    renderer.render_pokemon_card,
+                    poke_data,
+                    ctx.author.name,
+                    type_names
+                )
+                if poke is None:
+                    await cache.set_qi_ws_image(user_id, img_buf.getvalue())
+                else:
+                    await cache.set_qi_search_image(user_id, matched_identifier, img_buf.getvalue())
+            except Exception as e:
+                import logging
+                log = logging.getLogger("dueler.cog.teambuilder")
+                log.exception("Failed to render pokemon card for ;qi")
+                await ctx.send(f"Error rendering card: {e}")
+                return
 
-            type_str = " / ".join(type_names) if type_names else "Unknown"
-            embed = discord.Embed(
-                title=f"⚡ {poke_data.get('pokname', '?').replace('-', ' ').title()}",
-                description=f"**Type:** {type_str}",
-                color=0x3B4CCA,
-            )
-            embed.set_image(url="attachment://pokemon_card.png")
-            embed.set_footer(text=footer_text)
+        file = discord.File(fp=img_buf, filename="pokemon_card.png")
 
-            await ctx.send(embed=embed, file=file)
-        except Exception as e:
-            import logging
-            log = logging.getLogger("dueler.cog.teambuilder")
-            log.exception("Failed to render pokemon card for ;qi")
-            await ctx.send(f"Error rendering card: {e}")
+        type_str = " / ".join(type_names) if type_names else "Unknown"
+        embed = discord.Embed(
+            title=f"⚡ {poke_data.get('pokname', '?').replace('-', ' ').title()}",
+            description=f"**Type:** {type_str}",
+            color=0x3B4CCA,
+        )
+        embed.set_image(url="attachment://pokemon_card.png")
+        embed.set_footer(text=footer_text)
+
+        await ctx.send(embed=embed, file=file)
 
 
 async def setup(bot: commands.Bot) -> None:

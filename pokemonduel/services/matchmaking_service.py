@@ -1,12 +1,3 @@
-"""
-pokemonduel.services.matchmaking_service
-=========================================
-Redis-backed matchmaking queue for ranked PvP duels.
-
-Uses a FIFO list in Redis to queue players, with Elo-range matching
-to pair players of similar skill.
-"""
-
 from __future__ import annotations
 
 import json
@@ -78,7 +69,6 @@ class MatchmakingService:
             opponent_id = entry.get("user_id", "")
             opponent_elo = entry.get("elo", 1000)
 
-            # Don't match against yourself
             if str(opponent_id) == str(user_id):
                 continue
 
@@ -92,13 +82,12 @@ class MatchmakingService:
 
         opponent_id, raw_entry = best_match
 
-        # Remove the matched opponent from the queue
         removed = await cache.queue_remove(
             _QUEUE_KEY,
             raw_entry.decode() if isinstance(raw_entry, bytes) else raw_entry,
         )
         if removed == 0:
-            # Someone else grabbed this opponent — race condition
+            # Someone else grabbed this opponent — race condition.
             return None
 
         log.info(

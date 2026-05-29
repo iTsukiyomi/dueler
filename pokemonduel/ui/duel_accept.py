@@ -18,7 +18,7 @@ class DuelAcceptView(discord.ui.View):
         self.confirm = True
         await interaction.response.edit_message(view=None)
         self.stop()
-    
+
     @discord.ui.button(label="Reject", style=discord.ButtonStyle.red)
     async def reject(self, interaction, button):
         await interaction.response.edit_message(view=None)
@@ -29,12 +29,12 @@ class DuelAcceptView(discord.ui.View):
             await interaction.response.send_message(content="You are not allowed to interact with this button.", ephemeral=True)
             return False
         return True
-    
+
     async def on_timeout(self):
         # pyrefly: ignore [missing-attribute]
         await self.message.edit(view=None)
         self.stop()
-    
+
     async def on_error(self, interaction, error, item):
         # pyrefly: ignore [missing-attribute]
         await self.ctx.cog.log.error("Exception in a button.", exc_info=error)

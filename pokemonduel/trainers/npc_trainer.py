@@ -24,11 +24,7 @@ class NPCTrainer(Trainer):
             self.ai.set_battle(battle)
             chosen_move, switch_idx = self.ai.choose_move()
             if switch_idx is not None:
-                # Queue the switch as an integer selected_action so the battle
-                # loop handles it at the correct time (same as a human swap).
-                # Previously this called self.switch_poke() directly, which
-                # both changed current_pokemon before the turn ran (double-action
-                # bug) AND left selected_action=None (forfeit bug).
+                # Queue the switch as an integer selected_action so the battle loop handles it at the correct time (same as a human swap). Previously this called self.switch_poke() directly, which both changed current_pokemon before the turn ran (double-action bug) AND left selected_action=None (forfeit bug).
                 log.debug(
                     "[NPC %s] move() → queuing switch to slot %d "
                     "(current_pokemon=%s)",
@@ -44,7 +40,7 @@ class NPCTrainer(Trainer):
                 )
                 self.selected_action = chosen_move
         else:
-            # Fallback to random if no AI set
+            # Fallback to random if no AI set.
             status_code, movedata = self.valid_moves(defender)
             if status_code == "forced":
                 self.selected_action = movedata
@@ -63,11 +59,11 @@ class NPCTrainer(Trainer):
             if switch_idx is not None:
                 self.switch_poke(switch_idx, mid_turn=mid_turn)
             else:
-                # Fallback to random
+                # Fallback to random.
                 poke_idx = random.choice(self.valid_swaps(defender, battle, check_trap=False))
                 self.switch_poke(poke_idx, mid_turn=mid_turn)
         else:
-            # Fallback to random
+            # Fallback to random.
             poke_idx = random.choice(self.valid_swaps(defender, battle, check_trap=False))
             self.switch_poke(poke_idx, mid_turn=mid_turn)
         self.event.set()

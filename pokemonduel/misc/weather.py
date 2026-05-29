@@ -27,7 +27,6 @@ class Weather(ExpiringEffect):
         for poke in (self.battle.trainer1.current_pokemon, self.battle.trainer2.current_pokemon):
             if poke is None:
                 continue
-            # Forecast
             if poke.ability() == Ability.FORECAST and poke._name in ("Castform-snowy", "Castform-rainy",
                                                                      "Castform-sunny"):
                 if poke.form("Castform"):
@@ -134,7 +133,6 @@ class Weather(ExpiringEffect):
         else:
             raise ValueError("unexpected weather")
 
-        # Forecast
         t = ElementType(element).name.lower()
         for poke in (self.battle.trainer1.current_pokemon, self.battle.trainer2.current_pokemon):
             if poke is None:

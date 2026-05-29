@@ -1,13 +1,3 @@
-"""
-ai/encoder.py — Battle-state → float32 feature vector.
-
-Operates directly on the real ``Battle``/``DuelPokemon``/``Move`` objects
-defined elsewhere in the project so we never duplicate game state. The
-encoder is *pure* and *side-effect free*: it never mutates the battle
-state, which is critical for safe MCTS rollouts.
-
-Layout is defined in ``ai/features.py``.
-"""
 from __future__ import annotations
 
 from typing import Optional
@@ -17,16 +7,12 @@ import numpy as np
 from . import features as F
 from .hidden_info import HiddenInfoTracker
 
-# Soft imports — the encoder must still work if the game enums change.
 try:
     from ..enums import DamageClass, ElementType, Ability  # type: ignore
-except ImportError:                              # pragma: no cover
+except ImportError:
     DamageClass = ElementType = Ability = None   # type: ignore
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Lightweight helpers
-# ─────────────────────────────────────────────────────────────────────────────
 def _safe(getter, default):
     try:
         v = getter()
@@ -79,7 +65,7 @@ def _type_effectiveness(battle, atk_type: int, def_types: list[int]) -> float:
         if v is not None:
             mult *= v / 100.0
     if battle.inverse_battle:
-        # Pokémon inverse rules — convert resists/immunities to weaknesses
+        # Pokémon inverse rules — convert resists/immunities to weaknesses.
         if mult == 0:
             mult = 2.0
         elif mult < 1.0:
@@ -92,16 +78,13 @@ def _type_effectiveness(battle, atk_type: int, def_types: list[int]) -> float:
 def _eff_bucket(mult: float) -> int:
     """Return one-hot bucket index for an effectiveness multiplier."""
     if mult == 0:        return 0
-    if mult < 0.5:       return 1   # .25x
-    if mult < 1.0:       return 2   # .5x
-    if mult < 2.0:       return 3   # 1x
-    if mult < 4.0:       return 4   # 2x
-    return 4                            # 4x maps to top bucket too (rare)
+    if mult < 0.5:       return 1
+    if mult < 1.0:       return 2
+    if mult < 2.0:       return 3
+    if mult < 4.0:       return 4
+    return 4
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Pokémon-block writer
-# ─────────────────────────────────────────────────────────────────────────────
 def _write_poke_block(buf: np.ndarray, off: int, poke, *,
                       visible: bool, opponent_active, battle,
                       hidden: Optional[HiddenInfoTracker] = None,
@@ -119,13 +102,11 @@ def _write_poke_block(buf: np.ndarray, off: int, poke, *,
     fainted = (getattr(p, "hp", 0) or 0) <= 0
 
     cur = off
-    # ── species bucket ──
     species_id = getattr(p, "pokemon_id", 0) or 0
     if visible:
         buf[cur + F.bucket(species_id, F.POKE_BLOCK.species_oh, F.N_SPECIES)] = 1.0
     cur += F.POKE_BLOCK.species_oh
 
-    # ── current type one-hot ──
     if visible:
         for t in (getattr(p, "type_ids", None) or ()):
             ti = int(t)
@@ -133,7 +114,6 @@ def _write_poke_block(buf: np.ndarray, off: int, poke, *,
                 buf[cur + ti] = 1.0
     cur += F.POKE_BLOCK.type_oh
 
-    # ── tera type one-hot (optional — engine may not yet support tera) ──
     tera = getattr(p, "tera_type", None)
     if visible and tera is not None:
         try:
@@ -144,13 +124,11 @@ def _write_poke_block(buf: np.ndarray, off: int, poke, *,
             pass
     cur += F.POKE_BLOCK.tera_oh
 
-    # ── ability bucket ──
     if visible:
         ab = getattr(p, "ability_id", 0) or 0
         buf[cur + F.bucket(ab, F.POKE_BLOCK.ability_oh, F.N_ABILITIES)] = 1.0
     cur += F.POKE_BLOCK.ability_oh
 
-    # ── item bucket ──
     if visible:
         hi = getattr(p, "held_item", None)
         item_id = 0
@@ -160,17 +138,14 @@ def _write_poke_block(buf: np.ndarray, off: int, poke, *,
         buf[cur + F.bucket(item_id, F.POKE_BLOCK.item_oh, F.N_ITEMS)] = 1.0
     cur += F.POKE_BLOCK.item_oh
 
-    # ── status one-hot ──
     nv = getattr(p, "nv", None)
     nv_cur = (getattr(nv, "current", "") if nv is not None else "") or ""
     buf[cur + F.status_index(nv_cur)] = 1.0
     cur += F.POKE_BLOCK.status_oh
 
-    # ── current HP ratio ──
     buf[cur] = _hp_ratio(p)
     cur += F.POKE_BLOCK.hp
 
-    # ── raw stat snapshot (normalised by 400) ──
     if visible:
         try:
             buf[cur + 0] = min(1.0, (getattr(p, "starting_hp", 0) or 0) / 700.0)
@@ -183,7 +158,6 @@ def _write_poke_block(buf: np.ndarray, off: int, poke, *,
             pass
     cur += F.POKE_BLOCK.stats
 
-    # ── stage modifiers ──
     buf[cur + 0] = _stage(p, "attack_stage")
     buf[cur + 1] = _stage(p, "defense_stage")
     buf[cur + 2] = _stage(p, "spatk_stage")
@@ -193,7 +167,6 @@ def _write_poke_block(buf: np.ndarray, off: int, poke, *,
     buf[cur + 6] = _stage(p, "evasion_stage")
     cur += F.POKE_BLOCK.stages
 
-    # ── flag block (24 bits) ──
     flags = [
         1.0 if fainted else 0.0,
         1.0 if getattr(p, "has_mega_evolved", False) else 0.0,
@@ -227,7 +200,6 @@ def _write_poke_block(buf: np.ndarray, off: int, poke, *,
         buf[cur + i] = f
     cur += F.POKE_BLOCK.flags
 
-    # ── per-move sub-block ──
     if visible and getattr(p, "moves", None):
         move_off = cur
         opp_types = getattr(opponent_active, "type_ids", None) or [] if opponent_active else []
@@ -235,49 +207,41 @@ def _write_poke_block(buf: np.ndarray, off: int, poke, *,
         for mi in range(F.MOVES_PER_POKE):
             base = move_off
             m = p.moves[mi] if mi < len(p.moves) else None
-            # ── move type one-hot ──
             if m is not None:
                 ti = int(getattr(m, "type", 0)) or 0
                 if 0 <= ti < F.N_TYPES:
                     buf[base + ti] = 1.0
             base += F.N_TYPES
-            # ── damage class one-hot ──
             if m is not None:
                 dc = int(getattr(m, "damage_class", 0)) or 0
                 if 0 <= dc < F.N_DAMAGE_CLASS:
                     buf[base + dc] = 1.0
             base += F.N_DAMAGE_CLASS
-            # ── power normalised /200 ──
             if m is not None:
                 buf[base + 0] = min(1.0, ((m.power or 0) / 200.0))
             base += 1
-            # ── accuracy /100 (None = perfect) ──
             if m is not None:
                 acc = m.accuracy
                 buf[base + 0] = 1.0 if acc is None else min(1.0, acc / 100.0)
             base += 1
-            # ── priority centred (-7..+7) ──
             if m is not None:
                 buf[base + 0] = float(getattr(m, "priority", 0) or 0) / 7.0
             base += 1
-            # ── PP left + PP max ──
             if m is not None:
                 pp_max = max(1, getattr(m, "starting_pp", m.pp or 1))
                 buf[base + 0] = min(1.0, (m.pp or 0) / pp_max)
                 buf[base + 1] = min(1.0, pp_max / 64.0)
             base += 2
-            # ── STAB ──
             if m is not None and own_types and int(getattr(m, "type", -1)) in own_types:
                 buf[base + 0] = 1.0
             base += 1
-            # ── effectiveness bucket vs current opp ──
             if m is not None and opp_types:
                 mult = _type_effectiveness(battle, int(getattr(m, "type", 0)), opp_types)
                 idx = _eff_bucket(mult)
                 if 0 <= idx < 5:
                     buf[base + idx] = 1.0
             base += 5
-            # ── disabled / cannot-select ──
+            # ── disabled / cannot-select ──.
             if m is not None:
                 disabled = ((m.pp or 0) <= 0
                             or (getattr(p, "disable", None)
@@ -292,15 +256,11 @@ def _write_poke_block(buf: np.ndarray, off: int, poke, *,
         cur += F.POKE_BLOCK.move_block
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Field & global blocks
-# ─────────────────────────────────────────────────────────────────────────────
 def _write_field_block(buf: np.ndarray, off: int, battle, ours, theirs) -> None:
     if battle is None:
         return
     cur = off
 
-    # weather
     wname = ""
     try:
         wname = battle.weather.get() or ""
@@ -309,7 +269,6 @@ def _write_field_block(buf: np.ndarray, off: int, battle, ours, theirs) -> None:
     buf[cur + F.weather_index(wname)] = 1.0
     cur += F.N_WEATHER
 
-    # terrain
     tname = ""
     try:
         tname = battle.terrain.item or ""
@@ -318,40 +277,34 @@ def _write_field_block(buf: np.ndarray, off: int, battle, ours, theirs) -> None:
     buf[cur + F.terrain_index(tname)] = 1.0
     cur += F.N_TERRAIN
 
-    # weather / terrain turns left
     buf[cur] = _expiring_turns(battle.weather)
     cur += 1
     buf[cur] = _expiring_turns(battle.terrain)
     cur += 1
 
-    # rooms — flag + turns left
     for room in (battle.trick_room, battle.gravity,
                  battle.magic_room, battle.wonder_room):
         buf[cur + 0] = _expiring_active(room)
         buf[cur + 1] = _expiring_turns(room)
         cur += 2
 
-    # per-side hazards + screens + misc (ours then theirs)
     for side in (ours, theirs):
         if side is None:
             cur += (F.FIELD_BLOCK.side_hazards_each
                     + F.FIELD_BLOCK.side_screens_each
                     + F.FIELD_BLOCK.side_misc_each)
             continue
-        # hazards
         buf[cur + 0] = (getattr(side, "spikes", 0) or 0) / 3.0
         buf[cur + 1] = (getattr(side, "toxic_spikes", 0) or 0) / 2.0
         buf[cur + 2] = 1.0 if getattr(side, "stealth_rock", False) else 0.0
         buf[cur + 3] = 1.0 if getattr(side, "sticky_web", False) else 0.0
         buf[cur + 4] = 0.0
         cur += F.FIELD_BLOCK.side_hazards_each
-        # screens
         buf[cur + 0] = _expiring_turns(getattr(side, "light_screen", None))
         buf[cur + 1] = _expiring_turns(getattr(side, "reflect", None))
         buf[cur + 2] = _expiring_turns(getattr(side, "aurora_veil", None))
         buf[cur + 3] = _expiring_turns(getattr(side, "safeguard", None))
         cur += F.FIELD_BLOCK.side_screens_each
-        # misc
         buf[cur + 0] = _expiring_turns(getattr(side, "tailwind", None))
         buf[cur + 1] = _expiring_turns(getattr(side, "mist", None))
         buf[cur + 2] = _expiring_turns(getattr(side, "mud_sport", None))
@@ -398,8 +351,8 @@ def _write_global_block(buf: np.ndarray, off: int, battle, ours, theirs) -> None
     cur += 1
     buf[cur] = float(avg_hp_ours - avg_hp_opp + 1.0) / 2.0
     cur += 1
-    # speed dominance one-hot
-    speed_dom = 1  # equal
+    # Speed dominance one-hot.
+    speed_dom = 1
     try:
         sa = ours.current_pokemon.get_speed(battle) if ours.current_pokemon else 0
         sb = theirs.current_pokemon.get_speed(battle) if theirs.current_pokemon else 0
@@ -409,7 +362,6 @@ def _write_global_block(buf: np.ndarray, off: int, battle, ours, theirs) -> None
         pass
     buf[cur + speed_dom] = 1.0
     cur += 3
-    # setup dominance bucket (-6..+6)
     try:
         cur_us = ours.current_pokemon
         cur_op = theirs.current_pokemon
@@ -424,16 +376,14 @@ def _write_global_block(buf: np.ndarray, off: int, battle, ours, theirs) -> None
     except Exception:
         pass
     cur += 6
-    # hazard dominance bucket
     try:
         our_haz = (ours.spikes or 0) + (ours.toxic_spikes or 0) + int(ours.stealth_rock) + int(ours.sticky_web)
         opp_haz = (theirs.spikes or 0) + (theirs.toxic_spikes or 0) + int(theirs.stealth_rock) + int(theirs.sticky_web)
-        b = max(0, min(5, (opp_haz - our_haz + 4) // 2))   # higher = more hazards on opp side = better for us
+        b = max(0, min(5, (opp_haz - our_haz + 4) // 2))
         buf[cur + b] = 1.0
     except Exception:
         pass
     cur += 6
-    # revealed-info fraction
     try:
         revealed_us = sum(1 for p in ours.party if getattr(p, "ever_sent_out", False))
         revealed_op = sum(1 for p in theirs.party if getattr(p, "ever_sent_out", False))
@@ -445,9 +395,6 @@ def _write_global_block(buf: np.ndarray, off: int, battle, ours, theirs) -> None
         cur += 2
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Public encoder
-# ─────────────────────────────────────────────────────────────────────────────
 class BattleEncoder:
     """Encode a battle from the point of view of *us*.
 
@@ -461,20 +408,16 @@ class BattleEncoder:
     def __init__(self, hidden: Optional[HiddenInfoTracker] = None) -> None:
         self.hidden = hidden or HiddenInfoTracker()
 
-    # ------------------------------------------------------------------
     def encode(self, battle, us, them, *, history=None) -> np.ndarray:
         """Return a fresh ``np.ndarray[float32]`` of shape ``(FEATURE_DIM,)``."""
         buf = np.zeros(F.FEATURE_DIM, dtype=np.float32)
 
-        # The hidden-info tracker observes the current step before we encode
-        # the opponent block so probabilities reflect the latest reveal.
         if battle is not None and them is not None:
             try:
                 self.hidden.observe(battle, us, them)
             except Exception:
                 pass
 
-        # ── OUR active + bench ────────────────────────────────────────
         if us is not None:
             active = us.current_pokemon
             _write_poke_block(buf, F.ACTIVE_OURS_OFFSET, active,
@@ -493,7 +436,6 @@ class BattleEncoder:
                                   battle=battle, slot_idx=bench_idx)
                 bench_idx += 1
 
-        # ── OPPONENT active + bench (visibility filtered) ─────────────
         if them is not None:
             opp_active = them.current_pokemon
             _write_poke_block(buf, F.ACTIVE_OPP_OFFSET, opp_active,
@@ -508,8 +450,7 @@ class BattleEncoder:
                 if bench_idx >= F.TEAM_SIZE - 1:
                     break
                 off = F.BENCH_OPP_OFFSET + bench_idx * F.POKE_BLOCK_SIZE
-                # Bench pokes are only "visible" once they have been on the
-                # field at some point.
+                # Bench pokes are only "visible" once they have been on the field at some point.
                 visible = bool(getattr(poke, "ever_sent_out", False))
                 _write_poke_block(buf, off, poke, visible=visible,
                                   opponent_active=(us.current_pokemon if us else None),
@@ -517,14 +458,11 @@ class BattleEncoder:
                                   slot_idx=bench_idx)
                 bench_idx += 1
 
-        # ── Field / global ────────────────────────────────────────────
         _write_field_block(buf, F.FIELD_OFFSET, battle, us, them)
         _write_global_block(buf, F.GLOBAL_OFFSET, battle, us, them)
 
-        # ── Hidden-info probability block ─────────────────────────────
         self.hidden.write(buf, F.HIDDEN_OFFSET, them)
 
-        # ── History block ─────────────────────────────────────────────
         if history is not None:
             history.write(buf, F.HISTORY_OFFSET)
 

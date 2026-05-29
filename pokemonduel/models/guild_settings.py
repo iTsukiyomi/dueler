@@ -1,18 +1,8 @@
-"""
-pokemonduel.models.guild_settings
-=================================
-MongoDB document schema for per-guild configuration.
-
-Replaces the old ``EnhancedConfigManager`` / ``GuildConfig`` file-based
-system with a MongoDB-backed settings store.
-"""
-
 from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Any
 
-# Collection name in MongoDB.
 COLLECTION = "guild_settings"
 
 
@@ -31,7 +21,6 @@ class GuildSettingsSchema:
         }
     """
 
-    # Default values for new guilds.
     DEFAULTS = {
         "prefix": ";",
         "use_threads": False,

@@ -1,29 +1,3 @@
-"""
-ai/hidden_info.py — Hidden-information estimator for opponent Pokémon.
-
-In a competitive Pokémon battle, the opponent's full set (items, moves,
-tera type, EV spread …) is unknown until revealed. AlphaZero search benefits
-massively from a calibrated belief over these latent variables, so we keep
-a small online estimator that consumes observations as they happen and emits
-probability vectors that the network reads.
-
-We track three things per opponent Pokémon:
-
-* **item belief** – multinomial over 12 item buckets
-  (choice-band, choice-scarf, choice-specs, life-orb, leftovers, focus-sash,
-  heavy-duty-boots, booster-energy, assault-vest, eviolite, rocky-helmet,
-  unknown/other)
-
-* **move-set belief** – multinomial over 16 move archetypes
-  (offensive-stab, coverage, status, setup, pivot, hazards, recovery,
-  priority, screens, weather, terrain, trapping, trick-room, defog, taunt,
-  speed-control)
-
-* **tera type belief** – 19-way categorical over element types
-
-We also estimate a *speed tier* and a coarse *set archetype* (sweeper,
-wall, pivot, lead, breaker, support, mixed, unknown).
-"""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -34,9 +8,6 @@ import numpy as np
 from . import features as F
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Bucket lookup tables (string-name → bucket index)
-# ─────────────────────────────────────────────────────────────────────────────
 ITEM_BUCKETS = [
     "choice-band", "choice-scarf", "choice-specs",
     "life-orb", "leftovers", "focus-sash",
@@ -60,22 +31,19 @@ SET_ARCHETYPES = [
 _SET_ARCH_INDEX = {n: i for i, n in enumerate(SET_ARCHETYPES)}
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Move → archetype classification (heuristic but works on real Move objects)
-# ─────────────────────────────────────────────────────────────────────────────
-HAZARD_EFFECTS    = {34, 38, 39, 372, 446}            # spikes, t-spikes, sr, sticky web
-RECOVERY_EFFECTS  = {33, 215, 357, 397}               # recover, roost, slack-off, moonlight
-PIVOT_EFFECTS     = {28, 314, 230, 442}               # u-turn, volt switch, teleport, flip turn
+HAZARD_EFFECTS    = {34, 38, 39, 372, 446}
+RECOVERY_EFFECTS  = {33, 215, 357, 397}
+PIVOT_EFFECTS     = {28, 314, 230, 442}
 SETUP_EFFECTS     = {18, 51, 30, 198, 224, 277, 280, 374, 348}
 DEFOG_EFFECTS     = {261, 343}
 TAUNT_EFFECTS     = {103, 285, 286}
 STATUS_EFFECTS    = {7, 8, 9, 32, 35, 36, 67, 78, 84, 87, 137, 150}
 SCREEN_EFFECTS    = {73, 74, 271, 365}
-WEATHER_EFFECTS   = {116, 117, 152, 153, 213, 224}    # rain, sun, sandstorm, hail, snowscape, drought-like
+WEATHER_EFFECTS   = {116, 117, 152, 153, 213, 224}
 TERRAIN_EFFECTS   = {439, 440, 441, 481}
 TRICK_ROOM_EFFECT = 197
 TRAP_EFFECTS      = {43, 252, 175}
-SPEED_CONTROL_EFF = {220, 222, 219}                   # tailwind, icy wind, scary face
+SPEED_CONTROL_EFF = {220, 222, 219}
 
 
 def _classify_move(move) -> List[str]:
@@ -119,7 +87,6 @@ def _classify_move(move) -> List[str]:
     if pw > 0 and not tags:
         tags.append("stab")
     if pw > 0 and dc != 1:
-        # Treat any high-BP non-STAB move as coverage; tags are non-exclusive.
         tags.append("coverage")
 
     if not tags:
@@ -127,9 +94,6 @@ def _classify_move(move) -> List[str]:
     return tags
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Belief object per opponent Pokémon
-# ─────────────────────────────────────────────────────────────────────────────
 @dataclass
 class _PokeBelief:
     item:        np.ndarray = field(default_factory=lambda: np.ones(F.HIDDEN_BLOCK.item_buckets,    dtype=np.float32))
@@ -178,9 +142,6 @@ class _PokeBelief:
         return off
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Tracker
-# ─────────────────────────────────────────────────────────────────────────────
 class HiddenInfoTracker:
     """Maintain belief over each of the six opponent Pokémon.
 
@@ -194,20 +155,17 @@ class HiddenInfoTracker:
             b.normalize()
         self._last_active_id: Optional[int] = None
 
-    # ------------------------------------------------------------------
     def reset(self) -> None:
         for b in self._beliefs:
             b.__init__()
             b.normalize()
         self._last_active_id = None
 
-    # ------------------------------------------------------------------
     def _belief_for(self, slot: int) -> _PokeBelief:
         if slot < 0 or slot >= F.TEAM_SIZE:
             slot = max(0, min(F.TEAM_SIZE - 1, slot))
         return self._beliefs[slot]
 
-    # ------------------------------------------------------------------
     def observe(self, battle, us, them) -> None:
         """Pull every observable fact from the live battle into the belief."""
         if them is None:
@@ -216,13 +174,11 @@ class HiddenInfoTracker:
         for slot, poke in enumerate(party[:F.TEAM_SIZE]):
             b = self._belief_for(slot)
             if not getattr(poke, "ever_sent_out", False):
-                # Even un-revealed pokes leak species — boost a coarse
-                # archetype prior based on base-stat totals.
+                # Even un-revealed pokes leak species — boost a coarse archetype prior based on base-stat totals.
                 self._prior_from_species(poke, b)
                 continue
             b.revealed = True
 
-            # Held item (if visible)
             try:
                 hi = getattr(poke, "held_item", None)
                 name = getattr(hi, "name", None) if hi is not None else None
@@ -231,7 +187,6 @@ class HiddenInfoTracker:
             except Exception:
                 pass
 
-            # Moves seen this battle: anything with reduced PP
             try:
                 for m in getattr(poke, "moves", None) or ():
                     if m and (m.starting_pp or 0) > (m.pp or 0):
@@ -239,7 +194,6 @@ class HiddenInfoTracker:
             except Exception:
                 pass
 
-            # Tera type (if engine exposes one)
             tera = getattr(poke, "tera_type", None)
             if tera is not None:
                 try:
@@ -247,17 +201,15 @@ class HiddenInfoTracker:
                 except Exception:
                     pass
 
-            # Speed estimate
+            # Speed estimate.
             try:
                 spd = poke.get_speed(battle) if battle else poke.get_raw_speed()
                 b.reveal_speed(float(spd or 0))
             except Exception:
                 pass
 
-            # Archetype hint from raw stats
             self._prior_from_species(poke, b)
 
-    # ------------------------------------------------------------------
     @staticmethod
     def _prior_from_species(poke, b: _PokeBelief) -> None:
         if poke is None:
@@ -271,7 +223,6 @@ class HiddenInfoTracker:
             hp   = poke.starting_hp
         except Exception:
             return
-        # weak heuristic priors so the network sees *something* useful.
         bulk = (hp or 0) + (df or 0) + (spd or 0)
         off  = max(atk or 0, spa or 0)
         if bulk > 750 and off < 100:
@@ -286,7 +237,6 @@ class HiddenInfoTracker:
             b.archetype[_SET_ARCH_INDEX["mixed"]] += 0.5
         b.normalize()
 
-    # ------------------------------------------------------------------
     def write(self, buf: np.ndarray, off: int, them) -> None:
         cur = off
         n = len(them.party) if them and them.party else 0

@@ -10,7 +10,6 @@ async def generate_main_battle_message(battle):
     renderer = BattleRenderer(data_dir)
     img_buf = renderer.render_battle_screen(battle)
 
-    # Build description text (classic game-like format)
     desc = ""
     if battle.weather._weather_type:
         desc += f"☀️ Weather: **{battle.weather._weather_type.title()}**\n"
@@ -21,7 +20,6 @@ async def generate_main_battle_message(battle):
     if desc:
         desc += "\n"
 
-    # Pokémon status lines
     t1 = battle.trainer1.current_pokemon
     t2 = battle.trainer2.current_pokemon
 
@@ -42,11 +40,10 @@ async def generate_main_battle_message(battle):
     if t2.substitute:
         desc += "  *(Behind a substitute)*\n"
 
-    # Create embed with the battle image
     e = discord.Embed(
         title=f"⚔️ {battle.trainer1.name} vs {battle.trainer2.name}",
         description=desc,
-        color=0x3B4CCA,  # Classic Pokémon blue
+        color=0x3B4CCA,
     )
     e.set_footer(text="What will you do?")
     e.set_image(url="attachment://battle_msg.png")
@@ -68,7 +65,7 @@ async def generate_text_battle_message(battle):
     """
     page = ""
     pages = []
-    base_embed = discord.Embed(color=0x3B4CCA)  # Classic Pokémon blue
+    base_embed = discord.Embed(color=0x3B4CCA)
     raw = battle.msg.strip().split("\n")
 
     for part in raw:

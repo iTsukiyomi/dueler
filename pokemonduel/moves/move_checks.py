@@ -7,7 +7,7 @@ class MoveChecks:
     def check_executable(self, attacker, defender, battle):
         """
         Returns True if the move can be executed, False otherwise
-        
+
         Checks different requirements for moves that can make them fail.
         """
         # pyrefly: ignore [missing-attribute]
@@ -260,11 +260,11 @@ class MoveChecks:
         if defender.ability(attacker=attacker, move=self) in (Ability.QUEENLY_MAJESTY, Ability.DAZZLING, Ability.ARMOR_TAIL) and self.get_priority(attacker, defender, battle) > 0:
             return False
         return True
-    
+
     def check_semi_invulnerable(self, attacker, defender, battle):
         """
         Returns True if this move hits, False otherwise.
-        
+
         Checks if a pokemon is in the semi-invulnerable turn of dive or dig.
         """
         # pyrefly: ignore [missing-attribute]
@@ -286,11 +286,11 @@ class MoveChecks:
         if defender.shadow_force:
             return False
         return True
-    
+
     def check_protect(self, attacker, defender, battle):
         """
         Returns True if this move hits, False otherwise.
-        
+
         Checks if this pokemon is protected by a move like protect or wide guard.
         Also returns a formatted message.
         """
@@ -361,11 +361,11 @@ class MoveChecks:
         if defender.quick_guard and self.get_priority(attacker, defender, battle) > 0:
             return False, msg
         return True, msg
-    
+
     def check_hit(self, attacker, defender, battle):
         """
         Returns True if this move hits, False otherwise.
-        
+
         Calculates the chance to hit & does an RNG check using that chance.
         """
         micle_used = attacker.micle_berry_ate
@@ -374,7 +374,7 @@ class MoveChecks:
         # pyrefly: ignore [missing-attribute]
         if self.accuracy is None:
             return True
-        
+
         # During hail, this bypasses accuracy checks
         # pyrefly: ignore [missing-attribute]
         if self.effect == 261 and battle.weather.get() == "hail":
@@ -391,7 +391,7 @@ class MoveChecks:
         # pyrefly: ignore [missing-attribute]
         if self.effect == 338 and defender.minimized:
             return True
-        
+
         # These DO allow OHKO moves to bypass accuracy checks
         # pyrefly: ignore [missing-attribute]
         if self.targets_opponent():
@@ -401,20 +401,19 @@ class MoveChecks:
                 return True
             if defender.ability(attacker=attacker, move=self) == Ability.NO_GUARD:
                 return True
-        
+
         # OHKO moves
         # pyrefly: ignore [missing-attribute]
         if self.effect == 39:
             accuracy = 30 + (attacker.level - defender.level)
             return random.uniform(0, 100) <= accuracy
-        
-        # This does NOT allow OHKO moves to bypass accuracy checks
+
+        # This does NOT allow OHKO moves to bypass accuracy checks.
         if attacker.telekinesis.active():
             return True
-            
-        
+
+
         accuracy = self.accuracy
-        # When used during harsh sunlight, this has an accuracy of 50%
         if self.effect in (153, 334) and battle.weather.get() in ("sun", "h-sun"):
             accuracy = 50
         # pyrefly: ignore [missing-attribute]
@@ -422,7 +421,7 @@ class MoveChecks:
             # pyrefly: ignore [missing-attribute]
             if defender.ability(attacker=attacker, move=self) == Ability.WONDER_SKIN and self.damage_class == DamageClass.STATUS:
                 accuracy = 50
-        
+
         if defender.ability(attacker=attacker, move=self) == Ability.UNAWARE:
             stage = 0
         else:
@@ -479,11 +478,11 @@ class MoveChecks:
             accuracy *= 1.2
 
         return random.uniform(0, 100) <= accuracy
-    
+
     def check_effective(self, attacker, defender, battle):
         """
         Returns True if a move has an effect on a poke.
-        
+
         Moves can have no effect based on things like type effectiveness and groundedness.
         """
         # What if I :flushed: used Hold Hands :flushed: in a double battle :flushed: with you? :flushed:
@@ -491,11 +490,11 @@ class MoveChecks:
         # pyrefly: ignore [missing-attribute]
         if self.effect in (86, 174, 368, 370, 371, 389):
             return False
-        
+
         # pyrefly: ignore [missing-attribute]
         if not self.targets_opponent():
             return True
-        
+
         if self.effect == 266 and defender.ability(attacker=attacker, move=self) == Ability.OBLIVIOUS:
             return False
         if self.effect == 39 and defender.ability(attacker=attacker, move=self) == Ability.STURDY:
@@ -521,12 +520,12 @@ class MoveChecks:
         # pyrefly: ignore [missing-attribute]
         if defender.ability(attacker=attacker, move=self) == Ability.GOOD_AS_GOLD and self.damage_class == DamageClass.STATUS:
             return False
-        
+
         # Status moves do not care about type effectiveness - except for thunder wave FOR SOME REASON...
         # pyrefly: ignore [missing-attribute]
         if self.damage_class == DamageClass.STATUS and self.id != 86:
             return True
-        
+
         # pyrefly: ignore [missing-attribute]
         current_type = self.get_type(attacker, defender, battle)
         if current_type == ElementType.TYPELESS:
@@ -536,7 +535,7 @@ class MoveChecks:
             effectiveness *= defender.effectiveness(ElementType.FLYING, battle, attacker=attacker, move=self)
         if effectiveness == 0:
             return False
-        
+
         if current_type == ElementType.GROUND and not defender.grounded(battle, attacker=attacker, move=self) and self.effect != 373 and not battle.inverse_battle:
             return False
         if self.effect != 459:
@@ -548,7 +547,7 @@ class MoveChecks:
             return False
         if effectiveness <= 1 and defender.ability(attacker=attacker, move=self) == Ability.WONDER_GUARD:
             return False
-        
+
         return True
 
 
@@ -562,7 +561,7 @@ class MoveHelpers:
             45, 46, 47, 48, 103, 173, 195, 215, 253, 304, 319, 320, 336, 405, 448, 496, 497, 547,
             555, 568, 574, 575, 586, 590, 664, 691, 728, 744, 753, 826, 871, 1005, 1006
         ]
-    
+
     def is_punching(self):
         """Whether or not this move is a punching move."""
         # pyrefly: ignore [missing-attribute]
@@ -570,12 +569,12 @@ class MoveHelpers:
             4, 5, 7, 8, 9, 146, 183, 223, 264, 309, 325, 327, 359, 409, 418, 612, 665, 721, 729,
             764, 765, 834, 857, 889
         ]
-    
+
     def is_biting(self):
         """Whether or not this move is a biting move."""
         # pyrefly: ignore [missing-attribute]
         return self.id in [44, 158, 242, 305, 422, 423, 424, 706, 733, 742]
-    
+
     def is_ball_or_bomb(self):
         """Whether or not this move is a ball or bomb move."""
         # pyrefly: ignore [missing-attribute]
@@ -583,22 +582,22 @@ class MoveHelpers:
             121, 140, 188, 190, 192, 247, 296, 301, 311, 331, 350, 360, 396, 402, 411, 412, 426,
             439, 443, 486, 491, 545, 676, 690, 748, 1017
         ]
-    
+
     def is_aura_or_pulse(self):
         """Whether or not this move is an aura or pulse move."""
         # pyrefly: ignore [missing-attribute]
         return self.id in [352, 396, 399, 406, 505, 618, 805]
-    
+
     def is_powder_or_spore(self):
         """Whether or not this move is a powder or spore move."""
         # pyrefly: ignore [missing-attribute]
         return self.id in [77, 78, 79, 147, 178, 476, 600, 737]
-    
+
     def is_dance(self):
         """Whether or not this move is a dance move."""
         # pyrefly: ignore [missing-attribute]
         return self.id in [14, 80, 297, 298, 349, 461, 483, 552, 686, 744, 846, 872]
-    
+
     def is_slicing(self):
         """Whether or not this move is a slicing move."""
         # pyrefly: ignore [missing-attribute]
@@ -606,12 +605,12 @@ class MoveHelpers:
             15, 75, 163, 210, 314, 332, 348, 400, 403, 404, 427, 440, 533, 534, 669, 749, 830, 845,
             860, 869, 891, 895, 1013, 1014
         ]
-    
+
     def is_wind(self):
         """Whether or not this move is a wind move."""
         # pyrefly: ignore [missing-attribute]
         return self.id in [16, 18, 59, 196, 201, 239, 257, 314, 366, 542, 572, 584, 829, 842, 844, 849]
-    
+
     def is_affected_by_magic_coat(self):
         """Whether or not this move can be reflected by magic coat and magic bounce."""
         # pyrefly: ignore [missing-attribute]
@@ -622,7 +621,7 @@ class MoveHelpers:
             432, 445, 446, 464, 477, 487, 493, 494, 505, 564, 567, 568, 571, 575, 576, 589, 590, 598,
             599, 600, 608, 666, 668, 671, 672, 685, 715, 736, 737, 810
         ]
-    
+
     def is_affected_by_heal_block(self):
         """Whether or not this move cannot be selected during heal block."""
         # pyrefly: ignore [missing-attribute]
@@ -630,7 +629,7 @@ class MoveHelpers:
             71, 72, 105, 135, 138, 141, 156, 202, 208, 234, 235, 236, 256, 273, 303, 355, 361, 409,
             456, 461, 505, 532, 570, 577, 613, 659, 666, 668, 685
         ]
-    
+
     def is_affected_by_substitute(self):
         """Whether or not this move is able to bypass a substitute."""
         # pyrefly: ignore [missing-attribute]
@@ -640,7 +639,7 @@ class MoveHelpers:
             391, 405, 448, 495, 496, 497, 513, 516, 547, 555, 568, 574, 575, 586, 587, 589, 590, 593,
             597, 600, 602, 607, 621, 664, 674, 683, 689, 691, 712, 728, 753, 826, 871, 1005, 1006
         ]
-    
+
     def targets_opponent(self):
         """Whether or not this move targets the opponent."""
         #Moves which don't follow normal targeting protocals, ignore them unless they are damaging.
@@ -660,7 +659,7 @@ class MoveHelpers:
             MoveTarget.USER_AND_ALLIES,
             MoveTarget.ALL_ALLIES,
         )
-    
+
     def targets_multiple(self):
         """Whether or not this move targets multiple pokemon."""
         # pyrefly: ignore [missing-attribute]
@@ -671,7 +670,7 @@ class MoveHelpers:
             MoveTarget.ALL_POKEMON,
             MoveTarget.ALL_ALLIES,
         )
-    
+
     def makes_contact(self, attacker):
         """Whether or not this move makes contact."""
         # pyrefly: ignore [missing-attribute]
@@ -693,12 +692,10 @@ class MoveHelpers:
             859, 860, 861, 862, 866, 869, 872, 873, 878, 879, 884, 885, 887, 889, 891, 892, 894,
             1003, 1010, 1012, 1013
         ] and not attacker.ability() == Ability.LONG_REACH
-    
+
     def selectable_by_mirror_move(self):
         """Whether or not this move can be selected by mirror move."""
         return self.targets_opponent()
-        # Previously, this was a hardcoded list of values.
-        # I don't think there is any factor besides whether or not the move can target opponents (for single battles).
         """
         return self.id not in [
             10, 14, 54, 68, 74, 96, 97, 100, 102, 104, 105, 106, 107, 110, 111, 112, 113, 114, 115,
@@ -712,7 +709,7 @@ class MoveHelpers:
             603, 604, 606, 607, 1000
         ]
         """
-    
+
     def selectable_by_sleep_talk(self):
         """Whether or not this move can be selected by sleep talk."""
         # pyrefly: ignore [missing-attribute]
@@ -720,7 +717,7 @@ class MoveHelpers:
             13, 19, 76, 91, 102, 117, 118, 119, 130, 143, 166, 253, 264, 274, 291, 340, 382, 383,
             467, 507, 553, 554, 562, 566, 601, 669, 690, 704, 731
         ]
-    
+
     def selectable_by_assist(self):
         """Whether or not this move can be selected by assist."""
         # pyrefly: ignore [missing-attribute]
@@ -729,12 +726,12 @@ class MoveHelpers:
             264, 266, 267, 270, 271, 289, 291, 340, 343, 364, 382, 383, 415, 448, 467, 476, 507,
             509, 516, 525, 561, 562, 566, 588, 596, 606, 607, 661, 671, 690, 704
         ]
-    
+
     def selectable_by_mimic(self):
         """Whether or not this move can be selected by mimic."""
         # pyrefly: ignore [missing-attribute]
         return self.id not in [102, 118, 165, 166, 448, 896]
-    
+
     def selectable_by_instruct(self):
         """Whether or not this move can be selected by instruct."""
         # pyrefly: ignore [missing-attribute]
@@ -743,7 +740,7 @@ class MoveHelpers:
             289, 291, 307, 308, 338, 340, 382, 383, 408, 416, 439, 459, 467, 507, 553, 554, 566,
             588, 601, 669, 689, 690, 704, 711, 761, 762, 896
         ]
-    
+
     def selectable_by_snatch(self):
         """Whether or not this move can be selected by snatch."""
         # pyrefly: ignore [missing-attribute]
@@ -754,12 +751,12 @@ class MoveHelpers:
             392, 393, 397, 417, 455, 456, 461, 468, 469, 475, 483, 489, 501, 504, 508, 526, 538,
             561, 602, 659, 673, 674, 694, 0xCFCF
         ]
-    
+
     @staticmethod
     def get_conversion_2(attacker, defender, battle):
         """
         Gets a random new type for attacker that is resistant to defender's last move type.
-        
+
         Returns a random possible type id, or None if there is no valid type.
         """
         if defender.last_move is None:
@@ -780,7 +777,7 @@ class MoveHelpers:
         if not newtypes:
             return None
         return random.choice(newtypes)
-    
+
     def copy(self):
         """Generate a copy of this move."""
         from . import Move
@@ -814,7 +811,7 @@ class MoveHelpers:
             # pyrefly: ignore [missing-attribute]
             max_hits=self.max_hits,
         )
-    
+
     @classmethod
     def struggle(cls):
         """Generate an instance of the move struggle."""
@@ -848,7 +845,7 @@ class MoveHelpers:
             # pyrefly: ignore [unexpected-keyword]
             max_hits=None,
         )
-    
+
     @classmethod
     def confusion(cls):
         """Generate an instance of the move confusion."""
@@ -882,7 +879,7 @@ class MoveHelpers:
             # pyrefly: ignore [unexpected-keyword]
             max_hits=None,
         )
-    
+
     @classmethod
     def present(cls, power):
         """Generate an instance of the move present."""
@@ -916,7 +913,7 @@ class MoveHelpers:
             # pyrefly: ignore [unexpected-keyword]
             max_hits=None,
         )
-    
+
     def __repr__(self):
         # pyrefly: ignore [missing-attribute]
         return f"Move(name={self.name!r}, power={self.power!r}, effect_id={self.effect!r})"

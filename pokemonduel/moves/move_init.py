@@ -22,11 +22,11 @@ class MoveInit:
         self.min_hits = kwargs["min_hits"]
         self.max_hits = kwargs["max_hits"]
         self.used = False
-    
+
     def setup(self, attacker, defender, battle):
         """
         Sets up anything this move needs to do prior to normal move execution.
-        
+
         Returns a formatted message.
         """
         msg = ""
@@ -42,7 +42,7 @@ class MoveInit:
     def get_priority(self, attacker, defender, battle):
         """
         Calculates the priority value for this move.
-        
+
         Returns an int priority from -7 to 5.
         """
         priority = self.priority
@@ -58,11 +58,11 @@ class MoveInit:
         if attacker.ability() == Ability.TRIAGE and self.is_affected_by_heal_block():
             priority += 3
         return priority
-    
+
     def get_effect_chance(self, attacker, defender, battle):
         """
         Gets the chance for secondary effects to occur.
-        
+
         Returns an int from 0-100.
         """
         if self.effect_chance is None:

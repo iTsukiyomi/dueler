@@ -1,16 +1,3 @@
-"""
-ai/residual.py — Residual MLP block.
-
-We deliberately use MLP-style residual blocks rather than convolutions; the
-feature vector is flat and not spatial, so 1D residuals with batch-norm
-produce a powerful but compact backbone.
-
-Every block computes:
-
-    h -> h + ReLU(BN(Linear(ReLU(BN(Linear(h))))))
-
-Optional dropout slot kept for experimentation; defaults to 0.
-"""
 from __future__ import annotations
 
 import torch
@@ -28,7 +15,6 @@ class ResidualBlock(nn.Module):
         self.bn2 = nn.BatchNorm1d(dim) if use_bn else nn.Identity()
         self.act = nn.ReLU(inplace=True)
         self.drop = nn.Dropout(dropout) if dropout > 0 else nn.Identity()
-        # Kaiming He init for ReLU nets
         nn.init.kaiming_normal_(self.fc1.weight, nonlinearity="relu")
         nn.init.kaiming_normal_(self.fc2.weight, nonlinearity="relu")
         if self.fc1.bias is not None:

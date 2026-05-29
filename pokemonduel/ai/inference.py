@@ -1,40 +1,3 @@
-"""
-ai/inference.py — Thin inference wrapper around the network.
-
-Thread-safety / eval-mode handling
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-The trainer and the inference server share the *same* network instance,
-so the workers always pick up the latest weights. The trainer toggles
-``net.train()`` / ``net.eval()`` every optimiser step. Without
-coordination the inference thread can wake up inside a ``train()``
-window with a batch of size 1 and crash BatchNorm with::
-
-    ValueError: Expected more than 1 value per channel when training,
-                got input size torch.Size([1, 768])
-
-To make this impossible, every forward on the inference path:
-
-1. Acquires a module-wide ``RLock``.
-2. Forces the network into ``eval()`` mode.
-3. Wraps the forward in ``torch.inference_mode()`` AND sets the
-   module's training flag explicitly to False on every contained
-   sub-module via ``net.eval()`` — so even if another thread races a
-   ``net.train()`` call, our forward already saw ``training=False`` at
-   forward time (BatchNorm reads ``self.training`` once per call).
-
-The lock window is short (one forward) so contention with the trainer
-is negligible.
-
-Picklability
-~~~~~~~~~~~~
-``InferenceEngine`` and ``RemoteInferenceClient`` expose ``__getstate__`` /
-``__setstate__`` that drop their threading primitives and queue handles.
-
-Server-loop robustness
-~~~~~~~~~~~~~~~~~~~~~~
-``BatchedInferenceServer.serve_forever`` logs and *continues* on any
-exception during a batch instead of dying.
-"""
 from __future__ import annotations
 
 import threading
@@ -70,7 +33,6 @@ class InferenceEngine:
         self._cache_size = max(0, int(cache_size))
         self.net.eval()
 
-    # ------------------------------------------------------------------
     def predict_batch(self, states: np.ndarray, masks: Optional[np.ndarray] = None):
         if states.ndim == 1:
             states = states[np.newaxis]
@@ -118,7 +80,6 @@ class InferenceEngine:
             return policy, value
         return policy, value
 
-    # ------------------------------------------------------------------
     def _forward_safely(self,
                         states: np.ndarray,
                         masks: Optional[np.ndarray]
@@ -138,9 +99,7 @@ class InferenceEngine:
             was_training = self.net.training
             self.net.eval()
             try:
-                # Detect singleton-batch case and pad to size 2 with a
-                # zero row. BatchNorm in train mode hates batch=1; padding
-                # to >=2 makes the call safe under any race condition.
+                # Detect singleton-batch case and pad to size 2 with a zero row. BatchNorm in train mode hates batch=1; padding to >=2 makes the call safe under any race condition.
                 pad_needed = (states.shape[0] == 1)
                 if pad_needed:
                     states_in = np.concatenate([states, np.zeros_like(states)], axis=0)
@@ -165,7 +124,6 @@ class InferenceEngine:
                     self.net.train()
             return policy, value
 
-    # ------------------------------------------------------------------
     def load_state(self, state_dict: dict) -> None:
         with self._lock:
             self.net.load_state_dict(state_dict)
@@ -173,9 +131,6 @@ class InferenceEngine:
             self._cache.clear()
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Batched cross-process inference server
-# ─────────────────────────────────────────────────────────────────────────────
 class _Request:
     __slots__ = ("state", "mask", "worker_id")
     def __init__(self, state, mask, worker_id: int):
@@ -198,7 +153,7 @@ class BatchedInferenceServer:
     def __init__(self,
                  net: PokemonAlphaZeroNet,
                  request_q,
-                 response_qs: dict,          # {worker_id: Queue}
+                 response_qs: dict,
                  *,
                  batch_size: int = 64,
                  max_wait_ms: float = 1.0,
@@ -213,7 +168,6 @@ class BatchedInferenceServer:
     def stop(self) -> None:
         self._stop.set()
 
-    # ------------------------------------------------------------------
     def serve_forever(self) -> None:
         pending: list[_Request] = []
         while not self._stop.is_set():
@@ -249,9 +203,6 @@ class BatchedInferenceServer:
                 # pyrefly: ignore [unknown-name]
                 log.exception("inference batch failed (size=%d); sending neutral replies",
                               len(pending))
-                # Send neutral replies so workers don't block forever.
-                # The shapes/values are valid: uniform policy over legal
-                # actions, value 0. Workers can keep going.
                 for r in pending:
                     try:
                         if r.mask is not None:
@@ -279,7 +230,6 @@ class RemoteInferenceClient:
         self.resp_q   = response_q
         self.worker_id = worker_id
 
-    # ------------------------------------------------------------------
     def __getstate__(self):
         return {"worker_id": self.worker_id}
 

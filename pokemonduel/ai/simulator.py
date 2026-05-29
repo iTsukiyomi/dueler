@@ -1,25 +1,3 @@
-"""
-ai/simulator.py — Synchronous, headless replication of ``Battle.run()``.
-
-The original ``pokemonduel.battle.battle.Battle.run`` is an async coroutine
-that intermixes game logic with Discord I/O (view rendering, waiting on
-``trainer.event``, channel sending). For self-play and MCTS we need to
-*step* a battle one full turn at a time without any of that — and we need
-to be able to deep-clone the state so the search can explore counterfactual
-branches without mutating the real game.
-
-``HeadlessBattle`` is constructed from two already-initialised
-``Trainer`` objects (with their parties fully created) plus an optional
-``ctx``-like stub. It mirrors the behaviour of ``Battle.run`` exactly,
-following the *same code paths* — we call into the same engine
-(``send_out``, ``setup``, ``use``, ``next_turn`` etc.) — but skip the
-Discord rendering.
-
-A full real-time async ``Battle`` can also be **stepped** turn-by-turn by
-this module: simply call :func:`run_turn` against a real ``Battle`` after
-both trainers have set their ``selected_action`` — see ``ai/npc_bridge``
-for the live bot integration.
-"""
 from __future__ import annotations
 
 import copy
@@ -30,9 +8,6 @@ from typing import Optional
 from ..misc import ExpiringEffect, Weather, Terrain
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Cached lookup data (immutable across runs)
-# ─────────────────────────────────────────────────────────────────────────────
 _TYPE_EFF_CACHE: Optional[dict] = None
 _METRONOME_CACHE: Optional[list] = None
 
@@ -79,11 +54,8 @@ def _load_metronome_moves() -> list:
     return _METRONOME_CACHE
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Minimal stand-ins so we can construct a Battle outside Discord
-# ─────────────────────────────────────────────────────────────────────────────
 class _NullChannel:
-    async def send(self, *a, **kw):  # noqa: D401
+    async def send(self, *a, **kw):
         return None
 
 
@@ -96,9 +68,6 @@ class _NullCtx:
         self.message = None
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# HeadlessBattle
-# ─────────────────────────────────────────────────────────────────────────────
 class HeadlessBattle:
     """A non-async, no-Discord ``Battle`` clone.
 
@@ -141,7 +110,6 @@ class HeadlessBattle:
         self.inverse_battle = inverse_battle
         self.msg = ""
 
-    # ------------------------------------------------------------------
     def __deepcopy__(self, memo):
         """Skip cloning the read-only globals to keep deepcopy snappy."""
         cls = type(self)
@@ -158,19 +126,16 @@ class HeadlessBattle:
         new.gravity     = copy.deepcopy(self.gravity,     memo)
         new.weather     = copy.deepcopy(self.weather,     memo)
         new.terrain     = copy.deepcopy(self.terrain,     memo)
-        # The battle back-reference inside cloned weather/terrain must point
-        # to the *new* battle, not the old one.
         new.weather.battle = new
         new.terrain.battle = new
         new.plasma_fists = self.plasma_fists
         new.turn = self.turn
         new.last_move_effect = self.last_move_effect
-        new.metronome_moves_raw = self.metronome_moves_raw            # shared
-        new.type_effectiveness  = self.type_effectiveness             # shared
+        new.metronome_moves_raw = self.metronome_moves_raw
+        new.type_effectiveness  = self.type_effectiveness
         new.inverse_battle = self.inverse_battle
         new.msg = ""
 
-        # Re-link held_item.battle and Pokémon.owner references in the clone.
         for trainer in (new.trainer1, new.trainer2):
             for poke in trainer.party:
                 poke.owner = trainer
@@ -180,9 +145,6 @@ class HeadlessBattle:
         return new
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Single-turn driver — mirrors Battle.run() turn body
-# ─────────────────────────────────────────────────────────────────────────────
 def _switch_in(trainer, opponent, battle) -> str:
     msg = ""
     if trainer.current_pokemon is not None:
@@ -196,7 +158,6 @@ def _switch_in(trainer, opponent, battle) -> str:
     # pyrefly: ignore [missing-attribute]
     msg += trainer.current_pokemon.send_out(opponent.current_pokemon, battle)
     return msg
-
 
 
 def _safe_mid_turn_switch(trainer, opponent, battle) -> str:
@@ -219,7 +180,7 @@ def _safe_mid_turn_switch(trainer, opponent, battle) -> str:
         if alt is None:
             alt = next((i for i, p in enumerate(trainer.party) if p.hp > 0), None)
         if alt is None:
-            return msg            # nothing to do – trainer has no one alive
+            return msg
         slot = alt
     msg += trainer.current_pokemon.remove(battle)
     trainer.switch_poke(slot, mid_turn=True)
@@ -332,7 +293,6 @@ def run_turn(battle) -> tuple[str, Optional[object]]:
     populated ``selected_action``. Returns ``(message, winner_or_None)``."""
     msg = ""
 
-    # ── opening swap if either side has no active poke ──
     swapped = False
     if battle.trainer1.current_pokemon is None:
         msg += _switch_in(battle.trainer1, battle.trainer2, battle)
@@ -344,7 +304,6 @@ def run_turn(battle) -> tuple[str, Optional[object]]:
         battle.msg += msg
         return msg, _maybe_winner(battle)
 
-    # ── setup for both ──
     t1, t2 = _who_first(battle)
     if t1.current_pokemon is not None and t2.current_pokemon is not None:
         if not isinstance(t1.selected_action, int):
@@ -359,7 +318,6 @@ def run_turn(battle) -> tuple[str, Optional[object]]:
         battle.msg += msg
         return msg, w
 
-    # ── execute t1 action ──
     ran_megas = False
     if not isinstance(t1.selected_action, int):
         msg += _handle_megas(battle, t1, t2)
@@ -380,7 +338,6 @@ def run_turn(battle) -> tuple[str, Optional[object]]:
             isinstance(t2.selected_action, int) or not t2.selected_action.targets_opponent()):
         msg += _switch_in(t1, t2, battle)
 
-    # ── execute t2 action ──
     if not ran_megas and not isinstance(t2.selected_action, int):
         msg += _handle_megas(battle, t1, t2)
         ran_megas = True
@@ -400,7 +357,6 @@ def run_turn(battle) -> tuple[str, Optional[object]]:
     if not ran_megas:
         msg += _handle_megas(battle, t1, t2)
 
-    # ── progress turn / end-of-turn effects ──
     battle.turn += 1
     battle.plasma_fists = False
     if battle.weather.next_turn():
@@ -438,7 +394,7 @@ def _maybe_winner(battle):
     t1_alive = battle.trainer1.has_alive_pokemon()
     t2_alive = battle.trainer2.has_alive_pokemon()
     if not t1_alive and not t2_alive:
-        return battle.trainer1               # arbitrary tie-break
+        return battle.trainer1
     if not t1_alive:
         return battle.trainer2
     if not t2_alive:

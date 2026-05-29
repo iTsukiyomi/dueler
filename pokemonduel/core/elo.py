@@ -1,12 +1,3 @@
-"""
-pokemonduel.core.elo
-====================
-Standalone Elo rating calculations.
-
-This module is imported by :mod:`pokemonduel.services.player_service`
-but is also usable independently for testing and simulations.
-"""
-
 from __future__ import annotations
 
 import math

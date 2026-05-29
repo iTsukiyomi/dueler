@@ -15,7 +15,6 @@ class _PokemonDuelCogStub:
     ``EnhancedConfigManager.get_conf()`` resolves the right data dir."""
     pass
 
-# Rename the class so __class__.__name__ == "PokemonDuel"
 _PokemonDuelCogStub.__name__ = "PokemonDuel"
 _PokemonDuelCogStub.__qualname__ = "PokemonDuel"
 

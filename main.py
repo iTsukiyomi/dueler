@@ -20,7 +20,6 @@ logging.basicConfig(
     ]
 )
 
-# ignite gay samoso took some balls of a gay
 
 intents = discord.Intents.default()
 intents.members = True
@@ -35,7 +34,6 @@ class Flame(commands.Bot):
             case_insensitive=True,
             owner_ids={853283237630967839, 839182501091344444}
         )
-        # a
 
     async def setup_hook(self):
         print('starting...')
@@ -62,7 +60,7 @@ class Flame(commands.Bot):
             logging.error(f"unexpected error in {ctx.command}: {error}")
             await ctx.send(f"bruhh {error}")
 
-# ignore this stuff its for render to host the bot
+# Ignore this stuff its for render to host the bot.
 
 class DummyHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -90,7 +88,7 @@ async def keep_alive():
             except Exception as e:
                 logging.error(f"Keep-alive failed: {e}")
 
-            await asyncio.sleep(300)  
+            await asyncio.sleep(300)
 
 async def main():
     threading.Thread(target=start_dummy_server, daemon=True).start()

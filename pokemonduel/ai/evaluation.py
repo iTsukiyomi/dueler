@@ -1,16 +1,3 @@
-"""
-ai/evaluation.py — Arena matches + ELO tracking.
-
-Used in two places:
-
-* During training, after every ``OPT_EVAL_EVERY`` steps we play
-  ``EVAL_MATCHES`` headless games between the latest network and the best
-  network so far. If the candidate's win rate ≥ ``EVAL_PROMOTE_WR`` we
-  promote it.
-
-* On demand from the Discord bot (``;duel npcaistats``) to print the
-  current ELO trajectory.
-"""
 from __future__ import annotations
 
 import json
@@ -33,13 +20,10 @@ from .team_loader import random_two_teams
 from ..trainers.npc_trainer import NPCTrainer
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# ELO bookkeeping
-# ─────────────────────────────────────────────────────────────────────────────
 @dataclass
 class EloState:
     ratings: dict = field(default_factory=dict)
-    history: list = field(default_factory=list)         # list of (step, name, rating)
+    history: list = field(default_factory=list)
 
     def get(self, name: str) -> float:
         return float(self.ratings.get(name, C.ELO_INIT))
@@ -77,9 +61,6 @@ class EloState:
             json.dump({"ratings": self.ratings, "history": self.history}, f, indent=2)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Single deterministic match — both sides use *real* inference engines
-# ─────────────────────────────────────────────────────────────────────────────
 def play_match(inference_a, inference_b,
                *,
                simulations: int = C.MCTS_EVAL_SIMS,
@@ -149,9 +130,6 @@ def _forced_swap(trainer, opponent, battle, mcts, side: int) -> None:
         trainer.selected_action = None
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Tournament between candidate and best
-# ─────────────────────────────────────────────────────────────────────────────
 def evaluate(candidate_inference, best_inference,
              *,
              n_matches: int = C.EVAL_MATCHES,
@@ -174,7 +152,6 @@ def evaluate(candidate_inference, best_inference,
 
     for i in range(n_matches):
         s = rng.randint(0, 2**31 - 1)
-        # alternate sides to remove first-move advantage
         if i % 2 == 0:
             r = _guarded_match(candidate_inference, best_inference,
                            simulations=simulations, seed=s)

@@ -1,20 +1,3 @@
-"""
-pokemonduel.core.migration
-============================
-One-time data migration from JSON files to MongoDB.
-
-Reads all ``data/PokemonDuel/member_*.json`` files, creates player
-profiles, and saves existing parties as "legacy" teams in MongoDB.
-
-This script is idempotent — running it multiple times will not
-create duplicate records thanks to MongoDB's upsert semantics
-and the compound unique index on teams.
-
-Usage::
-
-    python -m pokemonduel.core.migration
-"""
-
 from __future__ import annotations
 
 import asyncio
@@ -27,7 +10,6 @@ from dotenv import load_dotenv
 
 log = logging.getLogger("dueler.migration")
 
-# Path to the legacy user data directory.
 _LEGACY_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "PokemonDuel"
 
 
@@ -46,14 +28,13 @@ async def migrate() -> dict:
     from ..models.player import PlayerSchema
     from ..models.team import TeamSchema
 
-    # Ensure environment is loaded
     load_dotenv()
 
     db = await connect()
     player_repo = PlayerRepository()
     team_repo = TeamRepository()
 
-    # Ensure indexes exist
+    # Ensure indexes exist.
     await player_repo.ensure_indexes()
     await team_repo.ensure_indexes()
 
@@ -76,8 +57,7 @@ async def migrate() -> dict:
     log.info("Found %d legacy member files to migrate.", len(json_files))
 
     for filepath in json_files:
-        # Extract user ID from filename: member_123456789.json → 123456789
-        stem = filepath.stem  # "member_123456789"
+        stem = filepath.stem
         user_id = stem.replace("member_", "")
 
         try:
@@ -91,7 +71,6 @@ async def migrate() -> dict:
 
         party = data.get("party", [])
 
-        # Create/update player profile
         try:
             await player_repo.get_or_create(user_id, f"Player_{user_id[:8]}")
             summary["players_created"] += 1
@@ -100,13 +79,11 @@ async def migrate() -> dict:
             log.error(msg)
             summary["errors"].append(msg)
 
-        # Save party as "legacy" team
         if party:
             try:
                 await team_repo.create(user_id, "legacy", party)
                 summary["teams_created"] += 1
             except Exception as exc:
-                # DuplicateKeyError is expected on re-runs
                 if "DuplicateKeyError" in type(exc).__name__ or "duplicate key" in str(exc).lower():
                     log.debug("Team 'legacy' already exists for %s (idempotent skip).", user_id)
                 else:

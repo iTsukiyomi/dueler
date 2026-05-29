@@ -30,7 +30,6 @@ class NonVolatileEffect():
             removed = self.current
             self.reset()
             return f"{self.pokemon.name}'s shed skin cured its {removed}!\n"
-        # The poke still has a status effect, apply damage
         if self.current == "burn":
             damage = max(1, self.pokemon.starting_hp // 16)
             if self.pokemon.ability() == Ability.HEATPROOF:

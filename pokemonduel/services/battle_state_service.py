@@ -1,12 +1,3 @@
-"""
-pokemonduel.services.battle_state_service
-==========================================
-Redis-backed battle state persistence for crash recovery.
-
-Serialises the essential battle state into a Redis hash with a TTL,
-allowing the bot to resume interrupted battles after a restart.
-"""
-
 from __future__ import annotations
 
 import json
@@ -19,7 +10,7 @@ from ..core import cache
 log = logging.getLogger("dueler.svc.battle_state")
 
 _KEY_PREFIX = "battle:"
-_STATE_TTL = 3600  # 1 hour — battles shouldn't last longer
+_STATE_TTL = 3600
 
 
 class BattleStateService:
@@ -61,7 +52,6 @@ class BattleStateService:
         if data is None:
             return None
 
-        # Attempt to JSON-decode values that look like JSON
         decoded = {}
         for k, v in data.items():
             try:

@@ -35,7 +35,6 @@ class MemberConfig:
     async def all(self) -> Dict[str, Any]:
         """Get all member data - equivalent to config.member().all()"""
         data = await self._load_data()
-        # Apply defaults for missing keys
         result = self.config_manager.member_defaults.copy()
         result.update(data)
         return result
@@ -84,7 +83,6 @@ class GuildConfig:
     async def all(self) -> Dict[str, Any]:
         """Get all guild data - equivalent to config.guild().all()"""
         data = await self._load_data()
-        # Apply defaults for missing keys
         result = self.config_manager.guild_defaults.copy()
         result.update(data)
         return result
@@ -112,11 +110,9 @@ class ConfigManager:
         self.cog_name = cog_name
         self.identifier = identifier
 
-        # Create data directory
         self.data_dir = Path("data") / cog_name
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
-        # Store default values
         self.member_defaults = {}
         self.guild_defaults = {}
 
@@ -139,7 +135,6 @@ class ConfigManager:
         Equivalent to config.member(member)
         Returns a MemberConfig instance for the given member
         """
-        # Handle both Member objects and IDs
         member_id = getattr(member, 'id', member)
         # pyrefly: ignore [bad-argument-type]
         return EnhancedMemberConfig(self, member_id)
@@ -149,7 +144,6 @@ class ConfigManager:
         Equivalent to config.guild(guild)
         Returns a GuildConfig instance for the given guild
         """
-        # Handle both Guild objects and IDs
         guild_id = getattr(guild, 'id', guild)
         # pyrefly: ignore [bad-argument-type]
         return EnhancedGuildConfig(self, guild_id)
@@ -163,7 +157,6 @@ class ConfigManager:
         return cls(cog.__class__.__name__, identifier)
 
 
-# Helper classes for attribute syntax
 class PartyAttribute:
     """Helper class to handle party().set() syntax"""
 
@@ -176,7 +169,6 @@ class PartyAttribute:
 
     async def __call__(self):
         """Get party data when called - equivalent to config.member().party()"""
-        # Call the actual party method from MemberConfig, not this class
         return await self.member_config._get_party_data()
 
 
@@ -192,7 +184,6 @@ class UseThreadsAttribute:
 
     async def __call__(self):
         """Get useThreads data when called - equivalent to config.guild().useThreads()"""
-        # Call the actual useThreads method from GuildConfig, not this class
         return await self.guild_config._get_useThreads_data()
 
 
@@ -226,7 +217,6 @@ class EnhancedGuildConfig(GuildConfig):
         return UseThreadsAttribute(self)
 
 
-# Use EnhancedConfigManager as the main export
 class EnhancedConfigManager(ConfigManager):
     """Main config manager with enhanced syntax support"""
     pass

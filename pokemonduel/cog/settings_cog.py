@@ -1,11 +1,13 @@
 import discord
 from discord.ext import commands
+import io
 import logging
 from pathlib import Path
 
 from ..services.player_service import PlayerService
 from ..canvas import BattleRenderer
 from ..canvas.themes.palette import get_palette
+from ..core import cache
 
 log = logging.getLogger("dueler.cog.settings")
 
@@ -20,9 +22,15 @@ class SettingsView(discord.ui.View):
         theme = profile.get("theme", "firered")
         moveset_img = profile.get("moveset_img", True)
 
-        data_dir = Path(__file__).parent.parent / "data"
-        renderer = BattleRenderer(data_dir, palette=get_palette(theme), theme=theme)
-        img_buf = renderer.render_settings_menu(theme, moveset_img=moveset_img)
+        cached_img = await cache.get_settings_image(str(interaction.user.id))
+        if cached_img:
+            img_buf = io.BytesIO(cached_img)
+        else:
+            data_dir = Path(__file__).parent.parent / "data"
+            renderer = BattleRenderer(data_dir, palette=get_palette(theme), theme=theme)
+            img_buf = renderer.render_settings_menu(theme, moveset_img=moveset_img)
+            await cache.set_settings_image(str(interaction.user.id), img_buf.getvalue())
+
         file = discord.File(fp=img_buf, filename="settings.png")
 
         embed = discord.Embed(
@@ -38,6 +46,9 @@ class SettingsView(discord.ui.View):
         from ..models.player import COLLECTION
         from datetime import datetime, timezone
 
+        await cache.invalidate_settings_image(str(interaction.user.id))
+        await cache.invalidate_player_profile(str(interaction.user.id))
+
         db = get_db()
         await db[COLLECTION].find_one_and_update(
             {"_id": str(interaction.user.id)},
@@ -48,7 +59,7 @@ class SettingsView(discord.ui.View):
         )
         doc = await db[COLLECTION].find_one({"_id": str(interaction.user.id)})
         if doc:
-            await self.player_svc._repo._cache_profile(str(interaction.user.id), doc)
+            await cache.set_player_profile(str(interaction.user.id), doc)
 
         await interaction.response.send_message(
             f"Changed {label} to **{str(value).upper() if isinstance(value, str) else ('IMAGE' if value else 'TEXT')}**.",
@@ -133,10 +144,15 @@ class SettingsCog(commands.Cog, name="Settings"):
         theme = profile.get("theme", "firered")
         moveset_img = profile.get("moveset_img", True)
 
-        data_dir = Path(__file__).parent.parent / "data"
-        renderer = BattleRenderer(data_dir, palette=get_palette(theme), theme=theme)
+        cached_img = await cache.get_settings_image(str(ctx.author.id))
+        if cached_img:
+            img_buf = io.BytesIO(cached_img)
+        else:
+            data_dir = Path(__file__).parent.parent / "data"
+            renderer = BattleRenderer(data_dir, palette=get_palette(theme), theme=theme)
+            img_buf = renderer.render_settings_menu(theme, moveset_img=moveset_img)
+            await cache.set_settings_image(str(ctx.author.id), img_buf.getvalue())
 
-        img_buf = renderer.render_settings_menu(theme, moveset_img=moveset_img)
         file = discord.File(fp=img_buf, filename="settings.png")
 
         embed = discord.Embed(

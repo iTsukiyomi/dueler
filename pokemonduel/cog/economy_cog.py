@@ -1,20 +1,6 @@
-"""
-pokemonduel.cog.economy_cog
-=============================
-Economy and ranking commands — balance, deposit, withdraw,
-leaderboard, rank, and profile.
-
-Commands:
-    ;balance / ;bal
-    ;deposit <amount>
-    ;withdraw <amount>
-    ;leaderboard / ;lb
-    ;rank [user]
-    ;profile [user]
-"""
-
 from __future__ import annotations
 
+import io
 import logging
 
 import discord
@@ -22,6 +8,7 @@ from discord.ext import commands
 
 from ..services.player_service import PlayerService
 from ..services.team_service import TeamService
+from ..core import cache
 
 log = logging.getLogger("dueler.cog.economy")
 
@@ -34,7 +21,6 @@ class EconomyCog(commands.Cog, name="Economy"):
         self._svc = PlayerService()
         self._team_svc = TeamService()
 
-    # -- ;balance ----------------------------------------------------------
 
     @commands.command(name="balance", aliases=["bal"])
     async def balance(self, ctx: commands.Context):
@@ -48,12 +34,11 @@ class EconomyCog(commands.Cog, name="Economy"):
 
         embed = discord.Embed(
             title=f"{ctx.author.name}'s Balance",
-            color=0xFFCB05,  # Pokémon yellow
+            color=0xFFCB05,
         )
         embed.add_field(name="💰 Wallet", value=f"¥{bal['wallet']:,}", inline=True)
         await ctx.send(embed=embed)
 
-    # -- ;leaderboard ------------------------------------------------------
 
     @commands.command(name="leaderboard", aliases=["lb", "top"])
     async def leaderboard(self, ctx: commands.Context, page: int = 1):
@@ -75,7 +60,7 @@ class EconomyCog(commands.Cog, name="Economy"):
         for i, entry in enumerate(entries):
             rank = offset + i + 1
             user_id = entry.get("_id")
-            
+
             resolved_name = entry.get("username", "Unknown")
             if user_id:
                 try:
@@ -106,12 +91,11 @@ class EconomyCog(commands.Cog, name="Economy"):
         embed = discord.Embed(
             title="🏆 Elo Leaderboard",
             description="\n".join(lines),
-            color=0xFFCB05,  # Pokémon yellow
+            color=0xFFCB05,
         )
         embed.set_footer(text=f"Page {page}")
         await ctx.send(embed=embed)
 
-    # -- ;rank -------------------------------------------------------------
 
     @commands.command(name="rank")
     # pyrefly: ignore [bad-function-definition]
@@ -139,7 +123,7 @@ class EconomyCog(commands.Cog, name="Economy"):
 
         embed = discord.Embed(
             title=f"{target.name}'s Rank",
-            color=0x3B4CCA,  # Pokémon blue
+            color=0x3B4CCA,
         )
         embed.add_field(name="Rank", value=f"#{rank}" if rank else "Unranked", inline=True)
         embed.add_field(name="Elo", value=str(elo), inline=True)
@@ -155,64 +139,64 @@ class EconomyCog(commands.Cog, name="Economy"):
         Usage: ;profile [user]
         """
         target = member or ctx.author
-        await self._svc.ensure_profile(str(target.id), target.name)
+        user_id = str(target.id)
 
-        profile = await self._svc.get_profile(str(target.id))
-        rank = await self._svc.get_rank(str(target.id))
+        cached_img = await cache.get_profile_image(user_id)
+        if cached_img:
+            img_buf = io.BytesIO(cached_img)
+        else:
+            await self._svc.ensure_profile(user_id, target.name)
+            profile = await self._svc.get_profile(user_id)
+            rank = await self._svc.get_rank(user_id)
 
-        if profile is None:
-            await ctx.send("Profile not found.")
-            return
+            if profile is None:
+                await ctx.send("Profile not found.")
+                return
 
-        elo = profile.get("elo", 1000)
-        wins = profile.get("wins", 0)
-        losses = profile.get("losses", 0)
-        wallet = profile.get("wallet", 0)
-        active_team = profile.get("active_party_name") or "None"
+            elo = profile.get("elo", 1000)
+            wins = profile.get("wins", 0)
+            losses = profile.get("losses", 0)
+            wallet = profile.get("wallet", 0)
+            active_team = profile.get("active_party_name") or "None"
 
-        # Load active party pokemon
-        party_pokemon = await self._team_svc.load_active_party(str(target.id))
+            party_pokemon = await self._team_svc.load_active_party(user_id)
 
-        # Download avatar bytes asynchronously
-        avatar_bytes = None
-        try:
-            avatar_bytes = await target.display_avatar.read()
-        except Exception as e:
-            log.warning(f"Failed to read avatar for {target.id}: {e}")
+            avatar_bytes = None
+            try:
+                avatar_bytes = await target.display_avatar.read()
+            except Exception as e:
+                log.warning(f"Failed to read avatar for {target.id}: {e}")
 
-        # Render the trainer card
-        from ..canvas import BattleRenderer
-        from ..canvas.themes.palette import get_palette
-        from pathlib import Path
-        
-        data_dir = Path(__file__).parent.parent / "data"
-        
-        # Get user theme preferences
-        theme = profile.get("theme", "firered")
-        
-        renderer = BattleRenderer(data_dir, palette=get_palette(theme), theme=theme)
+            from ..canvas import BattleRenderer
+            from ..canvas.themes.palette import get_palette
+            from pathlib import Path
 
-        import asyncio
-        loop = asyncio.get_running_loop()
-        img_buf = await loop.run_in_executor(
-            None,
-            renderer.render_trainer_card,
-            target.name,
-            str(target.id),
-            rank,
-            elo,
-            wins,
-            losses,
-            wallet,
-            active_team,
-            avatar_bytes,
-            party_pokemon
-        )
+            data_dir = Path(__file__).parent.parent / "data"
+            theme = profile.get("theme", "firered")
+            renderer = BattleRenderer(data_dir, palette=get_palette(theme), theme=theme)
+
+            import asyncio
+            loop = asyncio.get_running_loop()
+            img_buf = await loop.run_in_executor(
+                None,
+                renderer.render_trainer_card,
+                target.name,
+                user_id,
+                rank,
+                elo,
+                wins,
+                losses,
+                wallet,
+                active_team,
+                avatar_bytes,
+                party_pokemon
+            )
+            await cache.set_profile_image(user_id, img_buf.getvalue())
 
         file = discord.File(fp=img_buf, filename="trainer_card.png")
         embed = discord.Embed(
             title=f"{target.name}'s Trainer Card",
-            color=0x3B4CCA,  # Pokémon blue
+            color=0x3B4CCA,
         )
         embed.set_image(url="attachment://trainer_card.png")
         await ctx.send(file=file, embed=embed)

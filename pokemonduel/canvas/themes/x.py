@@ -11,11 +11,9 @@ class XRenderer(BaseThemeRenderer):
                             active_team: str, avatar_bytes: Optional[bytes] = None,
                             party_pokemon: Optional[List[Dict[str, Any]]] = None) -> io.BytesIO:
         width, height = 480, 280
-        # Light blue gradient background
         canvas = Image.new("RGBA", (width, height), (255, 255, 255))
         draw = ImageDraw.Draw(canvas)
 
-        # Draw soft gradient top to bottom
         for y in range(height):
             f = y / height
             r = int(240 * (1 - f) + 220 * f)
@@ -23,22 +21,18 @@ class XRenderer(BaseThemeRenderer):
             b = int(255 * (1 - f) + 250 * f)
             draw.line([(0, y), (width, y)], fill=(r, g, b, 255))
 
-        # Thin soft frame
         draw.rectangle([0, 0, width - 1, height - 1], outline=(96, 144, 192), width=2)
 
-        # 1. Soft Blue Header
         self.renderer._draw_header_bar(draw, 10, 10, width - 10, 30, text="KALOS TRAINER PASSPORT", bg=(96, 144, 192))
 
-        # 2. Left Details Panel with soft blue header bands
         self.renderer._draw_classic_panel(draw, 14, 48, 320, 188, fill=(255, 255, 255), border=(160, 192, 224), radius=6)
-        
+
         draw.text((24, 56), "NAME:", fill=(96, 144, 192), font=self.fonts["small_bold"])
         draw.text((70, 54), username, fill=self.palette.text_dark, font=self.fonts["body_bold"])
-        
+
         id_no = str(player_id)[-5:] if player_id else "00000"
         draw.text((200, 56), f"IDNo. {id_no}", fill=self.palette.text_dark, font=self.fonts["small_bold"])
 
-        # Soft blue details
         info_items = [
             ("MONEY", f"¥{wallet:,}"),
             ("ELO RATING", f"{elo}"),
@@ -48,16 +42,14 @@ class XRenderer(BaseThemeRenderer):
 
         dy = 84
         for label, val in info_items:
-            # Draw tiny band
             draw.rectangle([20, dy - 2, 110, dy + 16], fill=(230, 240, 250), outline=(208, 224, 240))
             draw.text((24, dy), label, fill=(96, 144, 192), font=self.fonts["tiny"])
-            
+
             val_bbox = draw.textbbox((0, 0), val, font=self.fonts["small_bold"])
             val_w = val_bbox[2] - val_bbox[0]
             draw.text((310 - val_w, dy), val, fill=self.palette.text_dark, font=self.fonts["small_bold"])
             dy += 24
 
-        # 3. Avatar Panel
         self.renderer._draw_classic_panel(draw, 334, 48, 466, 188, fill=(255, 255, 255), border=(160, 192, 224), radius=6)
         avatar_loaded = False
         if avatar_bytes:
@@ -75,7 +67,6 @@ class XRenderer(BaseThemeRenderer):
             draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(240, 248, 255), outline=(160, 192, 224), width=2)
             draw.line([cx - r, cy, cx + r, cy], fill=(160, 192, 224), width=2)
 
-        # 4. Active Team Section (Glabrous rounded slots)
         self.renderer._draw_classic_panel(draw, 14, 198, width - 14, 268, fill=(240, 248, 255), border=(160, 192, 224), radius=6)
 
         slot_w, slot_h = 56, 56
@@ -114,11 +105,10 @@ class XRenderer(BaseThemeRenderer):
         buf.seek(0)
         return buf
 
-    def render_pokemon_card(self, poke: Any, player_name: str = "Trainer", 
+    def render_pokemon_card(self, poke: Any, player_name: str = "Trainer",
                             type_names: Optional[List[str]] = None) -> io.BytesIO:
         data = self.parse_pokemon_data(poke, type_names)
         width, height = 500, 310
-        # Gradient background
         canvas = Image.new("RGBA", (width, height), (255, 255, 255))
         draw = ImageDraw.Draw(canvas)
 
@@ -131,35 +121,29 @@ class XRenderer(BaseThemeRenderer):
 
         draw.rectangle([0, 0, width - 1, height - 1], outline=(96, 144, 192), width=2)
 
-        # 1. Left Summary Panel (Rounded with soft shadow)
         self.renderer._draw_classic_panel(draw, 10, 10, 180, 300, fill=(255, 255, 255), border=(160, 192, 224), radius=8)
-        
-        # Name banner
+
         self.renderer._draw_header_bar(draw, 16, 16, 174, 24, text=data["display_name"].upper(), bg=(96, 144, 192))
-        
+
         sprite = self.renderer._load_sprite(data["poke_id"], (110, 110), name=data["poke_name"])
         if sprite:
             canvas.paste(sprite, (40, 50), sprite)
 
-        # OT / Nature / Held Item
         draw.text((20, 170), f"OT: {player_name.upper()}", fill=(120, 140, 160), font=self.fonts["tiny"])
         draw.text((20, 184), f"NATURE: {str(data['nature']).upper()}", fill=self.palette.text_dark, font=self.fonts["small_bold"])
         draw.text((20, 198), f"ITEM: {str(data['item']).replace('-', ' ').upper()}", fill=(120, 140, 160), font=self.fonts["tiny"])
 
-        # Type badges
         if data["type_names"]:
             tx_y = 210
             for tn in data["type_names"]:
                 self.renderer._draw_type_badge(draw, 20, tx_y, tn, width=64, height=18)
                 tx_y += 22
 
-        # 2. Right Stats Panel (Rounded, modern bar charts)
         self.renderer._draw_classic_panel(draw, 190, 10, 490, 300, fill=(255, 255, 255), border=(160, 192, 224), radius=8)
         self.renderer._draw_header_bar(draw, 196, 16, 484, 22, text="POKéMON SKILLS", bg=(96, 144, 192))
 
         draw.text((200, 48), f"ABILITY: {str(data['ability']).replace('-', ' ').upper()}", fill=(120, 140, 160), font=self.fonts["small_bold"])
 
-        # Stats Table
         stats_y = 86
         stats_keys = ["hp", "atk", "def", "spa", "spd", "spe"]
         stats_labels = ["HP", "ATK", "DEF", "SpA", "SpD", "SPE"]
@@ -171,24 +155,19 @@ class XRenderer(BaseThemeRenderer):
             iv_v = data["ivs"].get(key, 31)
             ev_v = data["evs"].get(key, 0)
 
-            # Draw Label
             draw.text((200, y_offset), lbl, fill=(96, 144, 192), font=self.fonts["small_bold"])
             draw.text((236, y_offset), f"{bs_v:<3}", fill=self.palette.text_dark, font=self.fonts["small"])
 
-            # Modern smooth rounded bar
             max_bar_w = 90
             bar_w = int((bs_v / 200) * max_bar_w)
             bar_w = min(max_bar_w, max(5, bar_w))
-            
-            # Empty container
+
             draw.rounded_rectangle([276, y_offset + 2, 276 + max_bar_w, y_offset + 10], radius=3, fill=(240, 245, 250), outline=(208, 224, 240))
-            # Fill bar (Blue)
             draw.rounded_rectangle([276, y_offset + 2, 276 + bar_w, y_offset + 10], radius=3, fill=(96, 144, 192))
 
             draw.text((380, y_offset), f"IV {iv_v}", fill=(160, 170, 180), font=self.fonts["tiny"])
             draw.text((424, y_offset), f"EV {ev_v}", fill=(200, 160, 80), font=self.fonts["tiny"])
 
-        # Moves Footer
         moves_y = 238
         self.renderer._draw_classic_panel(draw, 196, moves_y, 484, 292, fill=(240, 248, 255), border=(160, 192, 224), border_width=1, radius=4)
         move_names = []
@@ -237,7 +216,6 @@ class XRenderer(BaseThemeRenderer):
         font = self.fonts["body_bold"]
         font_sm = self.fonts["small"]
 
-        # Option 1: Theme App
         card_x, card_y = 30, 68
         self.renderer._draw_classic_panel(draw, card_x, card_y, card_x + 120, card_y + 40, fill=(240, 248, 255), border=(96, 144, 192), radius=6)
         draw.text((card_x + 14, card_y + 10), "THEME APP", fill=(96, 144, 192), font=self.fonts["small_bold"])
@@ -246,7 +224,6 @@ class XRenderer(BaseThemeRenderer):
         self.renderer._draw_classic_panel(draw, val_x, card_y, val_x + 270, card_y + 40, fill=(255, 255, 255), border=(160, 192, 224), radius=6)
         draw.text((val_x + 24, card_y + 10), current_theme.upper(), fill=self.palette.text_dark, font=font)
 
-        # Option 2: Moveset Display App
         card_y2 = 124
         self.renderer._draw_classic_panel(draw, card_x, card_y2, card_x + 120, card_y2 + 40, fill=(240, 248, 255), border=(96, 144, 192), radius=6)
         draw.text((card_x + 6, card_y2 + 10), "MOVESET DISP", fill=(96, 144, 192), font=self.fonts["small_bold"])
@@ -262,4 +239,3 @@ class XRenderer(BaseThemeRenderer):
         canvas.save(buf, format="PNG")
         buf.seek(0)
         return buf
-

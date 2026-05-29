@@ -1,14 +1,3 @@
-"""
-ai/trainer.py — Training loop for the policy/value network.
-
-Pulls samples from a ``PrioritizedReplayBuffer`` (filled by self-play
-workers), runs cross-entropy/MSE loss, applies gradient clipping, steps a
-cosine-annealing scheduler with warm-up, periodically saves checkpoints and
-runs evaluation matches against the current best network.
-
-Exposes :class:`Trainer` which is meant to be instantiated *once* per
-training run and driven by ``run(num_steps)``.
-"""
 from __future__ import annotations
 
 import copy
@@ -27,7 +16,7 @@ import torch.nn.functional as Fnn
 try:
     from torch.utils.tensorboard import SummaryWriter   # type: ignore
     _HAS_TB = True
-except Exception:                                        # pragma: no cover
+except Exception:
     SummaryWriter = None
     _HAS_TB = False
 
@@ -43,9 +32,6 @@ from .replay_buffer import PrioritizedReplayBuffer
 log = logging.getLogger("dueler.ai.trainer")
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Cosine schedule with linear warm-up
-# ─────────────────────────────────────────────────────────────────────────────
 class WarmupCosine(torch.optim.lr_scheduler._LRScheduler):
     def __init__(self, optimizer, warmup_steps: int, period: int,
                  lr_min_ratio: float = 0.05, last_epoch: int = -1):
@@ -65,9 +51,6 @@ class WarmupCosine(torch.optim.lr_scheduler._LRScheduler):
         return [base_lr * scale for base_lr in self.base_lrs]
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Trainer
-# ─────────────────────────────────────────────────────────────────────────────
 class Trainer:
     def __init__(self,
                  buffer: PrioritizedReplayBuffer,
@@ -88,12 +71,10 @@ class Trainer:
         self.elo_path  = Path(elo_path)
         self.meta_path = Path(meta_path)
 
-        # ── networks ──
         self.net = PokemonAlphaZeroNet().to(self.device)
         self.best_net = PokemonAlphaZeroNet().to(self.device)
         self.best_net.load_state_dict(self.net.state_dict())
 
-        # ── optimiser / scheduler ──
         self.optimizer = torch.optim.AdamW(
             self.net.parameters(),
             lr=C.OPT_LR,
@@ -110,25 +91,21 @@ class Trainer:
             enabled=C.OPT_MIXED_PREC and self.device.type == "cuda",
         )
 
-        # ── elo ──
         self.elo = EloState.load(self.elo_path)
 
         # ── tensorboard ──
         # pyrefly: ignore [not-callable]
         self.writer = SummaryWriter(str(self.tb_dir)) if _HAS_TB else None
 
-        # ── inference snapshots used by evaluation ──
         self._latest_engine = InferenceEngine(self.net, device=self.device)
         self._best_engine   = InferenceEngine(self.best_net, device=self.device)
 
-        # ── step counter ──
         self.step = 0
         self._maybe_load_latest()
 
         log.info("Trainer ready on %s. params=%s",
                  self.device, self.net.count_parameters())
 
-    # ------------------------------------------------------------------
     def _maybe_load_latest(self) -> None:
         if self.latest_path.exists():
             info = load_checkpoint(
@@ -141,14 +118,12 @@ class Trainer:
             load_checkpoint(self.best_path, self.best_net, map_location=self.device, strict=False)
             log.info("Best network loaded")
 
-    # ------------------------------------------------------------------
     def get_latest_engine(self) -> InferenceEngine:
         return self._latest_engine
 
     def get_best_engine(self) -> InferenceEngine:
         return self._best_engine
 
-    # ------------------------------------------------------------------
     def train_step(self) -> dict:
         states, policies, values, masks, weights, tree_idxs = \
             self.buffer.sample(C.OPT_BATCH_SIZE)
@@ -168,7 +143,6 @@ class Trainer:
             neg_inf = torch.finfo(logits.dtype).min
             logits = torch.where(mask, logits, torch.full_like(logits, neg_inf))
             log_probs = Fnn.log_softmax(logits, dim=-1)
-            # cross-entropy with soft labels π
             policy_loss = -(pi_target * log_probs).sum(dim=-1)
             value_loss  = (v_target - value).pow(2)
             entropy     = -(log_probs.exp() * log_probs).sum(dim=-1)
@@ -188,7 +162,7 @@ class Trainer:
         self.scaler.update()
         self.scheduler.step()
 
-        # Update priorities by value TD error magnitude
+        # Update priorities by value TD error magnitude.
         td = (v_target.detach() - value.detach()).abs().cpu().numpy()
         self.buffer.update_priorities(tree_idxs, td)
 
@@ -202,7 +176,6 @@ class Trainer:
             "buffer":       len(self.buffer),
         }
 
-    # ------------------------------------------------------------------
     def maybe_log(self, stats: dict) -> None:
         if self.writer is None or self.step % C.OPT_LOG_EVERY:
             return
@@ -210,7 +183,6 @@ class Trainer:
             self.writer.add_scalar(f"train/{k}", v, self.step)
         self.writer.flush()
 
-    # ------------------------------------------------------------------
     def save_latest(self) -> None:
         save_checkpoint(
             self.latest_path, self.net, self.optimizer, self.scheduler,
@@ -223,11 +195,10 @@ class Trainer:
         })
 
     def save_best(self) -> None:
-        # copy current net to best_net + persist to disk
+        # Copy current net to best_net + persist to disk.
         self.best_net.load_state_dict(self.net.state_dict())
         save_checkpoint(self.best_path, self.best_net, step=self.step)
 
-    # ------------------------------------------------------------------
     def maybe_evaluate(self, force: bool = False) -> Optional[dict]:
         if not force and (self.step % C.OPT_EVAL_EVERY != 0 or self.step == 0):
             return None
@@ -251,7 +222,6 @@ class Trainer:
             log.info("Promoting latest -> best (wr=%.3f)", wr)
         return {"win_rate": wr, "wins": w, "losses": l, "draws": d, "promoted": promoted}
 
-    # ------------------------------------------------------------------
     def run(self, max_steps: int = C.OPT_TRAIN_STEPS, *,
             min_buffer: int = C.OPT_MIN_BUFFER) -> None:
         log.info("Waiting for buffer to fill (>= %d) ...", min_buffer)
@@ -286,8 +256,6 @@ class Trainer:
                 self.save_latest()
             self.maybe_evaluate()
             now = time.time()
-            # Log every 200 steps OR every 2 wall-clock seconds (whichever
-            # comes first) so progress is visible even when steps are slow.
             if self.step % 200 == 0 or (now - last_log_t) >= 2.0:
                 dt_total = now - t0
                 rate_overall = self.step / max(1e-6, dt_total)

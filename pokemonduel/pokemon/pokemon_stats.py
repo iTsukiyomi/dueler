@@ -7,12 +7,12 @@ class DuelPokemonStats:
     def calculate_raw_stat(self, base, iv, ev, nature):
         """
         Helper function to calculate a raw stat using the base, IV, EV, level, and nature.
-        
+
         https://bulbapedia.bulbagarden.net/wiki/Stat#Determination_of_stats "In Generation III onward"
         """
         # pyrefly: ignore [missing-attribute]
         return round((((2 * base + iv + (ev / 4)) * self.level) / 100) + 5) * nature
-    
+
     @staticmethod
     def calculate_stat(stat, stat_stage, *, crop=False):
         """Calculates a stat based on that stat's stage changes."""
@@ -36,7 +36,7 @@ class DuelPokemonStats:
             6: 4,
         }
         return stage_multiplier[stat_stage] * stat
-    
+
     def get_raw_attack(self, *, check_power_trick=True, check_power_shift=True):
         """Returns the raw attack of this poke, taking into account IVs EVs and natures and forms."""
         # pyrefly: ignore [missing-attribute]
@@ -51,7 +51,7 @@ class DuelPokemonStats:
         if self.attack_split is not None:
             stat = (stat + self.attack_split) // 2
         return stat
-    
+
     def get_raw_defense(self, *, check_power_trick=True, check_power_shift=True):
         """Returns the raw attack of this poke, taking into account IVs EVs and natures and forms."""
         # pyrefly: ignore [missing-attribute]
@@ -66,7 +66,7 @@ class DuelPokemonStats:
         if self.defense_split is not None:
             stat = (stat + self.defense_split) // 2
         return stat
-    
+
     def get_raw_spatk(self, *, check_power_shift=True):
         """Returns the raw attack of this poke, taking into account IVs EVs and natures and forms."""
         # pyrefly: ignore [missing-attribute]
@@ -78,7 +78,7 @@ class DuelPokemonStats:
         if self.spatk_split is not None:
             stat = (stat + self.spatk_split) // 2
         return stat
-    
+
     def get_raw_spdef(self, *, check_power_shift=True):
         """Returns the raw attack of this poke, taking into account IVs EVs and natures and forms."""
         # pyrefly: ignore [missing-attribute]
@@ -90,12 +90,12 @@ class DuelPokemonStats:
         if self.spdef_split is not None:
             stat = (stat + self.spdef_split) // 2
         return stat
-    
+
     def get_raw_speed(self):
         """Returns the raw attack of this poke, taking into account IVs EVs and natures and forms."""
         # pyrefly: ignore [missing-attribute]
         return self.calculate_raw_stat(self.speed, self.speediv, self.speedev, self.nature_stat_deltas["Speed"])
-    
+
     def get_paradox_boosted_stat(self):
         stats = [
             ("attack", self.get_raw_attack()),
@@ -180,7 +180,7 @@ class DuelPokemonStats:
         # pyrefly: ignore [missing-attribute]
         attack *= self.held_item.get_stat_multiplier("attack")
         return attack
-    
+
     def get_defense(self, battle, *, critical=False, ignore_stages=False, attacker=None, move=None):
         """Helper method to call calculate_stat for defense."""
         if battle.wonder_room.active():
@@ -210,7 +210,7 @@ class DuelPokemonStats:
         # pyrefly: ignore [missing-attribute]
         defense *= self.held_item.get_stat_multiplier("defense")
         return defense
-    
+
     def get_spatk(self, battle, *, critical=False, ignore_stages=False):
         """Helper method to call calculate_stat for spatk."""
         spatk = self.get_raw_spatk()
@@ -243,7 +243,7 @@ class DuelPokemonStats:
         # pyrefly: ignore [missing-attribute]
         spatk *= self.held_item.get_stat_multiplier("spatk")
         return spatk
-    
+
     def get_spdef(self, battle, *, critical=False, ignore_stages=False, attacker=None, move=None):
         """Helper method to call calculate_stat for spdef."""
         if battle.wonder_room.active():
@@ -276,7 +276,7 @@ class DuelPokemonStats:
         # pyrefly: ignore [missing-attribute]
         spdef *= self.held_item.get_stat_multiplier("spdef")
         return spdef
-    
+
     def get_speed(self, battle):
         """Helper method to call calculate_stat for speed."""
         #Always active stage changes
@@ -324,49 +324,49 @@ class DuelPokemonStats:
         # pyrefly: ignore [missing-attribute]
         speed *= self.held_item.get_speed_multiplier()
         return speed
-    
+
     def get_accuracy(self, battle):
         """Helper method to calculate accuracy stage."""
         # pyrefly: ignore [missing-attribute]
         return self.accuracy_stage
-        
+
     def get_evasion(self, battle):
         """Helper method to calculate evasion stage."""
         # pyrefly: ignore [missing-attribute]
         return self.evasion_stage
-    
+
     def append_attack(self, stage_change: int, *, attacker=None, move=None, source: str="", check_looping: bool=True):
         """Helper method to call append_stat for attack."""
         return self.append_stat(stage_change, attacker, move, "attack", source, check_looping)
-    
+
     def append_defense(self, stage_change: int, *, attacker=None, move=None, source: str="", check_looping: bool=True):
         """Helper method to call append_stat for defense."""
         return self.append_stat(stage_change, attacker, move, "defense", source, check_looping)
-    
+
     def append_spatk(self, stage_change: int, *, attacker=None, move=None, source: str="", check_looping: bool=True):
         """Helper method to call append_stat for special attack."""
         return self.append_stat(stage_change, attacker, move, "special attack", source, check_looping)
-    
+
     def append_spdef(self, stage_change: int, *, attacker=None, move=None, source: str="", check_looping: bool=True):
         """Helper method to call append_stat for special defense."""
         return self.append_stat(stage_change, attacker, move, "special defense", source, check_looping)
-    
+
     def append_speed(self, stage_change: int, *, attacker=None, move=None, source: str="", check_looping: bool=True):
         """Helper method to call append_stat for speed."""
         return self.append_stat(stage_change, attacker, move, "speed", source, check_looping)
-    
+
     def append_accuracy(self, stage_change: int, *, attacker=None, move=None, source: str="", check_looping: bool=True):
         """Helper method to call append_stat for accuracy."""
         return self.append_stat(stage_change, attacker, move, "accuracy", source, check_looping)
-    
+
     def append_evasion(self, stage_change: int, *, attacker=None, move=None, source: str="", check_looping: bool=True):
         """Helper method to call append_stat for evasion."""
         return self.append_stat(stage_change, attacker, move, "evasion", source, check_looping)
-        
+
     def append_stat(self, stage_change: int, attacker, move, stat: str, source: str, check_looping: bool=True):
         """
         Adds a stat stage change to this pokemon.
-        
+
         Returns a formatted string describing the stat change.
         """
         msg = ""
@@ -396,7 +396,7 @@ class DuelPokemonStats:
         # pyrefly: ignore [missing-attribute]
         if self.ability(attacker=attacker, move=move) == Ability.CONTRARY:
             delta *= -1
-        
+
         if stat == "attack":
             # pyrefly: ignore [missing-attribute]
             current_stage = self.attack_stage
@@ -420,26 +420,21 @@ class DuelPokemonStats:
             current_stage = self.evasion_stage
         else:
             raise ValueError(f"invalid stat {stat}")
-        
-        # Cap stat stages within -6 to 6
+
         if delta < 0:
-            #-6 -5 -4 ..  2
-            # 0 -1 -2 .. -8
             cap = (current_stage * -1) - 6
             delta = max(delta, cap)
             if delta == 0:
                 # pyrefly: ignore [missing-attribute]
                 return f"{self.name}'s {stat} won't go any lower!\n"
         else:
-            # 6  5  4 .. -2
-            # 0  1  2 ..  8
             cap = (current_stage * -1) + 6
             delta = min(delta, cap)
             if delta == 0:
                 # pyrefly: ignore [missing-attribute]
                 return f"{self.name}'s {stat} won't go any higher!\n"
-        
-        # Prevent stat changes
+
+        # Prevent stat changes.
         if delta < 0 and attacker is not self:
             # pyrefly: ignore [missing-attribute]
             if self.ability(attacker=attacker, move=move) in (Ability.CLEAR_BODY, Ability.WHITE_SMOKE, Ability.FULL_METAL_BODY):
@@ -476,13 +471,12 @@ class DuelPokemonStats:
                 msg += f"{self.name} reflected the stat change with its mirror armor!\n"
                 msg += attacker.append_stat(delta, self, None, stat, "", check_looping=False)
                 return msg
-        
-        # Remember if stats were changed for certain moves
+
         if delta > 0:
             self.stat_increased = True
         elif delta < 0:
             self.stat_decreased = True
-        
+
         if stat == "attack":
             # pyrefly: ignore [missing-attribute]
             self.attack_stage += delta
@@ -506,7 +500,7 @@ class DuelPokemonStats:
             self.evasion_stage += delta
         else:
             raise ValueError(f"invalid stat {stat}")
-        
+
         formatted_delta = min(max(delta, -3), 3)
         msg += delta_msgs[formatted_delta]
 
@@ -514,7 +508,6 @@ class DuelPokemonStats:
         # pyrefly: ignore [missing-attribute]
         battle = self.held_item.battle
 
-        # Effects that happen after a pokemon gains stats
         if delta < 0:
             if attacker is not self:
                 # pyrefly: ignore [missing-attribute]
@@ -544,11 +537,11 @@ class DuelPokemonStats:
                     msg += f"{poke.name} seizes the opportunity to boost its stat with its opportunist!\n"
                     msg += poke.append_stat(delta, poke, None, stat, "", check_looping=False)
         return msg
-    
+
     def grounded(self, battle, *, attacker=None, move=None):
         """
         Returns True if this pokemon is considered "grounded".
-        
+
         Explicit grounding applies first, then explicit ungrounding, then implicit grounding.
         """
         if battle.gravity.active():

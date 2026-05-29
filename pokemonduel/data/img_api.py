@@ -1,34 +1,3 @@
-"""
-download_pokemon_sprites.py  (forms.json-aware edition)
-========================================================
-Downloads sprites for every Pokémon form defined in your forms.json,
-naming them exactly how your Discord bot expects:
-
-    {base_id}.png            ← base / default form   (form_order == 1)
-    {base_id}-1.png          ← first alternate form   (form_order == 2)
-    {base_id}-2.png          ← second alternate form  (form_order == 3)
-    … etc.
-
-Custom / staff forms (identifiers ending in -staff or -custom) are skipped
-automatically — they have custom sprites not sourced from PokeAPI.
-
-Sprite resolution order (per form):
-  1. PokeAPI HOME sprite  → high-quality, transparent-bg renders
-  2. PokeAPI classic sprite  → classic battle sprites
-  3. PokeAPI name-based lookup  → for forms whose pokemon_id doesn't map
-     directly to a GitHub raw file (Ogerpon forms, Palafin-Hero, etc.)
-
-Usage:
-    python download_pokemon_sprites.py
-    python download_pokemon_sprites.py -o ./sprites --forms forms.json
-    python download_pokemon_sprites.py --classic-sprites   # use classic sprites
-    python download_pokemon_sprites.py --no-skip           # re-download everything
-    python download_pokemon_sprites.py --dry-run           # preview what would download
-
-Requirements:
-    pip install requests tqdm
-"""
-
 import os
 import sys
 import json
@@ -38,7 +7,6 @@ import requests
 from pathlib import Path
 from tqdm import tqdm
 
-# ── Config ─────────────────────────────────────────────────────────────────────
 
 DEFAULT_OUTPUT  = "./pokemon_sprites"
 DEFAULT_FORMS   = "forms.json"
@@ -48,12 +16,10 @@ SPRITE_HOME_URL = "https://raw.githubusercontent.com/PokeAPI/sprites/master/spri
 SPRITE_BASE_URL = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{pid}.png"
 API_BASE        = "https://pokeapi.co/api/v2"
 
-DELAY           = 0.20      # seconds between requests
+DELAY           = 0.20
 RETRY_LIMIT     = 4
 RETRY_BACKOFF   = 2
 
-# ── Identifiers that belong to custom / staff / bot-specific forms ──────────────
-# These are skipped — they have no PokeAPI sprite.
 CUSTOM_SUFFIXES    = ("-staff", "-custom")
 CUSTOM_IDENTIFIERS = frozenset({
     "tatogod-arceus-staff", "alacatzam", "chichiri-oddish-staff",
@@ -66,15 +32,13 @@ CUSTOM_IDENTIFIERS = frozenset({
     "radio-rockruff-custom", "snowy-lycanroc-custom",
 })
 
-# Forms whose pokemon_id in forms.json is non-standard and need name lookup
 NAME_LOOKUP_POKEMON_IDS = frozenset({
-    8922,   # urshifu-rapid-strike  (custom local ID — real PokeAPI ID is 10116)
-    11004,  # palafin-hero          (custom local ID — real PokeAPI ID is 10264)
-    16010,  # toxtricity-low-key    (custom local ID — real PokeAPI ID is 10176)
-    15000,  # urshifu-rapid-strike  (alternate custom ID)
+    8922,
+    11004,
+    16010,
+    15000,
 })
 
-# ── HTTP session ────────────────────────────────────────────────────────────────
 
 SESSION = requests.Session()
 SESSION.headers.update({"User-Agent": "PokemonDiscordBot-SpriteDownloader/1.0"})
@@ -100,7 +64,6 @@ def _get(url, binary=False, retries=RETRY_LIMIT):
 def fetch_json(url):   return _get(url, binary=False)
 def fetch_bytes(url):  return _get(url, binary=True)
 
-# ── Sprite resolution ───────────────────────────────────────────────────────────
 
 def png_valid(data):
     return data and data[:8] == b"\x89PNG\r\n\x1a\n"
@@ -115,7 +78,6 @@ def get_sprite_url(identifier, pokemon_id, use_home):
       2. GitHub raw classic sprite (by pokemon_id)
       3. PokeAPI JSON lookup       (by identifier name)
     """
-    # Forms with known-bad local pokemon_ids skip straight to name lookup
     if pokemon_id not in NAME_LOOKUP_POKEMON_IDS:
         if use_home:
             url = SPRITE_HOME_URL.format(pid=pokemon_id)
@@ -123,13 +85,13 @@ def get_sprite_url(identifier, pokemon_id, use_home):
                 return url
             time.sleep(DELAY)
 
-        # Classic fallback
+        # Classic fallback.
         url = SPRITE_BASE_URL.format(pid=pokemon_id)
         if png_valid(fetch_bytes(url)):
             return url
         time.sleep(DELAY)
 
-    # Final fallback: look up by Pokémon name via PokeAPI
+    # Final fallback: look up by Pokémon name via PokeAPI.
     poke_data = fetch_json(f"{API_BASE}/pokemon/{identifier}")
     if poke_data:
         # pyrefly: ignore [missing-attribute]
@@ -156,7 +118,6 @@ def save_sprite(sprite_url, filepath):
         return True
     return False
 
-# ── Forms loading & filtering ───────────────────────────────────────────────────
 
 def is_custom(form):
     ident = form.get("identifier", "")
@@ -185,7 +146,6 @@ def load_forms(forms_path):
         if f.get("base_id") and 1 <= f["base_id"] <= 1025 and not is_custom(f)
     ]
 
-    # Deduplicate: for each (base_id, form_order), keep the entry with smallest id
     seen = {}
     for form in sorted(valid, key=lambda f: (f.get("id") or 99999)):
         key = (form["base_id"], form.get("form_order") or 1)
@@ -218,7 +178,6 @@ def build_download_plan(forms):
         })
     return plan
 
-# ── Main download loop ──────────────────────────────────────────────────────────
 
 def download_all(output_dir, forms_path, use_home=True, skip_existing=True, dry_run=False):
     out = Path(output_dir)
@@ -298,7 +257,6 @@ def download_all(output_dir, forms_path, use_home=True, skip_existing=True, dry_
 
     log_path.write_text(json.dumps(log, indent=2))
 
-    # ── Summary ────────────────────────────────────────────────────────────────
     print(f"\n{'='*55}")
     print(f"  OK       : {success} sprites downloaded")
     print(f"  Skipped  : {skipped} (already existed)")
@@ -312,7 +270,6 @@ def download_all(output_dir, forms_path, use_home=True, skip_existing=True, dry_
     print(f"\n  Log saved to: {log_path}")
     print(f"{'='*55}\n")
 
-# ── CLI ─────────────────────────────────────────────────────────────────────────
 
 def main():
     parser = argparse.ArgumentParser(

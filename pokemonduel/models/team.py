@@ -1,18 +1,8 @@
-"""
-pokemonduel.models.team
-=======================
-MongoDB document schema for saved teams / parties.
-
-Each user can have multiple named teams.  The compound unique index
-on ``(owner_id, name)`` prevents duplicate team names per player.
-"""
-
 from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Any
 
-# Collection name in MongoDB.
 COLLECTION = "teams"
 
 

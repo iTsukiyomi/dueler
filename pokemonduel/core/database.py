@@ -1,16 +1,3 @@
-"""
-pokemonduel.core.database
-=========================
-Async MongoDB connection pool manager using Motor.
-
-Reads ``MONGO_URI`` from environment variables (loaded via python-dotenv).
-Provides a singleton connection lifecycle: connect once at bot startup,
-access the database instance anywhere, close on shutdown.
-
-Security: Connection strings are never hardcoded.  The module refuses
-to connect if ``MONGO_URI`` is not set.
-"""
-
 from __future__ import annotations
 
 import logging
@@ -24,7 +11,7 @@ log = logging.getLogger("dueler.database")
 _client: Optional[AsyncIOMotorClient] = None
 _db: Optional[AsyncIOMotorDatabase] = None
 
-# Default database name — override by setting MONGO_DB_NAME in .env
+# Default database name — override by setting MONGO_DB_NAME in .env.
 _DEFAULT_DB_NAME = "pokemonduel"
 
 
@@ -53,8 +40,7 @@ async def connect() -> AsyncIOMotorDatabase:
 
     db_name = os.environ.get("MONGO_DB_NAME", _DEFAULT_DB_NAME)
 
-    # Motor's AsyncIOMotorClient pools connections internally.
-    # serverSelectionTimeoutMS prevents hanging on unreachable clusters.
+    # Motor's AsyncIOMotorClient pools connections internally. serverSelectionTimeoutMS prevents hanging on unreachable clusters.
     _client = AsyncIOMotorClient(
         uri,
         serverSelectionTimeoutMS=5_000,
@@ -68,7 +54,6 @@ async def connect() -> AsyncIOMotorDatabase:
 
     _db = _client[db_name]
 
-    # Ping to verify connectivity at startup rather than failing later.
     await _client.admin.command("ping")
     log.info("MongoDB connected — database=%r", db_name)
     return _db

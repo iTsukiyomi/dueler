@@ -48,7 +48,6 @@ PROTECT_MOVES = [
     'banefulbunker', 'burningbulwark', 'protect', 'silktrap', 'spikyshield',
 ]
 
-# Moves with recoil (from Showdown's random battles)
 RECOIL_MOVES = [
     'accelerock', 'agility', 'airslash', 'attackorder', 'axekick', 'beakbite', 'blazekick',
     'blueflare', 'boltstrike', 'bravebird', 'breakingswipe', 'brickbreak', 'brutalswing',

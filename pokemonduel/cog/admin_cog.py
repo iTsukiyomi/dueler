@@ -1,16 +1,3 @@
-"""
-pokemonduel.cog.admin_cog
-==========================
-Owner-only admin commands — data migration, server configuration,
-AI management, and diagnostic commands.
-
-Commands:
-    ;migrate      — run JSON→MongoDB migration
-    ;dbstatus     — show database health
-    ;setprefix    — change guild command prefix
-    ;reloaddata   — hot-reload static game data
-"""
-
 from __future__ import annotations
 
 import logging
@@ -37,7 +24,6 @@ class AdminCog(commands.Cog, name="Admin"):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
 
-    # -- ;migrate ----------------------------------------------------------
 
     @commands.command(name="migrate")
     @_is_owner()
@@ -80,19 +66,18 @@ class AdminCog(commands.Cog, name="Admin"):
                     truncated_errors.append(err[:197] + "...")
                 else:
                     truncated_errors.append(err)
-            
+
             error_text = "\n".join(truncated_errors)
             if len(result["errors"]) > 3:
                 error_text += f"\n... and {len(result['errors']) - 3} more"
-                
+
             if len(error_text) > 1000:
                 error_text = error_text[:997] + "..."
-                
+
             embed.add_field(name="Error Details", value=error_text, inline=False)
 
         await msg.edit(content=None, embed=embed)
 
-    # -- ;dbstatus ---------------------------------------------------------
 
     @commands.command(name="dbstatus")
     @_is_owner()
@@ -120,7 +105,7 @@ class AdminCog(commands.Cog, name="Admin"):
             inline=True,
         )
 
-        # Active battles count (if Redis available)
+        # Active battles count (if Redis available).
         if redis_ok:
             from ..services.battle_state_service import BattleStateService
             battle_count = await BattleStateService().get_active_count()
@@ -130,7 +115,6 @@ class AdminCog(commands.Cog, name="Admin"):
 
         await ctx.send(embed=embed)
 
-    # -- ;reloaddata -------------------------------------------------------
 
     @commands.command(name="reloaddata")
     @_is_owner()
@@ -146,7 +130,6 @@ class AdminCog(commands.Cog, name="Admin"):
         except Exception as exc:
             await ctx.send(f"❌ Reload failed: {exc}")
 
-    # -- ;setprefix --------------------------------------------------------
 
     @commands.command(name="setprefix")
     @commands.has_guild_permissions(administrator=True)

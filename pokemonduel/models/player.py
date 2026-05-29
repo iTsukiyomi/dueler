@@ -1,26 +1,13 @@
-"""
-pokemonduel.models.player
-=========================
-MongoDB document schema for player profiles.
-
-Uses plain dicts + factory functions rather than an ORM so that the
-schema is explicit, lightweight, and easy to serialise across the
-Redis caching layer.
-"""
-
 from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Any, Optional
 
 
-# Default Elo rating for new players.
 DEFAULT_ELO = 1000
 
-# Default starting balance.
 DEFAULT_WALLET = 0
 
-# Collection name in MongoDB.
 COLLECTION = "players"
 
 

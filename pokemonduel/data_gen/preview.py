@@ -13,14 +13,12 @@ async def generate_team_preview(battle):
     renderer = BattleRenderer(data_dir)
     img_buf = renderer.render_team_preview(battle)
 
-    # Create embed with the team image
     embed = discord.Embed(
         title=f"⚡ Team Preview",
         description=f"**{battle.trainer1.name}** vs **{battle.trainer2.name}**\nChoose your lead Pokémon!",
-        color=0x3B4CCA,  # Classic Pokémon blue
+        color=0x3B4CCA,
     )
 
-    # Attach the image to the embed
     file = discord.File(fp=img_buf, filename="team_preview.png")
     embed.set_image(url="attachment://team_preview.png")
 

@@ -1,14 +1,3 @@
-"""
-pokemonduel.data_gen.query
-==========================
-Backwards-compatible query interface that delegates to the global
-in-memory registries instead of opening JSON files on every call.
-
-The ``ctx`` parameter is kept in the function signatures for API
-compatibility with existing callers, but it is no longer used —
-all data comes from :mod:`pokemonduel.core.registry`.
-"""
-
 from __future__ import annotations
 
 from typing import Any

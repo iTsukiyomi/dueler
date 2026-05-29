@@ -14,7 +14,6 @@ def git(cmd: List[str]):
     return result.stdout.strip()
 
 
-
 class Admin(commands.Cog, name="DevAdmin"):
     def __init__(self, bot):
         self.bot = bot

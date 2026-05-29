@@ -14,7 +14,6 @@ class InfoButton(discord.ui.Button):
         pokemon = self.view.trainer.current_pokemon
         item = pokemon.held_item.get() if pokemon.held_item.has_item() else "None"
 
-        # Resolve types
         type_ids = getattr(pokemon, 'type_ids', [])
         _TYPE_ID_TO_NAME = {
             1: "Normal", 2: "Fighting", 3: "Flying", 4: "Poison", 5: "Ground",

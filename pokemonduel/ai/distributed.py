@@ -1,49 +1,3 @@
-"""
-ai/distributed.py — Multiprocessing self-play coordinator.
-
-Architecture
-------------
-
-                ┌────────────────────────┐
-                │  Trainer (main proc)   │
-                │  • PokemonAlphaZeroNet │
-                │  • PrioritizedReplay   │
-                │  • InferenceServer ────┼──► request_q ◄─┐
-                │                        │                │
-                │  ◄── sample_q ─────────┼─────────┐      │
-                └────────────────────────┘         │      │
-                                                   │      │
-   ┌───────────────────────────────────────────────┴──────┴──┐
-   │ Self-play worker (N copies)                              │
-   │  • RemoteInferenceClient(request_q, response_q_i)        │
-   │  • play_one_game(...) → TrajectoryBatch                  │
-   │  • puts (states, policies, values, masks) on sample_q    │
-   └─────────────────────────────────────────────────────────┘
-
-The trainer process pulls finished trajectories from ``sample_q`` and
-inserts them into the replay buffer; meanwhile a background thread
-inside the trainer runs the inference server so workers always get
-batched evaluations.
-
-Run from the project root with:
-
-    python -m pokemonduel.ai.distributed --workers 6 --device cuda
-
-Stops cleanly on SIGINT.
-
-Robustness features
-~~~~~~~~~~~~~~~~~~~
-* **Per-game wall-clock timeout.** Workers that hang on pathological
-  states give up after ``SELFPLAY_GAME_TIMEOUT_S`` (default 90 s).
-* **Self-healing inference server.** A watchdog restarts the inference
-  thread if it ever exits.
-* **Low-latency batching** (``batch_size = workers``, ``max_wait_ms = 1``).
-* **Discord live-buffer ingestion.** On startup the trainer loads the
-  self-play buffer AND the Discord ``live_buffer.npz`` (if it exists),
-  merging both sources into the same replay buffer. The live buffer is
-  also re-checked every ``LIVE_BUFFER_POLL_S`` seconds at runtime so
-  freshly-played Discord battles enter training without restart.
-"""
 from __future__ import annotations
 
 import argparse
@@ -75,11 +29,9 @@ log = logging.getLogger("dueler.ai.distributed")
 _GAME_TIMEOUT_S      = float(getattr(C, "SELFPLAY_GAME_TIMEOUT_S", 90.0))
 _LIVE_BUFFER_POLL_S  = float(getattr(C, "LIVE_BUFFER_POLL_S", 60.0))
 
-# Paths to the two on-disk buffers.
 _SELFPLAY_BUFFER_PATH = C.REPLAY_DIR / "buffer.npz"
 _LIVE_BUFFER_PATH     = C.REPLAY_DIR / "live_buffer.npz"
 
-# ─────────────────────────────────────────────────────────────────────────────
 def _merge_buffer_from_disk(target: PrioritizedReplayBuffer,
                             path: Path) -> int:
     """Load samples from ``path`` and ``push_many`` them into ``target``.
@@ -105,9 +57,6 @@ def _merge_buffer_from_disk(target: PrioritizedReplayBuffer,
         log.exception("Failed to merge buffer from %s", path)
         return 0
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Shared progress counters (one set per WorkerStats namespace)
-# ─────────────────────────────────────────────────────────────────────────────
 class WorkerStats:
     __slots__ = ("games_done", "games_crashed", "games_skipped",
                  "games_timed_out",
@@ -124,9 +73,6 @@ class WorkerStats:
         self.last_heartbeat  = Value("d", 0.0)
         self.alive           = Value("i", 1)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Worker process entry point
-# ─────────────────────────────────────────────────────────────────────────────
 def _worker_main(worker_id: int,
                  request_q: Queue,
                  response_q: Queue,
@@ -162,11 +108,6 @@ def _worker_main(worker_id: int,
                 stats.games_skipped.value += 1
             continue
         except Exception as e:
-            # Common case: simulator hits a KeyError on a rare form whose
-            # base_stats lookup fails. We log once (full traceback) so
-            # it's visible, then count as skipped and continue. The
-            # pokemon_send_out.py patch in this repo makes most of these
-            # non-fatal, but we keep the guard as defence in depth.
             log.exception("worker %d game error (skipping): %s", worker_id, e)
             with stats.games_crashed.get_lock():
                 stats.games_crashed.value += 1
@@ -229,9 +170,6 @@ def _worker_progress(stats: WorkerStats, turn: int, simulations: int) -> None:
     with stats.last_heartbeat.get_lock():
         stats.last_heartbeat.value = time.time()
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Coordinator
-# ─────────────────────────────────────────────────────────────────────────────
 class DistributedTrainer:
     def __init__(self,
                  *,
@@ -248,7 +186,6 @@ class DistributedTrainer:
 
         self.buffer = PrioritizedReplayBuffer()
 
-        # 1) Self-play buffer (destructive load — primary source).
         if _SELFPLAY_BUFFER_PATH.exists():
             try:
                 self.buffer.load(_SELFPLAY_BUFFER_PATH)
@@ -256,14 +193,11 @@ class DistributedTrainer:
             except Exception:
                 log.exception("Failed to load replay buffer (continuing fresh)")
 
-        # 2) Discord live buffer (merged non-destructively on top).
         live_merged = _merge_buffer_from_disk(self.buffer, _LIVE_BUFFER_PATH)
         if live_merged > 0:
             log.info("Discord live buffer merged in: +%d samples "
                      "(total now %d)", live_merged, len(self.buffer))
-        # Track how many samples we've already pulled from the live file
-        # so the periodic poller only ingests newly-added ones. We use
-        # the file size as a cheap "did anything change?" signal.
+        # Track how many samples we've already pulled from the live file so the periodic poller only ingests newly-added ones. We use the file size as a cheap "did anything change?" signal.
         try:
             self._live_buffer_mtime = (_LIVE_BUFFER_PATH.stat().st_mtime
                                        if _LIVE_BUFFER_PATH.exists() else 0.0)
@@ -287,7 +221,6 @@ class DistributedTrainer:
         self._samples_drained = 0
         self._live_buffer_ingested = live_merged
 
-    # ------------------------------------------------------------------
     def _build_inference_server(self) -> BatchedInferenceServer:
         batch_size = max(4, self.workers)
         return BatchedInferenceServer(
@@ -325,7 +258,6 @@ class DistributedTrainer:
                     pass
                 self._start_inference_server()
 
-    # ------------------------------------------------------------------
     def _live_buffer_poll_loop(self) -> None:
         """Watch ``live_buffer.npz`` and merge in any newly-played games
         from the Discord bot. Polls every ``_LIVE_BUFFER_POLL_S`` seconds.
@@ -338,10 +270,7 @@ class DistributedTrainer:
                 mtime = _LIVE_BUFFER_PATH.stat().st_mtime
                 if mtime <= self._live_buffer_mtime:
                     continue
-                # The Discord bot keeps the file as a *cumulative* dump,
-                # so naive re-merge would double-count. We snapshot the
-                # current size first, then read, then push only the
-                # *tail* (samples beyond what we previously ingested).
+                # The Discord bot keeps the file as a *cumulative* dump, so naive re-merge would double-count. We snapshot the current size first, then read, then push only the *tail* (samples beyond what we previously ingested).
                 data = np.load(_LIVE_BUFFER_PATH, allow_pickle=False)
                 n = int(data["size"])
                 start = self._live_buffer_ingested
@@ -362,7 +291,6 @@ class DistributedTrainer:
             except Exception:
                 log.exception("live-buffer poll failed")
 
-    # ------------------------------------------------------------------
     def _start_workers(self) -> None:
         for wid in range(self.workers):
             rq = self.response_qs[wid]
@@ -378,7 +306,6 @@ class DistributedTrainer:
             self._procs.append(p)
         log.info("Spawned %d self-play workers", self.workers)
 
-    # ------------------------------------------------------------------
     def _drain_sample_q(self) -> None:
         while True:
             try:
@@ -392,7 +319,6 @@ class DistributedTrainer:
             self._batches_drained += 1
             self._samples_drained += len(states)
 
-    # ------------------------------------------------------------------
     def _heartbeat_loop(self) -> None:
         last_games = 0
         last_sims  = 0
@@ -448,7 +374,6 @@ class DistributedTrainer:
 
             last_games, last_sims, last_buf, last_t = games_done, sims_total, buf_size, now
 
-    # ------------------------------------------------------------------
     def run(self, max_steps: int = C.OPT_TRAIN_STEPS) -> None:
         self._start_inference_server()
         self._start_workers()
@@ -513,9 +438,6 @@ def _qsize(q) -> int:
     except (NotImplementedError, Exception):
         return -1
 
-# ─────────────────────────────────────────────────────────────────────────────
-# CLI
-# ─────────────────────────────────────────────────────────────────────────────
 def main() -> None:
     ap = argparse.ArgumentParser(description="Distributed AlphaZero self-play & training")
     ap.add_argument("--workers", type=int, default=C.SELFPLAY_WORKERS)

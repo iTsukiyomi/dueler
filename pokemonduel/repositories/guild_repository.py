@@ -1,12 +1,3 @@
-"""
-pokemonduel.repositories.guild_repository
-==========================================
-CRUD interface for per-guild settings.
-
-Replaces the old ``EnhancedConfigManager`` / ``GuildConfig`` system
-that wrote to flat JSON files on disk.
-"""
-
 from __future__ import annotations
 
 import logging
@@ -19,10 +10,6 @@ from ..models.guild_settings import COLLECTION, GuildSettingsSchema
 
 log = logging.getLogger("dueler.repo.guild")
 
-_CACHE_KEY = "guild:{guild_id}"
-_CACHE_TTL = 600  # 10 minutes
-
-
 class GuildRepository:
     """Data-access object for guild settings."""
 
@@ -30,10 +17,11 @@ class GuildRepository:
         """
         Fetch guild settings, creating defaults if the guild is new.
         """
-        cache_key = _CACHE_KEY.format(guild_id=guild_id)
-        cached = await cache.cache_get(cache_key)
+        cached = await cache.get_guild_settings(str(guild_id))
         if cached is not None:
             return cached
+
+        await cache.invalidate_guild_settings(str(guild_id))
 
         db = get_db()
         now = datetime.now(timezone.utc)
@@ -47,7 +35,7 @@ class GuildRepository:
             return_document=True,
         )
 
-        await cache.cache_set(cache_key, doc, ttl=_CACHE_TTL)
+        await cache.set_guild_settings(str(guild_id), doc)
         return doc
 
     async def update(self, guild_id: str, **settings: Any) -> Optional[dict]:
@@ -66,6 +54,8 @@ class GuildRepository:
 
         safe_update["updated_at"] = datetime.now(timezone.utc)
 
+        await cache.invalidate_guild_settings(str(guild_id))
+
         db = get_db()
         doc = await db[COLLECTION].find_one_and_update(
             {"_id": str(guild_id)},
@@ -73,5 +63,6 @@ class GuildRepository:
             return_document=True,
         )
 
-        await cache.cache_delete(_CACHE_KEY.format(guild_id=guild_id))
+        if doc is not None:
+            await cache.set_guild_settings(str(guild_id), doc)
         return doc

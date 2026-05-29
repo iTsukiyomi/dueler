@@ -28,7 +28,6 @@ class Terrain(ExpiringItem):
         turns = 8 if attacker.held_item == "terrain-extender" else 5
         super().set(item, turns)
         msg = f"{attacker.name} creates a{'n' if item == 'electric' else ''} {item} terrain!\n"
-        # Mimicry
         element = None
         if item == "electric":
             element = ElementType.ELECTRIC
@@ -66,7 +65,6 @@ class Terrain(ExpiringItem):
     def end(self):
         """Ends the terrain."""
         super().end()
-        # Mimicry
         for poke in (self.battle.trainer1.current_pokemon, self.battle.trainer2.current_pokemon):
             if poke is None:
                 continue

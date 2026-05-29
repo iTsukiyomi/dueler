@@ -1,10 +1,3 @@
-"""
-pokemonduel.services.team_service
-==================================
-Business logic for team management — parse, validate, save, and load
-party data through the :class:`TeamRepository`.
-"""
-
 from __future__ import annotations
 
 import logging
@@ -14,13 +7,13 @@ from typing import Optional
 from ..core.registry import FORMS, MOVES, ABILITIES, ITEMS, NATURES
 from ..repositories.team_repository import TeamRepository
 from ..services.player_service import PlayerService
+from ..core import cache
 
 log = logging.getLogger("dueler.svc.team")
 
 # Upper bound on how many teams a single user can save.
 _MAX_TEAMS_PER_USER = 50
 
-# Pokemon Showdown paste format parsing regex patterns.
 _SPECIES_LINE = re.compile(
     r"^(?:(?P<nick>.+?)\s+\((?P<species>[^)]+)\)|(?P<species_only>[^\s@(]+))"
     r"(?:\s+\((?P<gender>[MF])\))?"
@@ -55,7 +48,6 @@ class TeamService:
         self._repo = TeamRepository()
         self._player_svc = PlayerService()
 
-    # -- Parse Showdown format ---------------------------------------------
 
     def parse_showdown(self, text: str) -> list[dict]:
         """
@@ -97,7 +89,6 @@ class TeamService:
         if not lines:
             raise ValueError("Empty Pokémon block.")
 
-        # --- Line 1: Species (nickname) @ Item ---
         first_line = lines[0]
         match = _SPECIES_LINE.match(first_line)
         if not match:
@@ -110,19 +101,16 @@ class TeamService:
 
         species_norm = species.lower().replace(" ", "-")
 
-        # Validate item
         item_norm = item.lower().replace(" ", "-") if item else ""
         if item_norm and item_norm not in ITEMS:
-            item_norm = ""  # silently drop unknown items
+            item_norm = ""
 
-        # Gender
         gender = ""
         if gender_raw == "M":
             gender = "-m"
         elif gender_raw == "F":
             gender = "-f"
 
-        # Defaults
         slot = {
             "id": 0,
             "pokname": species,
@@ -143,14 +131,12 @@ class TeamService:
             "skin": None,
         }
 
-        # --- Remaining lines ---
         for line in lines[1:]:
             low = line.lower().strip()
 
             if low.startswith("ability:"):
                 ability_name = line.split(":", 1)[1].strip()
-                # We store ability_index; for now default to 0
-                # The actual index resolution happens at battle time
+                # We store ability_index; for now default to 0 The actual index resolution happens at battle time.
                 slot["ability_index"] = 0
 
             elif low.startswith("level:"):
@@ -211,7 +197,6 @@ class TeamService:
 
         return slot
 
-    # -- CRUD operations ---------------------------------------------------
 
     async def create_from_showdown(
         self, owner_id: str, name: str, paste_text: str
@@ -222,7 +207,7 @@ class TeamService:
         Raises ``ValueError`` for parse errors and
         ``pymongo.errors.DuplicateKeyError`` if the name is taken.
         """
-        # Enforce team limit
+        # Enforce team limit.
         count = await self._repo.count(str(owner_id))
         if count >= _MAX_TEAMS_PER_USER:
             raise ValueError(
@@ -260,15 +245,16 @@ class TeamService:
         """Delete a team."""
         return await self._repo.delete(str(owner_id), name)
 
-    # -- Active party convenience ------------------------------------------
 
     async def save_active_party(self, owner_id: str, pokemon: list[dict]) -> None:
         """Save or update the current active party under the name '__active__' in the database."""
+        await cache.invalidate_active_party(str(owner_id))
         existing = await self._repo.get(str(owner_id), "__active__")
         if existing is None:
             await self._repo.create(str(owner_id), "__active__", pokemon)
         else:
             await self._repo.update(str(owner_id), "__active__", pokemon)
+        await cache.set_active_party(str(owner_id), pokemon)
 
     async def load_active_party(self, owner_id: str) -> Optional[list[dict]]:
         """
@@ -276,11 +262,18 @@ class TeamService:
 
         Returns ``None`` if no active party is set.
         """
+        cached = await cache.get_active_party(str(owner_id))
+        if cached is not None:
+            return cached
+
         active_team = await self._repo.get(str(owner_id), "__active__")
         if active_team is not None:
-            return active_team.get("pokemon")
+            pokemon = active_team.get("pokemon")
+            if pokemon is not None:
+                await cache.set_active_party(str(owner_id), pokemon)
+            return pokemon
 
-        # Fallback to profile's active_party_name if __active__ does not exist yet
+        # Fallback to profile's active_party_name if __active__ does not exist yet.
         profile = await self._player_svc.get_profile(str(owner_id))
         if profile is not None and profile.get("active_party_name") is not None:
             team_name = profile["active_party_name"]
@@ -304,20 +297,16 @@ class TeamService:
         if team is None:
             return False
 
-        # Copy the team's pokemon list to "__active__"
         await self.save_active_party(str(owner_id), team["pokemon"])
 
-        # Update the active party name in player profile
         await self._player_svc.set_active_party(str(owner_id), team_name)
 
-        # Double-write to legacy config
         from ..config import get_legacy_config
         cfg = get_legacy_config()
         await cfg.member(owner_id).party.set(team["pokemon"])
 
         return True
 
-    # -- Indexes -----------------------------------------------------------
 
     async def ensure_indexes(self) -> None:
         """Ensure database indexes exist."""

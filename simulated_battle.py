@@ -1,32 +1,3 @@
-"""
-simulated_battle.py — Headless replication of the Discord battle flow.
-
-Runs the exact same engine as the real bot, but with all Discord I/O
-stubbed out. Two ``NPCTrainer`` objects (each driven by the AlphaZero
-``NPCTeamAI``) face each other on random teams; the script is intended
-for training runs ("python simulated_battle.py --battles 1000") and for
-end-to-end sanity testing of the engine.
-
-Usage 
------
-
-    python simulated_battle.py                       # 50 battles, default sims
-    python simulated_battle.py --battles 500         # longer run
-    python simulated_battle.py --simulations 16      # faster shallow MCTS
-    python simulated_battle.py --train --steps 10000 # also train after each batch
-
-The script mirrors ``Battle.run()`` step-for-step:
-
-1. ``initial_send_out`` (entry-on hazards + abilities)
-2. Loop ``run_turn``:
-   * forced switch resolution (mid-turn)
-   * action selection by each AI
-   * setup, megas, action execution, mid-turn swaps
-   * end-of-turn passes, weather/terrain/rooms decrement
-
-Everything in the inner loop is the real engine code — we just don't
-talk to Discord.
-"""
 from __future__ import annotations
 
 import argparse
@@ -51,7 +22,6 @@ from pokemonduel.ai import config as C
 from pokemonduel.trainers.npc_trainer import NPCTrainer
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 def run_battle(seed: Optional[int] = None,
                simulations: int = C.MCTS_SIMULATIONS,
                max_turns: int = C.SELFPLAY_MAX_TURNS,
@@ -61,6 +31,8 @@ def run_battle(seed: Optional[int] = None,
 
     Returns ``(winner_side, turns_played, traj1, traj2)``.
     """
+    from pokemonduel.core.registry import load_all
+    load_all()
     if seed is not None:
         random.seed(seed)
         np.random.seed(seed & 0xFFFFFFFF)
@@ -71,15 +43,11 @@ def run_battle(seed: Optional[int] = None,
     t2 = NPCTrainer("NPC Beta",  party2)
     battle = HeadlessBattle(t1, t2)
 
-    # Build the two AIs and bind them to the engine exactly the way
-    # ``commands.py`` does in the live bot — guaranteeing identical
-    # decision-making behaviour.
     ai1 = NPCTeamAI(t1, t2, simulations=simulations)
     ai2 = NPCTeamAI(t2, t1, simulations=simulations)
     ai1.set_battle(battle); ai2.set_battle(battle)
     t1.set_ai(ai1);          t2.set_ai(ai2)
 
-    # Pick leads (slot 0 is already active; AI may want a different opener).
     try:
         lead1 = ai1.choose_lead()
         if lead1 != 0 and 0 <= lead1 < len(t1.party) and t1.party[lead1].hp > 0:
@@ -97,7 +65,6 @@ def run_battle(seed: Optional[int] = None,
 
     winner_side = 0
     for turn_idx in range(max_turns):
-        # Handle forced switches before each turn
         if t1.current_pokemon is None and t1.has_alive_pokemon():
             _resolve_forced_switch(t1, t2, battle, ai1)
         if t2.current_pokemon is None and t2.has_alive_pokemon():
@@ -110,9 +77,7 @@ def run_battle(seed: Optional[int] = None,
             winner_side = 1
             break
 
-        # Ask AIs for their actions. Both calls *mutate* selected_action /
-        # should_mega_evolve on their trainer / current Pokémon, matching
-        # the live ``NPCTrainer.move`` contract.
+        # Ask AIs for their actions. Both calls *mutate* selected_action / should_mega_evolve on their trainer / current Pokémon, matching the live ``NPCTrainer.move`` contract.
         _ai_action(ai1, t1, t2, battle)
         _ai_action(ai2, t2, t1, battle)
 
@@ -142,7 +107,6 @@ def run_battle(seed: Optional[int] = None,
     return winner_side, battle.turn, ai1._traj, ai2._traj
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 def _resolve_forced_switch(trainer, opponent, battle, ai) -> None:
     """Handle a forced switch by asking the AI which party slot to send out."""
     from pokemonduel.moves import Move
@@ -178,7 +142,6 @@ def _ai_action(ai, trainer, opponent, battle) -> None:
         trainer.selected_action = Move.struggle()
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 def main() -> None:
     ap = argparse.ArgumentParser(description="Headless NPC-vs-NPC trainer.")
     ap.add_argument("--battles",     type=int, default=50,
@@ -196,7 +159,7 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO,
                         format="%(asctime)s %(levelname)s %(message)s")
     t0 = time.time()
-    wins = [0, 0, 0]   # tie, side1, side2
+    wins = [0, 0, 0]
     for i in range(args.battles):
         ws, turns, _t1, _t2 = run_battle(seed=random.randint(0, 2**31 - 1),
                                          simulations=args.simulations,

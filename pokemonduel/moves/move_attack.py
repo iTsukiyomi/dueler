@@ -8,27 +8,24 @@ class MoveAttack:
     def attack(self, attacker, defender, battle):
         """
         Attacks the defender using this move.
-        
+
         Returns a string of formatted results of this attack and the number of hits this move did.
         """
-        #https://bulbapedia.bulbagarden.net/wiki/Damage
         msg = ""
         # pyrefly: ignore [missing-attribute]
         current_type = self.get_type(attacker, defender, battle)
-        
-        # Move effectiveness
+
         effectiveness = defender.effectiveness(current_type, battle, attacker=attacker, move=self)
         # pyrefly: ignore [missing-attribute]
         if self.effect == 338:
             effectiveness *= defender.effectiveness(ElementType.FLYING, battle, attacker=attacker, move=self)
         if effectiveness <= 0:
-            return ("The attack had no effect!\n", 0) 
+            return ("The attack had no effect!\n", 0)
         if effectiveness <= .5:
             msg += "It's not very effective...\n"
-        elif effectiveness >= 2: 
+        elif effectiveness >= 2:
             msg += "It's super effective!\n"
-        
-        # Calculate the number of hits for this move.
+
         parental_bond = False
         # pyrefly: ignore [missing-attribute]
         min_hits = self.min_hits
@@ -37,12 +34,10 @@ class MoveAttack:
         if self.effect == 361 and attacker._name == "Greninja-ash":
             hits = 3
         elif min_hits is not None and max_hits is not None:
-            # Handle hit range overrides
             if attacker.ability() == Ability.SKILL_LINK:
                 min_hits = max_hits
             elif attacker.held_item == "loaded-dice" and max_hits >= 4 and (min_hits < 4 or self.effect == 484):
                 min_hits = 4
-            # Randomly select number of hits
             if min_hits == 2 and max_hits == 5:
                 hits = random.choice([
                     2, 2, 2, 2, 2, 2, 2,
@@ -58,16 +53,14 @@ class MoveAttack:
                 parental_bond = True
             else:
                 hits = 1
-        
+
         for hit in range(hits):
             if defender.hp == 0:
                 break
-            # Explosion faints the user first, but should still do damage after death.
-            # Future sight still needs to hit after the attacker dies.
-            # Mind blown still needs to hit after the attacker dies.
+            # Explosion faints the user first, but should still do damage after death. Future sight still needs to hit after the attacker dies. Mind blown still needs to hit after the attacker dies.
             if attacker.hp == 0 and self.effect not in (8, 149, 420, 444):
                 break
-            
+
             # Critical hit chance
             # pyrefly: ignore [missing-attribute]
             critical_stage = self.crit_rate
@@ -89,7 +82,6 @@ class MoveAttack:
             critical = not random.randrange(crit_map[critical_stage])
             if attacker.ability() == Ability.MERCILESS and defender.nv.poison():
                 critical = True
-            # Always scores a critical hit.
             if self.effect == 289:
                 critical = True
             if attacker.laser_focus.active():
@@ -102,7 +94,7 @@ class MoveAttack:
             # pyrefly: ignore [missing-attribute]
             if self.id == 0xCFCF:
                 critical = False
-        
+
             # Stats
             # pyrefly: ignore [missing-attribute]
             if self.damage_class == DamageClass.PHYSICAL:
@@ -139,8 +131,7 @@ class MoveAttack:
                         attacker=attacker,
                         move=self
                     )
-        
-            # Always uses defender's defense
+
             if self.effect == 283:
                 d = defender.get_defense(
                     battle,
@@ -149,16 +140,15 @@ class MoveAttack:
                     attacker=attacker,
                     move=self
                 )
-            
-            # Use the user's defense instead of attack for the attack stat
+
+            # Use the user's defense instead of attack for the attack stat.
             if self.effect == 426:
                 # This does not pass critical, otherwise it would crop the wrong direction.
                 a = attacker.get_defense(
                     battle,
                     ignore_stages=defender.ability(attacker=attacker, move=self) == Ability.UNAWARE
                 )
-                
-            # Use the defender's attacking stat
+
             if self.effect == 298:
                 if self.damage_class == DamageClass.PHYSICAL:
                     a = defender.get_attack(
@@ -172,56 +162,44 @@ class MoveAttack:
                         critical=critical,
                         ignore_stages=defender.ability(attacker=attacker, move=self) == Ability.UNAWARE
                     )
-            
-            # Use the higher of attack or special attack
+
             if self.effect == 416:
                 ignore_stages = defender.ability(attacker=attacker, move=self) == Ability.UNAWARE
                 a = max(attacker.get_attack(battle, critical=critical, ignore_stages=ignore_stages), attacker.get_spatk(battle, critical=critical, ignore_stages=ignore_stages))
-            
+
             if attacker.flash_fire and current_type == ElementType.FIRE:
                 a *= 1.5
             if defender.ability(attacker=attacker, move=self) == Ability.THICK_FAT and current_type in (ElementType.FIRE, ElementType.ICE):
                 a *= .5
-        
+
             # pyrefly: ignore [missing-attribute]
             power = self.get_power(attacker, defender, battle)
             if power is None:
                 # pyrefly: ignore [missing-attribute]
                 raise ValueError(f"{self.name} has no power and no override.")
-            
-            # Check accuracy on each hit
-            # WARNING: If there is something BEFORE this in the loop which adds to msg (like "A critical hit")
-            # it MUST be after this block, or it will appear even after "misses" from this move.
+
+            # Check accuracy on each hit WARNING: If there is something BEFORE this in the loop which adds to msg (like "A critical hit") it MUST be after this block, or it will appear even after "misses" from this move.
             if hit > 0 and not attacker.ability() == Ability.SKILL_LINK:
-                # Increasing damage each hit
                 if self.effect == 105:
                     # pyrefly: ignore [missing-attribute]
                     if not self.check_hit(attacker, defender, battle):
-                        # Reset the number of hits to the number of ACTUAL hits
                         hits = hit
                         break
-                    # x2 then x3
                     power *= 1 + hit
-                # Only checks if loaded dice did not activate
+                # Only checks if loaded dice did not activate.
                 if self.effect == 484 and attacker.held_item != "loaded-dice":
                     # pyrefly: ignore [missing-attribute]
                     if not self.check_hit(attacker, defender, battle):
                         hits = hit
                         break
-            
-            # --- Showdown-accurate damage formula ---
-            # Step 1: Base damage with integer flooring at each step
-            # floor(floor(floor(2*L/5+2) * Bp * A/D) / 50 + 2)
+
             damage = int(int(int(2 * attacker.level / 5) + 2) * power * a / d)
             damage = int(damage / 50) + 2
 
-            # Step 2: Critical hit (1.5x, floored)
             if critical:
                 msg += "A critical hit!\n"
                 damage = int(damage * 3 / 2)
 
-            # Step 3: Weather type boosts (before random, matches Showdown ordering)
-            # Harsh sun/rain (h-sun/h-rain) give the same boost as normal sun/rain
             weather = battle.weather.get()
             if current_type == ElementType.WATER and weather in ("rain", "h-rain"):
                 damage = int(damage * 3 / 2)
@@ -232,21 +210,17 @@ class MoveAttack:
             elif current_type == ElementType.WATER and weather in ("sun", "h-sun"):
                 damage = int(damage / 2)
 
-            # Step 4: Random damage roll (Showdown integer method: 85-100, floor)
             damage = damage * random.randint(85, 100) // 100
-            
-        
-            # Same type attack bonus - extra damage for using a move that is the same type as your poke's type.
+
+
             if current_type in attacker.type_ids:
                 if attacker.ability() == Ability.ADAPTABILITY:
                     damage *= 2
                 else:
                     damage *= 1.5
-        
-            # Move effectiveness
+
             damage *= effectiveness
-        
-            # Burn
+
             if (
                 attacker.nv.burn()
                 and damage_class == DamageClass.PHYSICAL
@@ -254,8 +228,8 @@ class MoveAttack:
                 and self.effect != 170
             ):
                 damage *= .5
-        
-            # Aurora Veil, Light Screen, Reflect do not stack but all reduce incoming damage in some way
+
+            # Aurora Veil, Light Screen, Reflect do not stack but all reduce incoming damage in some way.
             if not critical and attacker.ability() != Ability.INFILTRATOR:
                 if defender.owner.aurora_veil.active():
                     damage *= .5
@@ -263,20 +237,17 @@ class MoveAttack:
                     damage *= .5
                 elif defender.owner.reflect.active() and damage_class == DamageClass.PHYSICAL:
                     damage *= .5
-        
-            # Moves that do extra damage to minimized pokes
+
             if defender.minimized and self.effect == 338:
                 damage *= 2
-            
-            # Fluffy
+
             if defender.ability(attacker=attacker, move=self) == Ability.FLUFFY:
                 # pyrefly: ignore [missing-attribute]
                 if self.makes_contact(attacker):
                     damage *= .5
                 if current_type == ElementType.FIRE:
                     damage *= 2
-        
-            # Abilities that change damage
+
             if defender.ability(attacker=attacker, move=self) in (Ability.FILTER, Ability.PRISM_ARMOR, Ability.SOLID_ROCK) and effectiveness > 1:
                 damage *= .75
             if attacker.ability() == Ability.NEUROFORCE and effectiveness > 1:
@@ -309,8 +280,7 @@ class MoveAttack:
                     damage *= 4/3
             if defender.ability(attacker=attacker, move=self) == Ability.DRY_SKIN and current_type == ElementType.FIRE:
                 damage *= 1.25
-        
-            # Items that change damage
+
             if defender.held_item == "chilan-berry" and current_type == ElementType.NORMAL:
                 damage *= .5
             if attacker.held_item == "expert-belt" and effectiveness > 1:
@@ -324,35 +294,29 @@ class MoveAttack:
             if attacker.held_item == "metronome":
                 # pyrefly: ignore [missing-attribute]
                 damage *= attacker.metronome.get_buff(self.name)
-            
-            # Parental bond - adds an extra low power hit
+
             if parental_bond and hit > 0:
                 damage *= .25
-            
-            # Reduced damage while at full hp
+
             if defender.ability(attacker=attacker, move=self) in (Ability.MULTISCALE, Ability.SHADOW_SHIELD) and defender.hp == defender.starting_hp:
                 damage *= .5
 
-            # Random damage scaling
             damage *= random.uniform(0.85, 1)
             damage = max(1, int(damage))
-            
+
             # Cannot lower the target's HP below 1.
             if self.effect == 102:
                 damage = min(damage, defender.hp - 1)
-            
-            # Drain ratios
+
             drain_heal_ratio = None
             if self.effect in (4, 9, 346, 500):
                 drain_heal_ratio = 1/2
             elif self.effect == 349:
                 drain_heal_ratio = 3/4
 
-            # Do the damage
             msgadd, damage = defender._damage(damage, battle, move=self, move_type=current_type, attacker=attacker, critical=critical, drain_heal_ratio=drain_heal_ratio)
             msg += msgadd
-            
-            # Recoil
+
             if attacker.ability() != Ability.ROCK_HEAD and defender.owner.has_alive_pokemon():
                 if self.effect == 49:
                     msg += attacker.damage(damage // 4, battle, source="recoil")
@@ -362,14 +326,13 @@ class MoveAttack:
                     msg += attacker.damage(damage // 2, battle, source="recoil")
                 if self.effect == 463:
                     msg += attacker.damage(attacker.starting_hp // 2, battle, source="recoil")
-        
-        # Weakness Policy
+
         if effectiveness > 1 and defender.held_item == "weakness-policy" and not defender.substitute:
             msg += defender.append_attack(2, attacker=defender, move=self, source="its weakness policy")
             msg += defender.append_spatk(2, attacker=defender, move=self, source="its weakness policy")
             # pyrefly: ignore [missing-attribute]
             defender.held_item.use()
-        
+
         return (msg, hits)
 
     def calculate_damage(self, attacker, defender, battle, current_type, effectiveness, is_protect_counter):

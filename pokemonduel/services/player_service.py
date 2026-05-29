@@ -1,12 +1,3 @@
-"""
-pokemonduel.services.player_service
-====================================
-Business logic layer for player profiles, Elo ratings, and economy.
-
-Orchestrates the :class:`PlayerRepository` and the
-:mod:`pokemonduel.core.elo` module.
-"""
-
 from __future__ import annotations
 
 import logging
@@ -17,7 +8,6 @@ from ..repositories.player_repository import PlayerRepository
 
 log = logging.getLogger("dueler.svc.player")
 
-# Elo configuration
 _ELO_K = 32
 
 
@@ -63,7 +53,6 @@ class PlayerService:
         """Fetch a profile without auto-creating."""
         return await self._repo.get(str(user_id))
 
-    # -- Match results -----------------------------------------------------
 
     async def record_match_result(
         self,
@@ -98,7 +87,6 @@ class PlayerService:
             str(loser_id), losses_delta=1, elo_delta=delta_l,
         )
 
-        # Award money to winner
         if money_reward > 0:
             await self._repo.update_wallet(str(winner_id), wallet_delta=money_reward)
 
@@ -148,8 +136,6 @@ class PlayerService:
         return player_doc["elo"] if player_doc else w_elo
 
 
-    # -- Economy -----------------------------------------------------------
-
     async def get_balance(self, user_id: str) -> dict:
         """Return ``{wallet}`` for a player."""
         profile = await self._repo.get(str(user_id))
@@ -159,7 +145,6 @@ class PlayerService:
             "wallet": profile.get("wallet", 0),
         }
 
-    # -- Leaderboard / Rank ------------------------------------------------
 
     async def get_leaderboard(
         self, offset: int = 0, limit: int = 10
@@ -171,7 +156,6 @@ class PlayerService:
         """Return the 1-based rank of a player."""
         return await self._repo.get_rank(str(user_id))
 
-    # -- Active party ------------------------------------------------------
 
     async def set_active_party(
         self, user_id: str, team_name: Optional[str]
@@ -179,7 +163,6 @@ class PlayerService:
         """Set the player's active party name."""
         await self._repo.set_active_party(str(user_id), team_name)
 
-    # -- Indexes -----------------------------------------------------------
 
     async def ensure_indexes(self) -> None:
         """Ensure database indexes exist."""

@@ -9,13 +9,13 @@ class DuelForfeitView(discord.ui.View):
         super().__init__(timeout=BUTTON_TIMEOUT)
         self.trainer = trainer
         self.confirm = False
-    
+
     @discord.ui.button(label="Forfeit", style=discord.ButtonStyle.red)
     async def actuallyforfeit(self, interaction, button):
         await interaction.response.edit_message(content="Forfeited.", view=None)
         self.confirm = True
         self.stop()
-    
+
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary)
     async def cancel(self, interaction, button):
         await interaction.response.edit_message(content="Not forfeiting.", view=None)
@@ -26,7 +26,7 @@ class DuelForfeitView(discord.ui.View):
             await interaction.response.send_message(content="You are not allowed to interact with this button.", ephemeral=True)
             return False
         return True
-    
+
     async def on_error(self, interaction, error, item):
         await self.trainer.party[0].held_item.battle.ctx.cog.log.error("Exception in a button.", exc_info=error)
 

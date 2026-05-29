@@ -1,19 +1,3 @@
-"""
-ai/replay_buffer.py — Prioritised replay with compressed persistence.
-
-Each entry is a tuple ``(state, policy_target, value_target)`` where
-``state`` is the feature vector emitted by ``BattleEncoder``, ``policy_target``
-is the MCTS visit distribution (sum == 1, illegal entries zero) and
-``value_target`` is the eventual game-result from the current player's
-point of view in ``[-1, +1]``.
-
-The buffer is implemented over pre-allocated numpy arrays so push/sample
-operations are O(1). Priorities are stored in a min-heap-style sum-tree to
-allow proportional sampling in O(log N).
-
-Compressed snapshots are saved as ``.npz`` files via ``save()`` /
-``load()`` so a training run can be resumed without losing experience.
-"""
 from __future__ import annotations
 
 import os
@@ -27,9 +11,6 @@ from . import config as C
 from . import features as F
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Sum-tree for proportional prioritised sampling
-# ─────────────────────────────────────────────────────────────────────────────
 class _SumTree:
     """Pure-python sum-tree compatible with PER (Schaul et al., 2015)."""
 
@@ -52,7 +33,6 @@ class _SumTree:
     def update(self, tree_idx: int, priority: float) -> None:
         change = priority - self.tree[tree_idx]
         self.tree[tree_idx] = priority
-        # propagate up
         parent = tree_idx >> 1
         while parent:
             self.tree[parent] += change
@@ -71,9 +51,6 @@ class _SumTree:
         return idx, float(self.tree[idx])
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Prioritised replay buffer
-# ─────────────────────────────────────────────────────────────────────────────
 class PrioritizedReplayBuffer:
     """Thread-safe prioritised replay buffer used by the trainer."""
 
@@ -104,11 +81,9 @@ class PrioritizedReplayBuffer:
         self._max_pri = 1.0
         self._lock    = threading.RLock()
 
-    # ──────────────────────────────────────────────────────────────────
     def __len__(self) -> int:
         return self._tree.size
 
-    # ──────────────────────────────────────────────────────────────────
     def push(self,
              state: np.ndarray,
              policy: np.ndarray,
@@ -132,13 +107,11 @@ class PrioritizedReplayBuffer:
             else:
                 self._masks[idx] = mask.astype(bool)
 
-    # ──────────────────────────────────────────────────────────────────
     def push_many(self, states, policies, values, masks=None) -> None:
         for i in range(len(states)):
             self.push(states[i], policies[i], float(values[i]),
                       None if masks is None else masks[i])
 
-    # ──────────────────────────────────────────────────────────────────
     def sample(self, batch_size: int):
         if self._tree.size == 0:
             raise RuntimeError("buffer is empty")
@@ -171,7 +144,6 @@ class PrioritizedReplayBuffer:
                 tree_idxs,
             )
 
-    # ──────────────────────────────────────────────────────────────────
     def update_priorities(self, tree_idxs, td_errors) -> None:
         with self._lock:
             for ti, err in zip(tree_idxs, td_errors):
@@ -179,14 +151,12 @@ class PrioritizedReplayBuffer:
                 self._tree.update(int(ti), p)
                 self._max_pri = max(self._max_pri, float(p))
 
-    # ──────────────────────────────────────────────────────────────────
     def _current_beta(self) -> float:
         if self.beta_steps <= 0:
             return self.beta_end
         frac = min(1.0, self._step / self.beta_steps)
         return self.beta_start + (self.beta_end - self.beta_start) * frac
 
-    # ──────────────────────────────────────────────────────────────────
     def save(self, path: str | Path) -> None:
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -206,7 +176,6 @@ class PrioritizedReplayBuffer:
             )
             os.replace(_tmp + ".npz", str(path))
 
-    # ──────────────────────────────────────────────────────────────────
     def load(self, path: str | Path) -> bool:
         path = Path(path)
         if not path.exists():
@@ -226,10 +195,6 @@ class PrioritizedReplayBuffer:
         return True
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# In-memory queue-based intermediate buffer used to ship samples from
-# self-play workers (separate processes) to the trainer over IPC.
-# ─────────────────────────────────────────────────────────────────────────────
 class TrajectoryBatch:
     """A whole game's worth of (state, policy_target) tuples plus the
     eventual winner-side value. Filled by the self-play loop, then drained

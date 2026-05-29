@@ -8,12 +8,11 @@ class DuelPokemonTurn:
     def next_turn(self, otherpoke, battle):
         """
         Updates this pokemon for a new turn.
-        
+
         `otherpoke` may be None if the opponent fainted the previous turn.
         Returns a formatted message.
         """
         msg = ""
-        # This needs to be here, as swapping sets this value explicitly
         self.has_moved = False
         if not self.swapped_in:
             # pyrefly: ignore [missing-attribute]
@@ -59,7 +58,6 @@ class DuelPokemonTurn:
         if self.locked_move:
             if self.locked_move.next_turn():
                 self.locked_move = None
-                # Just in case they never actually used the move to remove it
                 self.dive = False
                 self.dig = False
                 self.fly = False
@@ -74,10 +72,10 @@ class DuelPokemonTurn:
         self.roost = False
         # pyrefly: ignore [missing-attribute]
         self.syrup_bomb.next_turn()
-        
+
         # pyrefly: ignore [missing-attribute]
         msg += self.nv.next_turn(battle)
-        
+
         # Volatile status turn progression
         # pyrefly: ignore [missing-attribute]
         prev_disab_move = self.disable.item
@@ -144,7 +142,7 @@ class DuelPokemonTurn:
             # pyrefly: ignore [missing-attribute]
             self.held_item.last_used = None
 
-        
+
         # Abilities
         # pyrefly: ignore [missing-attribute]
         if self.ability() == Ability.SPEED_BOOST and not self.swapped_in:
@@ -403,7 +401,7 @@ class DuelPokemonTurn:
         if self.ability() == Ability.FLOWER_GIFT and self._name == "Cherrim-sunshine" and battle.weather.get() not in ("sun", "h-sun"):
             # pyrefly: ignore [missing-attribute]
             self.form("Cherrim")
-        
+
         #Bad Dreams
         # pyrefly: ignore [missing-attribute]
         if otherpoke is not None and otherpoke.ability() == Ability.BAD_DREAMS and self.nv.sleep():
@@ -425,7 +423,7 @@ class DuelPokemonTurn:
         if self.syrup_bomb.active() and otherpoke is not None:
             # pyrefly: ignore [missing-attribute]
             msg += self.append_speed(-1, attacker=otherpoke, source="its syrup coating")
-        
+
         #Weather damages
         # pyrefly: ignore [missing-attribute]
         if self.ability() == Ability.OVERCOAT:
@@ -455,7 +453,7 @@ class DuelPokemonTurn:
             ):
                 # pyrefly: ignore [missing-attribute]
                 msg += self.damage(self.starting_hp // 16, battle, source="the hail")
-        
+
         #Bind
         # pyrefly: ignore [missing-attribute]
         if self.bind.next_turn():
@@ -499,8 +497,8 @@ class DuelPokemonTurn:
         if battle.terrain.item == "grassy" and self.grounded(battle) and not self.heal_block.active():
             # pyrefly: ignore [missing-attribute]
             msg += self.heal(self.starting_hp // 16, source="grassy terrain")
-        
-        #Goes at the end so everything in this func that checks it handles it correctly
+
+        # Goes at the end so everything in this func that checks it handles it correctly.
         self.swapped_in = False
         # pyrefly: ignore [missing-attribute]
         msg += self.held_item.activate_end_of_turn(battle)

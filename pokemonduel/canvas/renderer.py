@@ -6,7 +6,6 @@ from PIL import Image, ImageDraw, ImageFont
 
 from .assets import AssetLoader
 
-# ── Classic Pokémon Type Colors (Gen 3/5 palette) ──
 TYPE_COLORS = {
     "normal":   (168, 168, 120, 255),
     "fire":     (240, 128, 48, 255),
@@ -45,7 +44,6 @@ STATUS_COLORS = {
     "frz":      (152, 216, 216, 255),
 }
 
-# Type ID → Name mapping
 _TYPE_ID_TO_NAME = {
     1: "Normal", 2: "Fighting", 3: "Flying", 4: "Poison", 5: "Ground",
     6: "Rock", 7: "Bug", 8: "Ghost", 9: "Steel", 10: "Fire",
@@ -63,8 +61,7 @@ class BattleRenderer:
         self.palette = palette
         self.data_dir = data_dir
         self.theme = theme.lower()
-        
-        # Resolve virtual gen number for backwards compatibility
+
         theme_lower = self.theme.strip()
         if theme_lower == "firered":
             self.gen = 3
@@ -96,7 +93,7 @@ class BattleRenderer:
         import urllib.request
         try:
             req = urllib.request.Request(
-                url, 
+                url,
                 headers={'User-Agent': 'Mozilla/5.0'}
             )
             with urllib.request.urlopen(req, timeout=10) as response:
@@ -114,7 +111,7 @@ class BattleRenderer:
     def _load_fonts(self) -> dict[str, ImageFont.ImageFont]:
         """Load fonts, preferring retro/monospace for pixel settings, clean sans-serif for modern."""
         is_pixel = getattr(self, "palette", None) and getattr(self.palette, "font_hint", "sans") == "pixel"
-        
+
         bold_path = None
         reg_path = None
 
@@ -134,7 +131,7 @@ class BattleRenderer:
                     elif not reg_path:
                         reg_path = Path(p)
 
-            # Fallback to downloading JetBrains Mono
+            # Fallback to downloading JetBrains Mono.
             if not bold_path:
                 bold_path = self._ensure_font(
                     "JetBrainsMono-Bold.ttf",
@@ -161,7 +158,7 @@ class BattleRenderer:
                     elif not reg_path:
                         reg_path = Path(p)
 
-            # Fallback to downloading Roboto
+            # Fallback to downloading Roboto.
             if not bold_path:
                 bold_path = self._ensure_font(
                     "Roboto-Bold.ttf",
@@ -212,15 +209,12 @@ class BattleRenderer:
                 from ..core.registry import FORMS
                 form_info = FORMS.get(name.lower())
                 if form_info:
-                    # 1. Form ID (e.g. 10081 or 10091)
                     fid = form_info.get("id")
                     if fid and fid not in candidates:
                         candidates.append(fid)
-                    # 2. Variety ID (e.g. 10021 or 666)
                     pid = form_info.get("pokemon_id")
                     if pid and pid not in candidates:
                         candidates.append(pid)
-                    # 3. Base ID (e.g. 645 or 666)
                     bid = form_info.get("base_id")
                     if bid and bid not in candidates:
                         candidates.append(bid)
@@ -245,7 +239,6 @@ class BattleRenderer:
                         continue
         return None
 
-    # ── Classic UI Drawing Primitives ──
 
     def _draw_classic_panel(self, draw: ImageDraw.ImageDraw,
                             x1: float, y1: float, x2: float, y2: float,
@@ -254,12 +247,11 @@ class BattleRenderer:
         """Draw a classic Pokémon-style bordered panel (solid fill, dark border)."""
         fill = fill or self.palette.panel_bg
         border = border or self.palette.frame_dark
-        
+
         if self.theme in ("firered", "black"):
             radius = 0
 
         if self.theme == "firered":
-            # FireRed GameBoy Advance style double border
             draw.rectangle([x1, y1, x2, y2], fill=(*fill, 255) if len(fill) == 3 else fill)
             draw.rectangle([x1, y1, x2, y2], outline=(*border, 255) if len(border) == 3 else border, width=2)
             draw.rectangle([x1 + 3, y1 + 3, x2 - 3, y2 - 3], outline=(*border, 255) if len(border) == 3 else border, width=1)
@@ -274,13 +266,13 @@ class BattleRenderer:
         """Draw a classic dark header bar with white text (Gen 3/5 style)."""
         bg = bg or self.palette.header_bg
         radius = 0 if self.theme in ("firered", "black") else 4
-        
+
         if self.theme == "firered":
             draw.rectangle([x1, y1, x2, y1 + height], fill=(*bg, 255) if len(bg) == 3 else bg)
             draw.rectangle([x1, y1, x2, y1 + height], outline=self.palette.frame_dark, width=1)
         else:
             draw.rounded_rectangle([x1, y1, x2, y1 + height], radius=radius, fill=(*bg, 255) if len(bg) == 3 else bg)
-            
+
         if text:
             font = self.fonts["body_bold"]
             bbox = draw.textbbox((0, 0), text, font=font)
@@ -293,7 +285,6 @@ class BattleRenderer:
                          *, width: int = 60, height: int = 18) -> Tuple[float, float]:
         """Draw a classic Gen 3/5 style type rectangle badge."""
         if self.theme == "firered":
-            # FireRed GBA monochrome type badge look: outline box, no fill color
             font = self.fonts["small_bold"]
             label = type_name.upper()
             draw.rectangle([x, y, x + width, y + height], fill=self.palette.panel_bg, outline=self.palette.frame_dark, width=1)
@@ -307,17 +298,14 @@ class BattleRenderer:
         font = self.fonts["small_bold"]
         radius = 3
 
-        # Filled rounded rectangle with slight darker border
         draw.rounded_rectangle([x, y, x + width, y + height], radius=radius,
                                fill=color, outline=(max(0, color[0]-40), max(0, color[1]-40), max(0, color[2]-40), 255), width=1)
 
-        # Centered white text
         label = type_name.upper()
         bbox = draw.textbbox((0, 0), label, font=font)
         tx = x + (width - (bbox[2] - bbox[0])) // 2
         ty = y + (height - (bbox[3] - bbox[1])) // 2 - 1
 
-        # Text shadow for readability
         draw.text((tx + 1, ty + 1), label, fill=(0, 0, 0, 100), font=font)
         draw.text((tx, ty), label, fill=(255, 255, 255, 255), font=font)
 
@@ -336,7 +324,6 @@ class BattleRenderer:
         w = text_w + 10
         h = 16
 
-        # Solid rectangle with darker border
         draw.rounded_rectangle([x, y, x + w, y + h], radius=3, fill=color,
                                outline=(max(0, color[0]-40), max(0, color[1]-40), max(0, color[2]-40), 255), width=1)
         draw.text((x + 5, y + (h - (bbox[3] - bbox[1])) // 2 - 1), badge_text,
@@ -350,11 +337,9 @@ class BattleRenderer:
         """Classic thin Pokémon HP bar (green→yellow→red, dark border)."""
         ratio = max(0.0, min(1.0, current / maximum if maximum > 0 else 0.0))
 
-        # "HP:" label on the left
         font = self.fonts["hp_label"]
         draw.text((x - 24, y - 1), "HP:", fill=self.palette.text_dark, font=font)
 
-        # Background bar with dark border
         draw.rounded_rectangle([x, y, x + w, y + h], radius=2, fill=self.palette.hp_bg)
 
         if ratio > 0.0:
@@ -367,10 +352,8 @@ class BattleRenderer:
                 color = self.palette.hp_red
             draw.rounded_rectangle([x, y, x + fill_w, y + h], radius=2, fill=color)
 
-        # Thin border
         draw.rounded_rectangle([x, y, x + w, y + h], radius=2, outline=self.palette.hp_border, width=1)
 
-        # HP text to the right
         hp_text = f"{current}/{maximum}"
         hp_font = self.fonts["small"]
         draw.text((x + w + 6, y - 2), hp_text, fill=self.palette.text_dark, font=hp_font)
@@ -381,11 +364,9 @@ class BattleRenderer:
         width = 310
         height = 80
 
-        # Classic solid panel (cream/white with dark border)
         self._draw_classic_panel(draw, x, y, x + width, y + height,
                                  fill=None, border=None)
 
-        # Name
         name_text = poke._name.replace('-', ' ').title()
         nick_text = getattr(poke, '_nickname', None)
         display_name = nick_text if nick_text and nick_text != "None" else name_text
@@ -393,7 +374,6 @@ class BattleRenderer:
         font_name = self.fonts["body_bold"]
         draw.text((x + 10, y + 8), display_name, fill=self.palette.text_dark, font=font_name)
 
-        # Level (right-aligned)
         level = getattr(poke, 'level', 100)
         level_text = f"Lv{level}"
         font_small = self.fonts["body"]
@@ -401,26 +381,22 @@ class BattleRenderer:
         lv_x = x + width - (lv_bbox[2] - lv_bbox[0]) - 10
         draw.text((lv_x, y + 8), level_text, fill=self.palette.text_mid, font=font_small)
 
-        # Gender icon
         gender = getattr(poke, 'gender', '')
         if gender == '-m':
             draw.text((lv_x - 16, y + 8), "♂", fill=(80, 128, 240, 255), font=font_small)
         elif gender == '-f':
             draw.text((lv_x - 16, y + 8), "♀", fill=(240, 104, 128, 255), font=font_small)
 
-        # HP Bar
         max_hp = poke.starting_hp
         current_hp = max(0, poke.hp)
         self._draw_hp_bar(draw, x + 38, y + 36, width - 110, 8, current_hp, max_hp)
 
-        # Status badge
         curr_y = y + 54
         start_x = x + 10
         if poke.nv.current:
             badge_w, _ = self._draw_status_badge(draw, start_x, curr_y, poke.nv.current)
             start_x += badge_w + 6
 
-        # Stat stages (compact)
         stages = getattr(poke, 'stages', {})
         if stages:
             stage_parts = []
@@ -472,11 +448,9 @@ class BattleRenderer:
         rnd = random.Random(42)
 
         if "sun" in weather_low or "sunny" in weather_low:
-            # Warm golden tint
             draw.rectangle([0, 0, width, height], fill=(255, 200, 80, 18))
 
         elif "rain" in weather_low:
-            # Blue tint + rain streaks
             draw.rectangle([0, 0, width, height], fill=(40, 80, 160, 18))
             for _ in range(60):
                 rx = rnd.randint(0, width)
@@ -502,7 +476,6 @@ class BattleRenderer:
 
         canvas.alpha_composite(overlay)
 
-    # ── Main Rendering Methods ──
 
     def render_battle_screen(self, battle) -> io.BytesIO:
         """Generates a classic Pokémon-style battle screen image."""
@@ -520,21 +493,16 @@ class BattleRenderer:
 
         horizon_y = int(height * 0.45)
 
-        # Classic battle platforms (flat elliptical ground markers)
-        # Left platform (player side — bottom-left area)
         plat_left_cx, plat_left_cy = 230, 400
         draw.ellipse([plat_left_cx - 120, plat_left_cy - 20, plat_left_cx + 120, plat_left_cy + 20],
                      fill=(96, 160, 56, 80), outline=(56, 120, 40, 180), width=2)
 
-        # Right platform (opponent side — upper-right area)
         plat_right_cx, plat_right_cy = 730, 380
         draw.ellipse([plat_right_cx - 110, plat_right_cy - 18, plat_right_cx + 110, plat_right_cy + 18],
                      fill=(96, 160, 56, 80), outline=(56, 120, 40, 180), width=2)
 
-        # Terrain overlays
         self._draw_terrain_overlay(draw, terrain, width, height)
 
-        # Active Pokémon Sprites
         t1_poke = battle.trainer1.current_pokemon
         t2_poke = battle.trainer2.current_pokemon
 
@@ -545,7 +513,6 @@ class BattleRenderer:
 
         sprite_w, sprite_h = 200, 200
 
-        # Left Pokémon (player's — larger, lower on screen)
         sprite_left = self._load_sprite(t1_id, (sprite_w, sprite_h), name=t1_name)
         if sprite_left:
             canvas.paste(sprite_left, (130, 230), sprite_left)
@@ -553,7 +520,6 @@ class BattleRenderer:
             draw.rectangle([170, 260, 290, 380], fill=(80, 140, 60, 60), outline=(56, 120, 40, 160))
             draw.text((215, 310), "?", fill=self.palette.text_mid, font=self.fonts["title"])
 
-        # Right Pokémon (opponent's — slightly smaller, higher)
         sprite_right = self._load_sprite(t2_id, (sprite_w - 10, sprite_h - 10), name=t2_name)
         if sprite_right:
             sprite_right = sprite_right.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
@@ -562,16 +528,11 @@ class BattleRenderer:
             draw.rectangle([670, 250, 790, 370], fill=(80, 140, 60, 60), outline=(56, 120, 40, 160))
             draw.text((715, 300), "?", fill=self.palette.text_mid, font=self.fonts["title"])
 
-        # Weather overlay
         self._apply_weather_overlay(canvas, weather)
 
-        # HUD Cards (classic solid panels)
-        # Right-side HUD for opponent (upper right)
         self._draw_hud(draw, 560, 30, t2_poke, is_left=False)
-        # Left-side HUD for player (lower left)
         self._draw_hud(draw, 50, 440, t1_poke, is_left=True)
 
-        # Center info panel (Turn / Weather / Terrain)
         info_w, info_h = 160, 60
         info_x = (width - info_w) // 2
         info_y = 16
@@ -584,7 +545,6 @@ class BattleRenderer:
         draw.text((info_x + (info_w - (tb[2] - tb[0])) // 2, info_y + 6),
                   turn_text, fill=self.palette.text_dark, font=self.fonts["body_bold"])
 
-        # Weather/terrain subtitles
         if weather != "clear":
             w_text = weather.replace("-", " ").title()
             w_tb = draw.textbbox((0, 0), w_text, font=self.fonts["small"])
@@ -597,7 +557,6 @@ class BattleRenderer:
             draw.text((info_x + (info_w - (t_tb[2] - t_tb[0])) // 2, info_y + 42),
                       t_text, fill=(80, 160, 56), font=self.fonts["small"])
 
-        # Outer frame border (classic game window)
         draw.rectangle([0, 0, width - 1, height - 1], outline=self.palette.frame_dark, width=3)
         draw.rectangle([3, 3, width - 4, height - 4], outline=self.palette.frame_mid, width=1)
 
@@ -612,7 +571,6 @@ class BattleRenderer:
         canvas = self.asset_loader.get_background("team_preview_bg", width, height).copy()
         draw = ImageDraw.Draw(canvas)
 
-        # Classic header bar
         self._draw_header_bar(draw, 20, 10, width - 20, 28,
                               text=f"TEAM PREVIEW — {battle.trainer1.name} vs {battle.trainer2.name}")
 
@@ -626,14 +584,12 @@ class BattleRenderer:
             row_width = len(party) * poke_w + (len(party) - 1) * col_gap
             start_x = (width - row_width) // 2
 
-            # Trainer label
             draw.text((start_x, start_y - 18), label_text,
                       fill=self.palette.header_text, font=self.fonts["small_bold"])
 
             for idx, poke in enumerate(party):
                 px = start_x + idx * (poke_w + col_gap)
 
-                # Classic bordered pocket
                 self._draw_classic_panel(draw, px, start_y, px + poke_w, start_y + poke_h,
                                          fill=(40, 56, 96), border=(72, 88, 136), border_width=2)
 
@@ -651,7 +607,6 @@ class BattleRenderer:
                 else:
                     draw.text((px + 34, start_y + 30), "?", fill=(160, 168, 200, 200), font=self.fonts["title"])
 
-                # Name below pocket
                 name = poke._name.replace('-', ' ').title()
                 if len(name) > 10:
                     name = name[:8] + ".."
@@ -660,7 +615,6 @@ class BattleRenderer:
                 nx = px + (poke_w - (nb[2] - nb[0])) // 2
                 draw.text((nx, start_y + poke_h + 4), name, fill=self.palette.header_text, font=name_font)
 
-                # Mini HP indicator
                 hp_text = f"{poke.hp}hp"
                 hp_font = self.fonts["tiny"]
                 hb = draw.textbbox((0, 0), hp_text, font=hp_font)
@@ -670,11 +624,9 @@ class BattleRenderer:
         draw_team_row(battle.trainer1, row1_y, f"▸ {battle.trainer1.name}'s Party:")
         draw_team_row(battle.trainer2, row2_y, f"▸ {battle.trainer2.name}'s Party:")
 
-        # Divider line between teams
         div_y = (row1_y + poke_h + 36 + row2_y - 18) // 2
         draw.line([(40, div_y), (width - 40, div_y)], fill=(72, 88, 136, 180), width=1)
 
-        # Outer frame
         draw.rectangle([0, 0, width - 1, height - 1], outline=self.palette.frame_dark, width=2)
 
         buf = io.BytesIO()
@@ -686,7 +638,6 @@ class BattleRenderer:
         """Look up base stats from static registries. Fixed to use proper registry API."""
         try:
             from ..core.registry import FORMS, POKEMON_STATS
-            # Use the correct .get() API on the registry
             form = FORMS.get(identifier.lower())
             if form:
                 pid = form.get("pokemon_id") or form.get("id")
@@ -748,4 +699,3 @@ class BattleRenderer:
         from .themes import get_theme_renderer
         theme_renderer = get_theme_renderer(self.theme, self)
         return theme_renderer.render_moveset(pokemon_name, moves_data, page, total_pages, total_moves)
-

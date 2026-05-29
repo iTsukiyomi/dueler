@@ -47,10 +47,10 @@ class BattlePromptView(discord.ui.View):
     async def on_timeout(self):
         self.battle.trainer1.event.set()
         self.battle.trainer2.event.set()
-    
+
     async def on_error(self, interaction, error, item):
         self.battle.ctx.cog.log.error("Exception in a button.", exc_info=error)
-    
+
     def stop(self):
         """Override to stop child views when this view is stopped."""
         for view in self.child_views:
@@ -93,12 +93,12 @@ class MoveSelectView(discord.ui.View):
             and not trainer.has_mega_evolved
         ):
             self.add_item(MegaEvolveButton())
-        
+
     async def interaction_check(self, interaction):
         if self.battle.turn != self.turn:
             await interaction.response.send_message(content="This button has expired.", ephemeral=True)
             return False
-        # Should never be hit, but just in case :P
+        # Should never be hit, but just in case :P.
         if interaction.user.id != self.trainer.id:
             await interaction.response.send_message(content="You are not allowed to interact with this button.", ephemeral=True)
             return False
@@ -106,10 +106,10 @@ class MoveSelectView(discord.ui.View):
             await interaction.response.send_message(content="You have already selected an action.", ephemeral=True)
             return False
         return True
-    
+
     async def on_error(self, interaction, error, item):
         self.battle.ctx.cog.log.error("Exception in a button.", exc_info=error)
-    
+
     def stop(self):
         """Override to stop child views when this view is stopped."""
         for view in self.child_views:
@@ -145,4 +145,3 @@ class SwapRequestButton(discord.ui.Button):
         # pyrefly: ignore [missing-attribute]
         self.view.child_views.append(view)
         await interaction.response.edit_message(content="Pick a pokemon:", view=view)
-

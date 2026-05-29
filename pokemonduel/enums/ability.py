@@ -313,8 +313,8 @@ class Ability(IntEnum):
     TERA_SHELL = 308
     TERAFORM_ZERO = 309
     POISON_PUPPETEER = 310
-    
+
     @property
     def pretty_name(self):
         """Formats the ability name for outputs."""
-        return self.name.lower().replace("_", " ") # pylint: disable=E1101
+        return self.name.lower().replace("_", " ")

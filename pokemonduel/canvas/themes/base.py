@@ -13,7 +13,7 @@ class BaseThemeRenderer:
                             party_pokemon: Optional[List[Dict[str, Any]]] = None) -> io.BytesIO:
         raise NotImplementedError
 
-    def render_pokemon_card(self, poke: Any, player_name: str = "Trainer", 
+    def render_pokemon_card(self, poke: Any, player_name: str = "Trainer",
                             type_names: Optional[List[str]] = None) -> io.BytesIO:
         raise NotImplementedError
 
@@ -24,7 +24,6 @@ class BaseThemeRenderer:
                        page: int, total_pages: int, total_moves: int) -> io.BytesIO:
         raise NotImplementedError
 
-    # -- Shared moveset table renderer (themed via override params) --------
 
     _TYPE_ID_TO_NAME = {
         1: "Normal", 2: "Fighting", 3: "Flying", 4: "Poison", 5: "Ground",
@@ -64,14 +63,12 @@ class BaseThemeRenderer:
         canvas = Image.new("RGBA", (width, height), canvas_bg)
         draw = ImageDraw.Draw(canvas)
 
-        # ── Header bar ──
         self.renderer._draw_header_bar(
             draw, 8, 8, width - 8, 28,
             text=f"{pokemon_name.replace('-', ' ').upper()} — LEARNABLE MOVES",
             bg=header_bg,
         )
 
-        # ── Column headers ──
         col_x = {"name": 20, "type": 190, "cat": 290, "pwr": 400, "acc": 470}
         hdr_y = 46
         self.renderer._draw_classic_panel(
@@ -83,7 +80,6 @@ class BaseThemeRenderer:
                           ("ACC", col_x["acc"])]:
             draw.text((x, hdr_y), label, fill=header_text_color, font=self.fonts["small_bold"])
 
-        # ── Move rows ──
         row_h = 28
         start_y = 68
         cat_labels = {1: "STATUS", 2: "PHYSICAL", 3: "SPECIAL"}
@@ -91,7 +87,6 @@ class BaseThemeRenderer:
 
         for idx, move in enumerate(moves_data):
             ry = start_y + idx * row_h
-            # Alternating row backgrounds
             if row_alt_bg and idx % 2 == 1:
                 self.renderer._draw_classic_panel(
                     draw, 8, ry, width - 8, ry + row_h,
@@ -103,13 +98,11 @@ class BaseThemeRenderer:
                     fill=panel_bg, border=panel_bg, border_width=0, radius=0,
                 )
 
-            # Move name
             name = move.get("identifier", "").replace("-", " ").title()
             if len(name) > 18:
                 name = name[:16] + ".."
             draw.text((col_x["name"], ry + 6), name, fill=text_color, font=self.fonts["small_bold"])
 
-            # Type badge (small inline)
             t_id = move.get("type_id", 0)
             type_name = self._TYPE_ID_TO_NAME.get(t_id, "Normal")
             if use_type_color_badges:
@@ -119,41 +112,34 @@ class BaseThemeRenderer:
             else:
                 draw.text((col_x["type"], ry + 6), type_name.upper(), fill=text_secondary, font=self.fonts["small"])
 
-            # Category
             dmg_class = move.get("damage_class_id", 1)
             cat = cat_short.get(dmg_class, "STA")
             cat_full = cat_labels.get(dmg_class, "STATUS")
-            # Color code category text
             if dmg_class == 2:
-                cat_color = (200, 80, 40)  # Physical orange
+                cat_color = (200, 80, 40)
             elif dmg_class == 3:
-                cat_color = (80, 120, 200)  # Special blue
+                cat_color = (80, 120, 200)
             else:
                 cat_color = text_secondary
             draw.text((col_x["cat"], ry + 6), cat_full, fill=cat_color, font=self.fonts["small"])
 
-            # Power
             pwr = move.get("power")
             pwr_text = str(pwr) if pwr is not None else "—"
             draw.text((col_x["pwr"], ry + 6), pwr_text, fill=text_color, font=self.fonts["small"])
 
-            # Accuracy
             acc = move.get("accuracy")
             acc_text = str(acc) if acc is not None else "—"
             draw.text((col_x["acc"], ry + 6), acc_text, fill=text_color, font=self.fonts["small"])
 
-        # ── Bottom border line ──
         table_bottom = start_y + len(moves_data) * row_h + 4
         draw.line([(8, table_bottom), (width - 8, table_bottom)], fill=panel_border, width=1)
 
-        # ── Footer: page info ──
         footer_y = height - 34
         page_text = f"Page {page} of {total_pages}  •  {total_moves} moves total"
         pbox = draw.textbbox((0, 0), page_text, font=self.fonts["small"])
         px = (width - (pbox[2] - pbox[0])) // 2
         draw.text((px, footer_y), page_text, fill=text_secondary, font=self.fonts["small"])
 
-        # ── Outer frame ──
         if border_radius == 0:
             draw.rectangle([0, 0, width - 1, height - 1], outline=panel_border, width=3)
             draw.rectangle([3, 3, width - 4, height - 4], outline=panel_border, width=1)
@@ -168,7 +154,7 @@ class BaseThemeRenderer:
     def parse_pokemon_data(self, poke: Any, type_names: Optional[List[str]] = None) -> Dict[str, Any]:
         """Parses a Pokemon dictionary or object into a standard dictionary structure."""
         from ...core.registry import FORMS, POKE_ABILITIES, ABILITIES
-        
+
         if isinstance(poke, dict):
             pokname = poke.get("pokname", "")
             poke_id = None
@@ -185,7 +171,6 @@ class BaseThemeRenderer:
 
             nature_val = poke.get("nature", "Serious")
 
-            # Resolve ability dynamically
             ability_val = poke.get("ability", "None")
             if (ability_val == "None" or not ability_val) and "ability_index" in poke:
                 pn = poke.get("pokname", "").lower()
@@ -203,7 +188,6 @@ class BaseThemeRenderer:
             item_val = poke.get("hitem", "None")
             base_stats = self.renderer._get_base_stats(poke.get("pokname", ""))
 
-            # Resolve types if not passed
             if type_names is None:
                 type_names = self.renderer._get_type_names(poke.get("pokname", ""))
 
@@ -250,7 +234,6 @@ class BaseThemeRenderer:
 
             item_val = getattr(poke, 'item', 'None')
 
-            # Base stats from object
             bs = getattr(poke, 'base_stats', {})
             raw_name_obj = getattr(poke, '_name', '').lower()
             if raw_name_obj in bs:
@@ -273,7 +256,6 @@ class BaseThemeRenderer:
             else:
                 base_stats = self.renderer._get_base_stats(getattr(poke, '_name', ''))
 
-            # Resolve types
             if type_names is None:
                 type_names = self.renderer._get_type_names(getattr(poke, '_name', ''))
 

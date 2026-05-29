@@ -1,17 +1,3 @@
-"""
-ai/checkpoint.py — Resumable checkpoint management.
-
-A checkpoint bundles:
-
-* network weights (state-dict)
-* optimiser state
-* LR-scheduler state
-* training step counter
-* the buffer file path (the buffer itself is stored separately because
-  it can be huge — see ``replay_buffer.py:save``)
-* RNG state (numpy + torch) for deterministic resume
-* ELO snapshot
-"""
 from __future__ import annotations
 
 import json
@@ -26,7 +12,6 @@ import torch
 from . import config as C
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 def save_checkpoint(path: str | Path,
                     network: torch.nn.Module,
                     optimizer: Optional[torch.optim.Optimizer] = None,
@@ -54,7 +39,6 @@ def save_checkpoint(path: str | Path,
     os.replace(tmp, path)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 def load_checkpoint(path: str | Path,
                     network: torch.nn.Module,
                     optimizer: Optional[torch.optim.Optimizer] = None,
@@ -88,7 +72,6 @@ def load_checkpoint(path: str | Path,
     }
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 def export_torchscript(network: torch.nn.Module, path: str | Path,
                        example_dim: int) -> None:
     """Trace the network with TorchScript for blazing-fast inference."""
@@ -102,7 +85,6 @@ def export_torchscript(network: torch.nn.Module, path: str | Path,
     traced.save(str(path))
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 def write_meta(meta_path: str | Path, meta: Dict[str, Any]) -> None:
     meta_path = Path(meta_path)
     meta_path.parent.mkdir(parents=True, exist_ok=True)

@@ -1,26 +1,3 @@
-"""
-pokemonduel.core.registry
-=========================
-Global, in-memory registries for every static game-data JSON file.
-
-Instead of opening and scanning multi-MB JSON files on each query,
-this module loads all static data exactly once at bot startup and
-indexes it into dictionaries for O(1) lookups.
-
-Usage
------
-During bot startup (before any cog loads):
-
-    from pokemonduel.core.registry import load_all
-    load_all()
-
-Anywhere in the codebase:
-
-    from pokemonduel.core.registry import MOVES, FORMS, ABILITIES
-    flamethrower = MOVES.get("flamethrower")
-    charizard    = FORMS.get("charizard")
-"""
-
 from __future__ import annotations
 
 import json
@@ -30,13 +7,8 @@ from typing import Any, Optional
 
 log = logging.getLogger("dueler.registry")
 
-# Absolute path to the directory containing all static JSON data files.
 _DATA_DIR: Path = Path(__file__).resolve().parent.parent / "data"
 
-
-# ---------------------------------------------------------------------------
-# Registry container
-# ---------------------------------------------------------------------------
 
 class _Registry:
     """
@@ -59,7 +31,6 @@ class _Registry:
         self._secondary: dict[str | int, list[dict]] = {}
         self._secondary_key: str | None = None
 
-    # -- loading -----------------------------------------------------------
 
     def load(self, filepath: Path, *, secondary_key: str | None = None) -> None:
         """Read *filepath*, index every record by the primary key.
@@ -76,8 +47,6 @@ class _Registry:
         self._secondary.clear()
         self._secondary_key = secondary_key
 
-        # Normalise dict-of-dicts into list-of-dicts so the rest of the
-        # code can be format-agnostic.
         if isinstance(raw_json, dict):
             data: list[dict] = []
             for key, val in raw_json.items():
@@ -94,8 +63,6 @@ class _Registry:
         for record in data:
             pk = record.get(self._primary)
             if pk is not None:
-                # For string keys, normalise to lowercase so that lookups
-                # are consistently case-insensitive (e.g. "Flamethrower" → "flamethrower").
                 if isinstance(pk, str):
                     pk = pk.lower()
                 self._by_key[pk] = record
@@ -113,7 +80,6 @@ class _Registry:
             self._primary,
         )
 
-    # -- primary lookups ---------------------------------------------------
 
     def get(self, key: str | int) -> dict | None:
         """O(1) lookup by primary key."""
@@ -132,13 +98,11 @@ class _Registry:
             key = key.lower()
         return key in self._by_key
 
-    # -- secondary lookups -------------------------------------------------
 
     def by_secondary(self, key: str | int) -> list[dict]:
         """Retrieve all records matching the secondary index key."""
         return self._secondary.get(key, [])
 
-    # -- backwards-compatible query interface ------------------------------
 
     def find(self, filter_dict: dict[str, Any]) -> list[dict]:
         """
@@ -150,7 +114,6 @@ class _Registry:
         if not filter_dict:
             return list(self._raw)
 
-        # Fast path: filter is just {primary_key: value}
         if len(filter_dict) == 1:
             only_key = next(iter(filter_dict))
             only_val = filter_dict[only_key]
@@ -160,7 +123,7 @@ class _Registry:
             if only_key == self._secondary_key and not isinstance(only_val, dict):
                 return list(self.by_secondary(only_val))
 
-        # General case: full scan with mongo-style filter operators
+        # General case: full scan with mongo-style filter operators.
         results: list[dict] = []
         for item in self._raw:
             if _matches(item, filter_dict):
@@ -172,7 +135,6 @@ class _Registry:
         if not filter_dict:
             return self._raw[0] if self._raw else None
 
-        # Fast path for primary key
         if len(filter_dict) == 1:
             only_key = next(iter(filter_dict))
             only_val = filter_dict[only_key]
@@ -187,7 +149,6 @@ class _Registry:
                 return item
         return None
 
-    # -- convenience -------------------------------------------------------
 
     @property
     def all(self) -> list[dict]:
@@ -200,10 +161,6 @@ class _Registry:
     def __repr__(self) -> str:
         return f"<Registry {self._name!r} records={len(self._raw)}>"
 
-
-# ---------------------------------------------------------------------------
-# Mongo-style filter matching (supports $nin, $in, $gt, $lt, etc.)
-# ---------------------------------------------------------------------------
 
 def _matches(item: dict, filter_dict: dict[str, Any]) -> bool:
     for key, value in filter_dict.items():
@@ -237,10 +194,6 @@ def _matches(item: dict, filter_dict: dict[str, Any]) -> bool:
     return True
 
 
-# ---------------------------------------------------------------------------
-# Global registry singletons
-# ---------------------------------------------------------------------------
-
 FORMS:             _Registry = _Registry("forms",             "identifier")
 MOVES:             _Registry = _Registry("moves",             "identifier")
 ABILITIES:         _Registry = _Registry("abilities",         "identifier")
@@ -255,8 +208,7 @@ STAT_TYPES:        _Registry = _Registry("stat_types",        "id")
 SETS:              _Registry = _Registry("sets",              "identifier")
 LEARNSETS:         _Registry = _Registry("learnsets",         "identifier")
 
-# Mapping from the legacy "db name" strings used in query.find(ctx, "forms", ...)
-# to the corresponding registry instance.
+# Mapping from the legacy "db name" strings used in query.find(ctx, "forms", ...) to the corresponding registry instance.
 _REGISTRY_MAP: dict[str, _Registry] = {
     "forms":              FORMS,
     "moves":              MOVES,
@@ -284,10 +236,6 @@ def get_registry(name: str) -> _Registry:
             f"Known registries: {sorted(_REGISTRY_MAP)}"
         )
 
-
-# ---------------------------------------------------------------------------
-# Bootstrap
-# ---------------------------------------------------------------------------
 
 _loaded = False
 
@@ -319,12 +267,10 @@ def load_all(data_dir: Path | str | None = None) -> None:
     PFILE.load(base / "pfile.json")
     STAT_TYPES.load(base / "stat_types.json")
 
-    # sets.json may not be present in every deployment
     sets_path = base / "sets.json"
     if sets_path.exists():
         SETS.load(sets_path)
 
-    # learnsets.json holds global Pokémon movepools
     learnsets_path = base / "learnsets.json"
     if learnsets_path.exists():
         LEARNSETS.load(learnsets_path)

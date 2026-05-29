@@ -36,10 +36,10 @@ class PreviewPromptView(discord.ui.View):
     async def on_timeout(self):
         self.battle.trainer1.event.set()
         self.battle.trainer2.event.set()
-    
+
     async def on_error(self, interaction, error, item):
         self.battle.ctx.cog.log.error("Exception in a button.", exc_info=error)
-    
+
     def stop(self):
         """Override to stop child views when this view is stopped."""
         for view in self.child_views:
@@ -55,7 +55,7 @@ class LeadView(discord.ui.View):
         self.battle = battle
         for poke in trainer.party:
             self.add_item(LeadButton(poke))
-    
+
     async def on_error(self, interaction, error, item):
         self.battle.ctx.cog.log.error("Exception in a button.", exc_info=error)
 

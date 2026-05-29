@@ -1,19 +1,3 @@
-"""
-ai/network.py — AlphaZero-style policy/value network.
-
-Architecture
-------------
-input (FEATURE_DIM) → Linear → BN → ReLU         (stem)
-                  → ResidualTower(blocks, hidden) (body)
-                  → split into two heads:
-
-                        policy_head : Linear → BN → ReLU → Linear → N_ACTIONS
-                        value_head  : Linear → BN → ReLU → Linear → 1 (tanh)
-
-At inference time we wrap the network in `@torch.inference_mode()` and
-expose ``predict_batch`` for batched MCTS leaf evaluation. Mixed precision
-is auto-enabled when the device supports it.
-"""
 from __future__ import annotations
 
 from typing import Dict, Tuple
@@ -45,7 +29,6 @@ class PokemonAlphaZeroNet(nn.Module):
         self.n_actions   = n_actions
         self.hidden_dim  = hidden
 
-        # ── stem ─────────────────────────────────────────────────────
         self.stem = nn.Sequential(
             nn.Linear(input_dim, hidden, bias=not use_bn),
             nn.BatchNorm1d(hidden) if use_bn else nn.Identity(),
@@ -57,10 +40,8 @@ class PokemonAlphaZeroNet(nn.Module):
             # pyrefly: ignore [bad-argument-type]
             nn.init.zeros_(self.stem[0].bias)
 
-        # ── body ─────────────────────────────────────────────────────
         self.body = ResidualTower(hidden, blocks, use_bn=use_bn, dropout=dropout)
 
-        # ── policy head ──────────────────────────────────────────────
         self.policy_head = nn.Sequential(
             nn.Linear(hidden, policy_hidden, bias=not use_bn),
             nn.BatchNorm1d(policy_hidden) if use_bn else nn.Identity(),
@@ -73,7 +54,6 @@ class PokemonAlphaZeroNet(nn.Module):
                 if m.bias is not None:
                     nn.init.zeros_(m.bias)
 
-        # ── value head ───────────────────────────────────────────────
         self.value_head = nn.Sequential(
             nn.Linear(hidden, value_hidden, bias=not use_bn),
             nn.BatchNorm1d(value_hidden) if use_bn else nn.Identity(),
@@ -87,7 +67,6 @@ class PokemonAlphaZeroNet(nn.Module):
                 if m.bias is not None:
                     nn.init.zeros_(m.bias)
 
-    # ──────────────────────────────────────────────────────────────────
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:  # type: ignore[override]
         """Return ``(policy_logits, value)``."""
         h = self.stem(x)
@@ -96,7 +75,6 @@ class PokemonAlphaZeroNet(nn.Module):
         value         = self.value_head(h).squeeze(-1)
         return policy_logits, value
 
-    # ──────────────────────────────────────────────────────────────────
     @torch.inference_mode()
     def predict_batch(self,
                       states: np.ndarray,
@@ -134,7 +112,6 @@ class PokemonAlphaZeroNet(nn.Module):
             if was_training:
                 self.train()
 
-    # ──────────────────────────────────────────────────────────────────
     def count_parameters(self) -> Dict[str, int]:
         total = sum(p.numel() for p in self.parameters())
         train = sum(p.numel() for p in self.parameters() if p.requires_grad)

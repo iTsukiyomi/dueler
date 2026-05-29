@@ -9,16 +9,14 @@ class DuelPokemonSendOut:
     def send_out(self, otherpoke, battle):
             """
             Initalize a poke upon first sending it out.
-            
+
             otherpoke may be None, if two pokes are sent out at the same time and the first is killed in the send out process.
             Returns a formatted message.
             """
             self.ever_sent_out = True
-            
-            # Emergency exit `remove`s the pokemon *in the middle of the turn* in a somewhat unsafe way.
-            # `remove` may need to be called here, but that seems like it may have side effects.
+
             self.flinched = False
-            
+
             # This has to go BEFORE the send out message, and not in send_out_ability as it only
             # applies on send out, not when abilities are changed, and it changes the send out msg.
             # pyrefly: ignore [missing-attribute]
@@ -29,19 +27,18 @@ class DuelPokemonSendOut:
                 self.illusion_name = self.name
                 self._name = illusion_options[-1]._name
                 self.name = illusion_options[-1].name
-            
+
             if self._name == "Pikachu":
                 msg = f"{self.name}, I choose you!\n"
             else:
                 # pyrefly: ignore [missing-attribute]
                 msg = f"{self.owner.name} sent out {self.name}!\n"
-            
-            # Any time a poke switches out, certain effects it had put on its opponent end
+
             if otherpoke is not None:
                 otherpoke.trapping = False
                 otherpoke.octolock = False
                 otherpoke.bind.set_turns(0)
-            
+
             #Baton Pass
             # pyrefly: ignore [missing-attribute]
             if self.owner.baton_pass is not None:
@@ -50,7 +47,7 @@ class DuelPokemonSendOut:
                 self.owner.baton_pass.apply(self)
                 # pyrefly: ignore [missing-attribute]
                 self.owner.baton_pass = None
-            
+
             #Shed Tail
             # pyrefly: ignore [missing-attribute]
             if self.owner.next_substitute:
@@ -58,7 +55,7 @@ class DuelPokemonSendOut:
                 self.substitute = self.owner.next_substitute
                 # pyrefly: ignore [missing-attribute]
                 self.owner.next_substitute = 0
-            
+
             #Entry hazards
             #Special case for clearing toxic spikes, still happens even with heavy duty boots
             # pyrefly: ignore [missing-attribute]
@@ -104,10 +101,10 @@ class DuelPokemonSendOut:
                         damage = self.starting_hp // (32 // (4 * effective))
                         # pyrefly: ignore [missing-attribute]
                         msg += self.damage(int(damage), battle, source="stealth rock")
-            
+
             if self.hp > 0:
                 msg += self.send_out_ability(otherpoke, battle)
-            
+
             #Restoration
             # pyrefly: ignore [missing-attribute]
             if self.owner.healing_wish:
@@ -148,7 +145,7 @@ class DuelPokemonSendOut:
                     # pyrefly: ignore [missing-attribute]
                     self.owner.lunar_dance = False
                     msg += f"{self.name} was restored by lunar dance\n"
-            
+
             # Items
             # pyrefly: ignore [missing-attribute]
             if self.held_item == "air-balloon" and not self.grounded(battle):
@@ -176,23 +173,23 @@ class DuelPokemonSendOut:
             # pyrefly: ignore [missing-attribute]
             msg += self.held_item.activate_on_switch_in(battle)
             return msg
-        
+
     def send_out_ability(self, otherpoke, battle):
         """
         Initalize this poke's ability.
-        
+
         otherpoke may be None.
         Returns a formatted message.
         """
         msg = ""
-        
+
         #Imposter (sus)
         # pyrefly: ignore [missing-attribute]
         if self.ability() == Ability.IMPOSTER and otherpoke is not None and not otherpoke.substitute and otherpoke.illusion_name is None:
             msg += f"{self.name} transformed into {otherpoke._name}!\n"
             # pyrefly: ignore [missing-attribute]
             self.transform(otherpoke)
-        
+
         #Weather
         # pyrefly: ignore [missing-attribute]
         if self.ability() == Ability.DRIZZLE:
@@ -215,7 +212,7 @@ class DuelPokemonSendOut:
         # pyrefly: ignore [missing-attribute]
         if self.ability() == Ability.DELTA_STREAM:
             msg += battle.weather.set("h-wind", self)
-        
+
         #Terrain
         # pyrefly: ignore [missing-attribute]
         if self.ability() == Ability.GRASSY_SURGE:
@@ -229,7 +226,7 @@ class DuelPokemonSendOut:
         # pyrefly: ignore [missing-attribute]
         if self.ability() == Ability.PSYCHIC_SURGE:
             msg += battle.terrain.set("psychic", self)
-        
+
         # Message only
         # pyrefly: ignore [missing-attribute]
         if self.ability() == Ability.MOLD_BREAKER:
@@ -240,7 +237,7 @@ class DuelPokemonSendOut:
         # pyrefly: ignore [missing-attribute]
         if self.ability() == Ability.TERAVOLT:
             msg += f"{self.name} is radiating a bursting aura!\n"
-        
+
         # pyrefly: ignore [missing-attribute]
         if self.ability() == Ability.INTIMIDATE and otherpoke is not None:
             if otherpoke.ability() == Ability.OBLIVIOUS:
@@ -310,7 +307,7 @@ class DuelPokemonSendOut:
                     power = 0
                 if move.effect == 39:
                     power = 150
-                elif move.power is None: # Good enough
+                elif move.power is None:
                     power = 80
                 else:
                     power = move.power
@@ -510,13 +507,13 @@ class DuelPokemonSendOut:
         # pyrefly: ignore [missing-attribute]
         if self.ability() == Ability.SUPERSWEET_SYRUP and not self.supersweet_syrup and otherpoke is not None:
             msg += otherpoke.append_evasion(-1, attacker=self, source=f"{self.name}'s supersweet syrup")
-        
+
         return msg
-    
+
     def remove(self, battle, *, fainted=False):
         """
         Clean up a poke when it is removed from battle.
-        
+
         Returns a formatted message of anything that happened while switching out.
         """
         msg = ""
@@ -564,13 +561,7 @@ class DuelPokemonSendOut:
             self.owner.current_pokemon = None
         if battle.weather.recheck_ability_weather():
             msg += "The weather cleared!\n"
-        # Look up base stats for the current form name. If the form is
-        # missing from the table (e.g. a rare regional/mega variant whose
-        # key differs from the engine's ``_name``), fall back to the
-        # starting name. If that's also missing, keep the live stats and
-        # log a warning instead of crashing the whole battle — this is
-        # what was causing the ``KeyError: 'moltres'`` / ``'dewgong'``
-        # crashes in self-play.
+        # Look up base stats for the current form name. If the form is missing from the table (e.g. a rare regional/mega variant whose key differs from the engine's ``_name``), fall back to the starting name. If that's also missing, keep the live stats and log a warning instead of crashing the whole battle — this is what was causing the ``KeyError: 'moltres'`` / ``'dewgong'`` crashes in self-play.
         _stats_key = None
         # pyrefly: ignore [missing-attribute]
         if self._name in self.base_stats:

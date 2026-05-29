@@ -1,10 +1,3 @@
-"""
-modes/npc/npc_team_gen.py — Random-team helpers for NPC battles.
-
-Unchanged from the original module; preserved so the rest of the codebase
-keeps importing ``generate_npc_team`` / ``convert_to_raw_data`` /
-``create_npc_team`` from the same path.
-"""
 from ..randoms.random_team_gen import (convert_team_to_raw_data,
                                        generate_random_team)
 
