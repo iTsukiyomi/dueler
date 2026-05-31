@@ -1,0 +1,22 @@
+import { TYPE_COLORS } from "../../utils/pokemon";
+
+interface TypeBadgeProps {
+  type: string;
+  size?: "sm" | "md";
+}
+
+export function TypeBadge({ type, size = "sm" }: TypeBadgeProps) {
+  const color = TYPE_COLORS[type] ?? "#888";
+  const sizeClasses = size === "sm"
+    ? "text-[10px] px-2 py-0.5"
+    : "text-xs px-3 py-1";
+
+  return (
+    <span
+      className={`inline-block rounded-full font-semibold uppercase tracking-wider text-white ${sizeClasses}`}
+      style={{ backgroundColor: color }}
+    >
+      {type}
+    </span>
+  );
+}

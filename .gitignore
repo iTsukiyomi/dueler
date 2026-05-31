@@ -21,3 +21,8 @@ Thumbs.db
 
 # Scratch verification images
 pokemonduel/scratch_images/
+
+# Node.js
+node_modules/
+frontend/dist/
+server/dist/
