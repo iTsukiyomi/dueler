@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { useAuthStore } from "./stores/authStore";
 import { Sidebar } from "./components/layout/Sidebar";
@@ -13,7 +13,10 @@ function ProtectedLayout() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-bg-primary text-text-primary">
-        <div className="w-10 h-10 border-4 border-accent border-t-transparent rounded-full animate-spin" />
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-12 h-12 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+          <span className="font-display text-xs uppercase tracking-widest text-text-muted">Loading Session</span>
+        </div>
       </div>
     );
   }
@@ -23,14 +26,19 @@ function ProtectedLayout() {
   }
 
   return (
-    <div className="flex min-h-screen bg-bg-primary">
-      {/* Sidebar for desktop */}
+    <div className="flex min-h-screen bg-bg-primary font-sans text-text-primary relative overflow-hidden">
+      {/* Mystical Background Grid & Glows */}
+      <div className="absolute inset-0 bg-[radial-gradient(#1e1b4b_1px,transparent_1px)] [background-size:24px_24px] opacity-10 pointer-events-none" />
+      <div className="absolute top-0 right-1/4 w-[500px] h-[500px] rounded-full bg-accent/3 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-0 left-1/4 w-[500px] h-[500px] rounded-full bg-emerald-500/3 blur-[120px] pointer-events-none" />
+
+      {/* Sidebar */}
       <Sidebar />
       
-      {/* Main workspace */}
-      <div className="flex-1 flex flex-col min-w-0">
+      {/* Main Workspace */}
+      <div className="flex-1 flex flex-col min-w-0 border-l border-border/40">
         <Navbar />
-        <main className="flex-1 overflow-y-auto p-6 md:p-8 max-w-7xl mx-auto w-full">
+        <main className="flex-1 overflow-y-auto p-6 md:p-10 max-w-7xl mx-auto w-full relative">
           <Outlet />
         </main>
       </div>
@@ -40,11 +48,15 @@ function ProtectedLayout() {
 
 function LandingPage() {
   const { isAuthenticated, isLoading } = useAuthStore();
+  const [showConfigTips, setShowConfigTips] = useState(false);
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-bg-primary">
-        <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+          <span className="font-display text-xs uppercase tracking-widest text-text-muted">Loading</span>
+        </div>
       </div>
     );
   }
@@ -58,41 +70,97 @@ function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-bg-primary relative overflow-hidden p-6">
-      {/* Graphic background highlights */}
-      <div className="absolute top-[-10%] right-[-10%] w-[50vw] h-[50vw] rounded-full bg-accent/5 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-emerald-500/5 blur-[120px] pointer-events-none" />
+    <div className="min-h-screen flex items-center justify-center bg-bg-primary relative overflow-hidden p-6 font-sans select-none">
+      {/* Deep Mystical Atmosphere */}
+      <div className="absolute inset-0 bg-[radial-gradient(#2d284e_1px,transparent_1px)] [background-size:32px_32px] opacity-20 pointer-events-none" />
+      <div className="absolute top-[-20%] right-[-10%] w-[60vw] h-[60vw] rounded-full bg-accent/5 blur-[150px] pointer-events-none" />
+      <div className="absolute bottom-[-20%] left-[-10%] w-[60vw] h-[60vw] rounded-full bg-emerald-500/5 blur-[150px] pointer-events-none" />
 
-      {/* Login Card */}
-      <div className="relative max-w-md w-full rounded-3xl bg-bg-card/40 border border-border/60 p-8 md:p-10 backdrop-blur-xl shadow-2xl text-center space-y-8 animate-float">
-        <div className="space-y-3">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-accent/25 to-emerald-500/25 border border-accent/30 text-3xl mb-2">
-            ⚔️
+      {/* Decorative Corner Notch Lines */}
+      <div className="absolute top-10 left-10 w-24 h-24 border-t-2 border-l-2 border-accent/20 rounded-tl-3xl pointer-events-none" />
+      <div className="absolute bottom-10 right-10 w-24 h-24 border-b-2 border-r-2 border-accent/20 rounded-br-3xl pointer-events-none" />
+
+      {/* Asymmetric Overlapping Layout */}
+      <div className="relative max-w-5xl w-full grid grid-cols-1 md:grid-cols-12 gap-8 items-center z-10">
+        {/* Left Side: Mystic Emblem & Game Details */}
+        <div className="md:col-span-7 space-y-6 text-left p-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 text-accent text-xs font-bold uppercase tracking-widest">
+            🛡️ Ancient Battle Ground
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-text-primary via-emerald-400 to-accent bg-clip-text text-transparent">
-            Flame Bot Dueler
+          <h1 className="font-display text-4xl md:text-6xl font-black text-text-primary leading-tight tracking-wide">
+            FLAME <br />
+            <span className="bg-gradient-to-r from-accent via-accent-glow to-amber-500 bg-clip-text text-transparent">
+              DUELER
+            </span>
           </h1>
-          <p className="text-sm text-text-secondary">
-            Sync your Pokémon teams with Flame Bot in real-time. Log in via Discord to edit details, customize stats, and prepare for battle.
+          <p className="text-base text-text-secondary max-w-lg leading-relaxed">
+            Unleash the ultimate team configuration. Craft perfect statistics, design movesets, and sync directly with the bot databases. Your next tactical match awaits.
           </p>
+
+          <div className="flex gap-4 pt-4 border-t border-border/30 max-w-md">
+            <div>
+              <div className="text-xl font-display font-bold text-accent">1.4k+</div>
+              <div className="text-[10px] uppercase tracking-wider text-text-muted mt-0.5">Forms Tracked</div>
+            </div>
+            <div className="border-l border-border/30 pl-4">
+              <div className="text-xl font-display font-bold text-emerald-400">Realtime</div>
+              <div className="text-[10px] uppercase tracking-wider text-text-muted mt-0.5">Database Sync</div>
+            </div>
+            <div className="border-l border-border/30 pl-4">
+              <div className="text-xl font-display font-bold text-amber-500">Fastify V5</div>
+              <div className="text-[10px] uppercase tracking-wider text-text-muted mt-0.5">High Performance</div>
+            </div>
+          </div>
         </div>
 
-        <button
-          onClick={handleDiscordLogin}
-          className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-[#5865f2] hover:bg-[#4752c4] text-white font-bold text-base shadow-[0_4px_20px_rgba(88,101,242,0.3)] hover:shadow-[0_6px_24px_rgba(88,101,242,0.45)] transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
-        >
-          <svg
-            className="w-6 h-6 fill-current"
-            viewBox="0 0 127.14 96.36"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path d="M107.7,8.07A105.15,105.15,0,0,0,77.26,0a77.19,77.19,0,0,0-3.3,6.83A96.67,96.67,0,0,0,53.22,6.83,77.19,77.19,0,0,0,49.88,0,105.15,105.15,0,0,0,19.44,8.07C3.66,31.58-1.86,54.65,1,77.53A105.73,105.73,0,0,0,32,96.36a77.7,77.7,0,0,0,6.63-10.85,68.43,68.43,0,0,1-10.5-5c.9-.65,1.76-1.34,2.58-2a75.58,75.58,0,0,0,73,0c.83.68,1.69,1.37,2.58,2a68.43,68.43,0,0,1-10.5,5,77.7,77.7,0,0,0,6.63,10.85,105.73,105.73,0,0,0,31-18.83C129.87,50.31,123.63,27.57,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53S36.18,40.36,42.45,40.36,53.83,46,53.83,53,48.72,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.24,60,73.24,53S78.41,40.36,84.69,40.36,96.07,46,96.07,53,91,65.69,84.69,65.69Z" />
-          </svg>
-          Connect with Discord
-        </button>
+        {/* Right Side: Glassmorphic Panel with Discord Button */}
+        <div className="md:col-span-5 relative">
+          <div className="absolute inset-0 bg-accent/5 rounded-3xl blur-2xl pointer-events-none" />
+          <div className="relative rounded-3xl bg-bg-card/30 border border-border/60 p-8 md:p-10 backdrop-blur-xl shadow-2xl flex flex-col justify-between min-h-[420px] transition-all hover:border-accent/40">
+            <div className="space-y-6">
+              <div className="flex justify-between items-start">
+                <div className="font-display text-xs uppercase tracking-widest text-text-muted">Access Gate</div>
+                <span className="text-lg">⚔️</span>
+              </div>
+              <div className="space-y-2">
+                <h2 className="font-display text-2xl font-bold text-text-primary">Authenticate</h2>
+                <p className="text-xs text-text-secondary leading-relaxed">
+                  Sign in using your Discord account. This connects your profile, wins, losses, ELO rating, and active battle party.
+                </p>
+              </div>
+            </div>
 
-        <div className="text-[10px] text-text-muted">
-          By logging in, you authorize accessing your Flame Bot profile and teams data.
+            <div className="space-y-4 mt-8">
+              <button
+                onClick={handleDiscordLogin}
+                className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-xl bg-accent hover:bg-accent-soft text-bg-primary font-display font-bold text-sm tracking-widest uppercase transition-all duration-300 hover:shadow-[0_0_20px_rgba(207,162,64,0.3)] hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
+              >
+                Connect With Discord
+              </button>
+
+              <button
+                onClick={() => setShowConfigTips(!showConfigTips)}
+                className="w-full text-center text-[10px] text-text-muted hover:text-text-secondary transition-colors underline"
+              >
+                Getting "Invalid OAuth URL" or configuration errors?
+              </button>
+
+              {showConfigTips && (
+                <div className="text-[10px] text-left text-amber-500 bg-amber-500/5 border border-amber-500/20 p-3 rounded-lg leading-normal space-y-1">
+                  <p><strong>Common Fixes:</strong></p>
+                  <ul className="list-disc list-inside space-y-0.5">
+                    <li>Confirm that the Client ID in <code>.env</code> matches your Discord Bot's Client ID (or specific OAuth2 app ID).</li>
+                    <li>Ensure you have added the Redirect URI <code>http://localhost:3001/api/auth/callback</code> to your application redirects in the Discord Developer Portal and saved changes.</li>
+                    <li>If you access the site via <code>127.0.0.1</code> instead of <code>localhost</code>, update the redirects accordingly.</li>
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-border/30 text-[9px] text-text-muted">
+              By authenticating, you authorize secure reading/writing of your trainer party and teams.
+            </div>
+          </div>
         </div>
       </div>
     </div>

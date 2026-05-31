@@ -39,12 +39,15 @@ export function TeamList() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
+      className="space-y-6 select-none"
     >
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Teams</h1>
+      <div className="flex items-center justify-between border-b border-border/40 pb-3">
+        <h1 className="font-display text-3xl font-bold tracking-wider text-text-primary">
+          Teams
+        </h1>
         <button
           onClick={() => setShowCreate(true)}
-          className="px-4 py-2 rounded-xl bg-accent text-white font-medium text-sm hover:bg-accent-soft transition-colors"
+          className="px-4 py-2 rounded-xl bg-accent hover:bg-accent-soft text-bg-primary font-display font-bold text-xs uppercase tracking-widest transition-all duration-300 hover:shadow-[0_0_12px_rgba(207,162,64,0.2)] active:scale-[0.98] cursor-pointer"
         >
           + New Team
         </button>
@@ -56,39 +59,41 @@ export function TeamList() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="mb-6 rounded-2xl bg-bg-card border border-border p-4 overflow-hidden"
+            className="rounded-2xl bg-bg-card/30 border border-border p-5 overflow-hidden"
           >
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <input
                 type="text"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-                placeholder="Team name..."
+                placeholder="Name your legendary squad..."
                 maxLength={32}
                 autoFocus
-                className="flex-1 px-4 py-2 rounded-xl bg-bg-secondary border border-border text-text-primary placeholder:text-text-muted focus:border-accent outline-none text-sm"
+                className="flex-1 px-4 py-3 rounded-xl bg-bg-secondary/60 border border-border/60 text-text-primary placeholder:text-text-muted focus:border-accent outline-none text-sm font-semibold capitalize"
               />
-              <button
-                onClick={handleCreate}
-                disabled={createTeam.isPending || !newName.trim()}
-                className="px-4 py-2 rounded-xl bg-accent text-white font-medium text-sm hover:bg-accent-soft transition-colors disabled:opacity-50"
-              >
-                {createTeam.isPending ? "Creating..." : "Create"}
-              </button>
-              <button
-                onClick={() => { setShowCreate(false); setNewName(""); }}
-                className="px-3 py-2 rounded-xl text-text-muted hover:text-text-primary text-sm transition-colors"
-              >
-                Cancel
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleCreate}
+                  disabled={createTeam.isPending || !newName.trim()}
+                  className="px-5 py-3 rounded-xl bg-accent text-bg-primary font-display font-bold text-xs uppercase tracking-wider hover:bg-accent-soft transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  {createTeam.isPending ? "Creating..." : "Create"}
+                </button>
+                <button
+                  onClick={() => { setShowCreate(false); setNewName(""); }}
+                  className="px-4 py-3 rounded-xl bg-bg-secondary/40 border border-border/60 text-text-muted hover:text-text-primary text-xs uppercase font-bold tracking-wider transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
       {teams && teams.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
           {teams.map((team) => (
             <TeamCard
               key={team.name}
@@ -102,11 +107,11 @@ export function TeamList() {
           ))}
         </div>
       ) : (
-        <div className="text-center py-16 text-text-muted">
-          <div className="text-4xl mb-3">🎒</div>
-          <div className="font-medium">No teams yet</div>
-          <div className="text-sm mt-1">
-            Create your first team to get started
+        <div className="text-center py-20 rounded-2xl bg-bg-card/10 border border-dashed border-border/40 text-text-muted">
+          <div className="text-5xl mb-4">🎒</div>
+          <div className="font-display text-lg font-bold text-text-secondary tracking-wide">No Teams Found</div>
+          <div className="text-xs mt-1 text-text-muted">
+            Create your first tactical party to sync with the bot database.
           </div>
         </div>
       )}

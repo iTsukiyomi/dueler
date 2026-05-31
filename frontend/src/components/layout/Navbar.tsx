@@ -5,11 +5,11 @@ export function Navbar() {
   const { user, logout } = useAuthStore();
 
   return (
-    <nav className="fixed top-0 left-0 right-0 h-16 bg-bg-secondary/80 backdrop-blur-xl border-b border-border z-40 flex items-center px-6">
-      <Link to="/dashboard" className="flex items-center gap-3 group">
-        <span className="text-2xl">⚔️</span>
-        <span className="text-lg font-bold bg-gradient-to-r from-accent to-warning bg-clip-text text-transparent">
-          Pokemon Dueler
+    <nav className="h-16 bg-bg-secondary/20 backdrop-blur-xl border-b border-border/40 flex items-center justify-between px-6 md:px-8 z-30">
+      <Link to="/dashboard" className="flex items-center gap-3 group lg:hidden">
+        <span className="text-xl">⚔️</span>
+        <span className="font-display text-sm font-bold bg-gradient-to-r from-accent to-warning bg-clip-text text-transparent">
+          Flame Dueler
         </span>
       </Link>
 

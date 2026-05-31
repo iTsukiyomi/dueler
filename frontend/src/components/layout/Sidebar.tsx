@@ -14,9 +14,15 @@ export function Sidebar() {
     }`;
 
   return (
-    <aside className="fixed left-0 top-16 bottom-0 w-64 bg-bg-secondary border-r border-border p-4 flex flex-col gap-6 overflow-y-auto hidden lg:flex">
+    <aside className="w-64 bg-bg-secondary/20 border-r border-border/40 p-6 flex flex-col gap-8 h-screen sticky top-0 hidden lg:flex shrink-0">
+      <div className="flex items-center gap-3 border-b border-border/30 pb-4">
+        <span className="text-xl">🛡️</span>
+        <span className="font-display text-base font-bold bg-gradient-to-r from-accent to-accent-glow bg-clip-text text-transparent tracking-widest uppercase">
+          Flame Dueler
+        </span>
+      </div>
       {user && (
-        <div className="flex flex-col items-center gap-3 py-4">
+        <div className="flex flex-col items-center gap-3 py-2">
           <img
             src={user.avatarUrl}
             alt={user.username}
