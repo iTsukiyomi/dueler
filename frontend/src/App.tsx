@@ -30,7 +30,7 @@ function ProtectedLayout() {
   }
 
   return (
-    <div className="flex min-h-screen bg-bg-primary font-sans text-text-primary relative overflow-hidden">
+    <div className="flex min-h-screen w-full bg-bg-primary font-sans text-text-primary relative overflow-hidden">
       {/* Mystical Background Effects */}
       <div className="absolute inset-0 bg-[radial-gradient(#1e1b4b_1px,transparent_1px)] [background-size:24px_24px] opacity-10 pointer-events-none" />
       <div className="absolute top-0 right-1/4 w-[500px] h-[500px] rounded-full bg-accent/[0.03] blur-[120px] pointer-events-none" />
@@ -40,7 +40,7 @@ function ProtectedLayout() {
       <Sidebar />
 
       {/* Main Workspace */}
-      <div className="flex-1 flex flex-col min-w-0 border-l border-border/40">
+      <div className="flex-1 flex flex-col min-w-0 border-l border-border/40 w-full">
         <Navbar />
         <main className="flex-1 overflow-y-auto p-6 md:p-10 max-w-7xl mx-auto w-full relative">
           <Outlet />

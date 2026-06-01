@@ -170,7 +170,7 @@ export function LandingPage() {
   };
 
   return (
-    <div ref={containerRef} className="min-h-screen bg-bg-primary relative overflow-x-hidden font-sans">
+    <div ref={containerRef} className="min-h-screen w-full bg-bg-primary flex flex-col items-center relative overflow-x-hidden font-sans">
       {/* Animated background grid */}
       <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_0%,#2d284e_0%,transparent_50%)] opacity-30 pointer-events-none" />
       <div className="fixed inset-0 bg-[radial-gradient(#1e1b4b_1px,transparent_1px)] [background-size:32px_32px] opacity-20 pointer-events-none" />
@@ -186,7 +186,7 @@ export function LandingPage() {
       {/* Hero Section */}
       <motion.section
         style={{ y: yParallax, opacity: opacityHero, scale: scaleHero }}
-        className="relative min-h-screen flex items-center justify-center px-4 sm:px-6 py-20"
+        className="relative min-h-screen w-full flex items-center justify-center px-4 sm:px-6 py-20"
       >
         <div className="absolute top-8 left-8 w-32 h-32 border-t-2 border-l-2 border-accent/20 rounded-tl-3xl pointer-events-none" />
         <div className="absolute bottom-8 right-8 w-32 h-32 border-b-2 border-r-2 border-accent/20 rounded-br-3xl pointer-events-none" />
@@ -381,8 +381,8 @@ export function LandingPage() {
       </motion.section>
 
       {/* Stats Section */}
-      <ScrollReveal>
-        <section className="py-16 sm:py-24 px-4 sm:px-6 relative">
+      <ScrollReveal className="w-full">
+        <section className="py-16 sm:py-24 px-4 sm:px-6 relative w-full">
           <div className="max-w-4xl mx-auto text-center space-y-8">
             <div className="space-y-3">
               <div className="text-[10px] uppercase tracking-widest text-accent font-bold">Live Statistics</div>
@@ -394,7 +394,7 @@ export function LandingPage() {
       </ScrollReveal>
 
       {/* Features Section */}
-      <section className="py-16 sm:py-24 px-4 sm:px-6 relative">
+      <section className="py-16 sm:py-24 px-4 sm:px-6 relative w-full">
         <div className="max-w-6xl mx-auto">
           <ScrollReveal>
             <div className="text-center mb-12 sm:mb-16">
@@ -451,7 +451,7 @@ export function LandingPage() {
       </section>
 
       {/* How it works Section */}
-      <section className="py-16 sm:py-24 px-4 sm:px-6 relative bg-bg-secondary/20">
+      <section className="py-16 sm:py-24 px-4 sm:px-6 relative bg-bg-secondary/20 w-full">
         <div className="max-w-5xl mx-auto">
           <ScrollReveal>
             <div className="text-center mb-12 sm:mb-16">
@@ -481,8 +481,8 @@ export function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <ScrollReveal>
-        <section className="py-16 sm:py-24 px-4 sm:px-6">
+      <ScrollReveal className="w-full">
+        <section className="py-16 sm:py-24 px-4 sm:px-6 w-full">
           <div className="max-w-3xl mx-auto text-center">
             <div className="relative rounded-3xl bg-gradient-to-br from-accent/20 via-accent/10 to-transparent border border-accent/30 p-8 sm:p-12 overflow-hidden">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,#cfa240_0%,transparent_70%)] opacity-20" />
@@ -508,7 +508,7 @@ export function LandingPage() {
       </ScrollReveal>
 
       {/* Footer */}
-      <footer className="py-8 px-4 sm:px-6 border-t border-border/40">
+      <footer className="py-8 px-4 sm:px-6 border-t border-border/40 w-full">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-text-muted">
           <div className="flex items-center gap-2">
             <span className="text-lg">🔴</span>

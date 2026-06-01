@@ -257,7 +257,7 @@ export function ProfilePage() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="space-y-8 select-none"
+      className="space-y-8 select-none w-full"
     >
       {/* Header */}
       <div className="border-b border-border/40 pb-4 flex items-center justify-between">
