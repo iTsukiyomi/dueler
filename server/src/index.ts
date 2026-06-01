@@ -11,6 +11,7 @@ import { authRoutes } from "./routes/auth.js";
 import { playerRoutes } from "./routes/player.js";
 import { teamRoutes } from "./routes/teams.js";
 import { gamedataRoutes } from "./routes/gamedata.js";
+import { statsRoutes } from "./routes/stats.js";
 
 let gameData: GameData;
 
@@ -42,6 +43,7 @@ async function main() {
   await playerRoutes(app);
   teamRoutes(app, gameData);
   gamedataRoutes(app, gameData);
+  await statsRoutes(app);
 
   app.get("/api/health", async () => ({ status: "ok" }));
 

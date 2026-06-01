@@ -8,6 +8,8 @@ from dotenv import load_dotenv
 import traceback
 import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
+import subprocess
+import sys
 
 load_dotenv()
 
@@ -93,11 +95,55 @@ async def keep_alive():
 
 async def main():
     threading.Thread(target=start_dummy_server, daemon=True).start()
+
+    # Spawn server and frontend background processes
+    web_processes = []
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+
+    try:
+        # Start server (npm run dev)
+        server_proc = subprocess.Popen(
+            ["npm", "run", "dev"],
+            cwd=os.path.join(base_dir, "server"),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+        web_processes.append(server_proc)
+        logging.info("🚀 Started Backend Server (npm run dev)")
+    except Exception as e:
+        logging.error(f"❌ Failed to start Backend Server: {e}")
+
+    try:
+        # Start frontend (npm run dev)
+        frontend_proc = subprocess.Popen(
+            ["npm", "run", "dev"],
+            cwd=os.path.join(base_dir, "frontend"),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+        web_processes.append(frontend_proc)
+        logging.info("🚀 Started Frontend (npm run dev)")
+    except Exception as e:
+        logging.error(f"❌ Failed to start Frontend: {e}")
+
     bot = Flame()
     asyncio.create_task(keep_alive())
     token = os.getenv("DISCORD_TOKEN")
-    # pyrefly: ignore [bad-argument-type]
-    await bot.start(token)
+    
+    try:
+        # pyrefly: ignore [bad-argument-type]
+        await bot.start(token)
+    finally:
+        logging.info("🧹 Shutting down server and frontend processes...")
+        for proc in web_processes:
+            try:
+                proc.terminate()
+                proc.wait(timeout=2)
+            except Exception:
+                try:
+                    proc.kill()
+                except Exception:
+                    pass
 
 if __name__ == '__main__':
     asyncio.run(main())

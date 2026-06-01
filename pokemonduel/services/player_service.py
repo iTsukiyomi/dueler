@@ -5,6 +5,7 @@ import math
 from typing import Optional
 
 from ..repositories.player_repository import PlayerRepository
+from ..core.database import get_db
 
 log = logging.getLogger("dueler.svc.player")
 
@@ -60,12 +61,20 @@ class PlayerService:
         loser_id: str,
         *,
         money_reward: int = 0,
+        turns: int = 0,
+        duration: str = "0:00",
+        winner_team: str = "Unknown",
+        loser_team: str = "Unknown",
     ) -> tuple[int, int]:
         """
-        Record a match outcome: update wins/losses, calculate Elo, award money.
+        Record a match outcome: update wins/losses, calculate Elo, award money, save history.
 
         Returns ``(winner_new_elo, loser_new_elo)``.
         """
+        db = get_db()
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc)
+
         winner = await self._repo.get(str(winner_id))
         loser = await self._repo.get(str(loser_id))
 
@@ -90,6 +99,33 @@ class PlayerService:
         if money_reward > 0:
             await self._repo.update_wallet(str(winner_id), wallet_delta=money_reward)
 
+        # Retrieve updated profiles to get final ELO/username/avatarUrl
+        winner_final = await self._repo.get(str(winner_id))
+        loser_final = await self._repo.get(str(loser_id))
+
+        match_doc = {
+            "player1_id": str(winner_id),
+            "player2_id": str(loser_id),
+            "player1_name": winner_final.get("username", "Unknown") if winner_final else "Unknown",
+            "player2_name": loser_final.get("username", "Unknown") if loser_final else "Unknown",
+            "player1_avatar": winner_final.get("avatarUrl", "") if winner_final else "",
+            "player2_avatar": loser_final.get("avatarUrl", "") if loser_final else "",
+            "winner_id": str(winner_id),
+            "winner_name": winner_final.get("username", "Unknown") if winner_final else "Unknown",
+            "player1_team": winner_team,
+            "player2_team": loser_team,
+            "player1_elo_change": delta_w,
+            "player2_elo_change": delta_l,
+            "turns": turns,
+            "duration": duration,
+            "timestamp": now,
+            "type": "ranked"
+        }
+        try:
+            await db["matches"].insert_one(match_doc)
+        except Exception as e:
+            log.warning("Failed to save match history: %s", e)
+
         new_w = winner_doc["elo"] if winner_doc else w_elo + delta_w
         new_l = loser_doc["elo"] if loser_doc else l_elo + delta_l
 
@@ -108,9 +144,13 @@ class PlayerService:
         *,
         won: bool,
         money_reward: int = 0,
+        turns: int = 0,
+        duration: str = "0:00",
+        player_team: str = "Unknown",
+        npc_team: str = "Unknown",
     ) -> int:
         """
-        Record a match against an NPC: increment wins/losses, award money, no Elo change.
+        Record a match against an NPC: increment wins/losses, award money, save history, no Elo change.
 
         Returns the player's current Elo.
         """
@@ -132,6 +172,35 @@ class PlayerService:
             player_doc = await self._repo.update_stats(
                 str(player_id), losses_delta=1, elo_delta=0,
             )
+
+        db = get_db()
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc)
+
+        player_final = await self._repo.get(str(player_id))
+
+        match_doc = {
+            "player1_id": str(player_id),
+            "player2_id": "npc",
+            "player1_name": player_final.get("username", username) if player_final else username,
+            "player2_name": "NPC Challenger",
+            "player1_avatar": player_final.get("avatarUrl", "") if player_final else "",
+            "player2_avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=npc",
+            "winner_id": str(player_id) if won else "npc",
+            "winner_name": (player_final.get("username", username) if player_final else username) if won else "NPC Challenger",
+            "player1_team": player_team,
+            "player2_team": npc_team,
+            "player1_elo_change": 0,
+            "player2_elo_change": 0,
+            "turns": turns,
+            "duration": duration,
+            "timestamp": now,
+            "type": "casual"
+        }
+        try:
+            await db["matches"].insert_one(match_doc)
+        except Exception as e:
+            log.warning("Failed to save NPC match history: %s", e)
 
         return player_doc["elo"] if player_doc else w_elo
 

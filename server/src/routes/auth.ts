@@ -56,6 +56,9 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
           },
           $set: {
             username: discordUser.username,
+            avatarUrl: discordUser.avatar
+              ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png?size=128`
+              : `https://cdn.discordapp.com/embed/avatars/${parseInt(discordUser.id) % 5}.png`,
             updated_at: now,
           },
         },

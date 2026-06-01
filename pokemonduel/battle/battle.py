@@ -1,5 +1,6 @@
 import asyncio
 import random
+import time
 from ..ui import SwapPromptView
 from ..data_gen import generate_main_battle_message, generate_text_battle_message, find
 from ..enums import Ability, DamageClass
@@ -35,6 +36,14 @@ class Battle():
         self.type_effectiveness = {}
         self.inverse_battle = inverse_battle
         self.msg = ""
+        self.start_time = time.time()
+
+    def get_duration(self) -> str:
+        """Returns the duration of the battle in MM:SS format."""
+        elapsed = int(time.time() - self.start_time)
+        minutes = elapsed // 60
+        seconds = elapsed % 60
+        return f"{minutes}:{seconds:02d}"
 
     async def run(self):
         """Runs the duel."""

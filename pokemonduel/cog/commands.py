@@ -221,10 +221,19 @@ class PokemonDuel(commands.Cog):
                     try:
                         from ..services.player_service import PlayerService
                         svc = PlayerService()
+                        w_profile = await svc.get_profile(str(winner.id))
+                        l_profile = await svc.get_profile(str(loser.id))
+                        w_team = w_profile.get("active_party_name", "Unknown") if w_profile else "Unknown"
+                        l_team = l_profile.get("active_party_name", "Unknown") if l_profile else "Unknown"
+
                         w_elo, l_elo = await svc.record_match_result(
                             str(winner.id),
                             str(loser.id),
                             money_reward=100,
+                            turns=battle.turn,
+                            duration=battle.get_duration(),
+                            winner_team=w_team,
+                            loser_team=l_team,
                         )
                         import discord as _dc
                         embed = _dc.Embed(
@@ -245,11 +254,18 @@ class PokemonDuel(commands.Cog):
                     try:
                         from ..services.player_service import PlayerService
                         svc = PlayerService()
+                        w_profile = await svc.get_profile(str(winner.id))
+                        w_team = w_profile.get("active_party_name", "Unknown") if w_profile else "Unknown"
+
                         new_elo = await svc.record_npc_match_result(
                             str(winner.id),
                             winner.name,
                             won=True,
                             money_reward=100,
+                            turns=battle.turn,
+                            duration=battle.get_duration(),
+                            player_team=w_team,
+                            npc_team="NPC Challenger",
                         )
                         import discord as _dc
                         embed = _dc.Embed(
@@ -270,11 +286,18 @@ class PokemonDuel(commands.Cog):
                     try:
                         from ..services.player_service import PlayerService
                         svc = PlayerService()
+                        l_profile = await svc.get_profile(str(loser.id))
+                        l_team = l_profile.get("active_party_name", "Unknown") if l_profile else "Unknown"
+
                         new_elo = await svc.record_npc_match_result(
                             str(loser.id),
                             loser.name,
                             won=False,
                             money_reward=0,
+                            turns=battle.turn,
+                            duration=battle.get_duration(),
+                            player_team=l_team,
+                            npc_team="NPC Challenger",
                         )
                         import discord as _dc
                         embed = _dc.Embed(
