@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { motion } from "framer-motion";
 import { useAuthStore } from "./stores/authStore";
 import { Sidebar } from "./components/layout/Sidebar";
 import { Navbar } from "./components/layout/Navbar";
@@ -81,7 +82,12 @@ function LandingPage() {
       <div className="absolute bottom-10 right-10 w-24 h-24 border-b-2 border-r-2 border-accent/20 rounded-br-3xl pointer-events-none" />
 
       {/* Asymmetric Overlapping Layout */}
-      <div className="relative max-w-5xl w-full grid grid-cols-1 md:grid-cols-12 gap-8 items-center z-10">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="relative max-w-5xl w-full grid grid-cols-1 md:grid-cols-12 gap-8 items-center z-10"
+      >
         {/* Left Side: Mystic Emblem & Game Details */}
         <div className="md:col-span-7 space-y-6 text-left p-4">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 text-accent text-xs font-bold uppercase tracking-widest">
@@ -114,7 +120,12 @@ function LandingPage() {
         </div>
 
         {/* Right Side: Glassmorphic Panel with Discord Button */}
-        <div className="md:col-span-5 relative">
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="md:col-span-5 relative"
+        >
           <div className="absolute inset-0 bg-accent/5 rounded-3xl blur-2xl pointer-events-none" />
           <div className="relative rounded-3xl bg-bg-card/30 border border-border/60 p-8 md:p-10 backdrop-blur-xl shadow-2xl flex flex-col justify-between min-h-[420px] transition-all hover:border-accent/40">
             <div className="space-y-6">
@@ -133,7 +144,8 @@ function LandingPage() {
             <div className="space-y-4 mt-8">
               <button
                 onClick={handleDiscordLogin}
-                className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-xl bg-accent hover:bg-accent-soft text-bg-primary font-display font-bold text-sm tracking-widest uppercase transition-all duration-300 hover:shadow-[0_0_20px_rgba(207,162,64,0.3)] hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
+                aria-label="Connect with Discord"
+                className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-xl bg-accent hover:bg-accent-soft text-bg-primary font-display font-bold text-sm tracking-widest uppercase transition-all duration-300 hover:shadow-[0_0_20px_rgba(207,162,64,0.3)] hover:scale-[1.01] active:scale-[0.99] cursor-pointer focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-bg-card focus-visible:ring-accent outline-none"
               >
                 Connect With Discord
               </button>
@@ -161,8 +173,8 @@ function LandingPage() {
               By authenticating, you authorize secure reading/writing of your trainer party and teams.
             </div>
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </div>
   );
 }

@@ -47,8 +47,24 @@ export function TeamEditor() {
 
   if (isLoading || !editingTeam) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+      <div className="space-y-6 animate-pulse">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/40 pb-5">
+          <div className="flex items-center gap-4">
+             <div className="h-8 w-20 bg-bg-secondary/40 rounded-xl" />
+             <div className="h-8 w-48 bg-bg-secondary/40 rounded-xl" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          <div className="lg:col-span-7 space-y-4">
+            <div className="h-4 w-32 bg-bg-secondary/40 rounded-md mb-2" />
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="aspect-square rounded-2xl bg-bg-card/45 border-2 border-border/60" />
+              ))}
+            </div>
+          </div>
+          <div className="lg:col-span-5 h-[500px] rounded-2xl bg-bg-card/45 border border-border/60" />
+        </div>
       </div>
     );
   }

@@ -51,7 +51,8 @@ export function PokemonSlotCard({
       <button
         onClick={onClick}
         type="button"
-        className="w-full aspect-square rounded-2xl bg-bg-card/25 border-2 border-dashed border-border/50 hover:border-accent/60 flex flex-col items-center justify-center gap-2 transition-all duration-300 group cursor-pointer"
+        aria-label={`Add Pokémon to slot ${index + 1}`}
+        className="w-full aspect-square rounded-2xl bg-bg-card/25 border-2 border-dashed border-border/50 hover:border-accent/60 focus-visible:ring-2 focus-visible:ring-accent flex flex-col items-center justify-center gap-2 transition-all duration-300 group cursor-pointer"
       >
         <span className="font-display text-2xl text-text-muted group-hover:text-accent transition-colors">
           +
@@ -65,7 +66,8 @@ export function PokemonSlotCard({
     <button
       onClick={onClick}
       type="button"
-      className={`w-full rounded-2xl bg-bg-card/45 border-2 p-4 flex flex-col items-center gap-3 transition-all duration-300 cursor-pointer ${
+      aria-label={`Edit ${displayName(slot.pokname)} in slot ${index + 1}`}
+      className={`w-full rounded-2xl bg-bg-card/45 border-2 p-4 flex flex-col items-center gap-3 transition-all duration-300 cursor-pointer focus-visible:ring-2 focus-visible:ring-accent outline-none ${
         isSelected
           ? "border-accent shadow-[0_0_18px_rgba(207,162,64,0.18)] bg-bg-card/75"
           : `border-border/60 ${typeGlow}`

@@ -1,0 +1,3 @@
+## 2024-12-06 - Replacing Spinners with Skeletons
+**Learning:** Adding skeleton loaders to complex data dashboards (`PokemonEditor`, `TeamEditor`) greatly improves perceived performance and reduces layout shift compared to basic spinners. For EV inputs, users find it frustrating when an over-limit input is completely rejected; intelligently capping the input to the remaining available budget provides a significantly smoother user experience.
+**Action:** When adding loading states to complex layouts, default to skeletons matching the layout. When dealing with strict numeric budgets (like EVs), calculate the difference and apply the maximum allowed amount instead of rejecting the entire input.

@@ -22,8 +22,8 @@ export function PokemonEditor({
   onChangePokemon,
   onRemove,
 }: PokemonEditorProps) {
-  const { data: detail } = usePokemonDetail(slot.pokname || undefined);
-  const { data: natures } = useNatures();
+  const { data: detail, isLoading: isLoadingDetail } = usePokemonDetail(slot.pokname || undefined);
+  const { data: natures, isLoading: isLoadingNatures } = useNatures();
   const [activeTab, setActiveTab] = useState<"stats" | "moves" | "info">("stats");
 
   const currentNature = natures?.find(
@@ -41,6 +41,33 @@ export function PokemonEditor({
   const evRemaining = Math.max(0, 510 - evTotal);
 
   const tabs = ["stats", "moves", "info"] as const;
+
+  if (isLoadingDetail || isLoadingNatures) {
+    return (
+      <div className="rounded-2xl bg-bg-card border border-border h-full flex flex-col min-h-[500px] animate-pulse p-5">
+        <div className="flex gap-4 mb-6">
+          <div className="w-20 h-20 bg-bg-secondary/40 rounded-xl" />
+          <div className="flex-1 space-y-2">
+            <div className="h-6 w-32 bg-bg-secondary/40 rounded-md" />
+            <div className="flex gap-1">
+              <div className="h-5 w-16 bg-bg-secondary/40 rounded-full" />
+            </div>
+            <div className="h-8 w-28 bg-bg-secondary/40 rounded-lg" />
+          </div>
+        </div>
+        <div className="flex gap-2 mb-5">
+          <div className="flex-1 h-10 bg-bg-secondary/40 rounded-md" />
+          <div className="flex-1 h-10 bg-bg-secondary/40 rounded-md" />
+          <div className="flex-1 h-10 bg-bg-secondary/40 rounded-md" />
+        </div>
+        <div className="space-y-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-16 bg-bg-secondary/40 rounded-xl" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -94,7 +121,8 @@ export function PokemonEditor({
         </div>
         <button
           onClick={onRemove}
-          className="text-text-muted hover:text-danger text-sm transition-colors"
+          aria-label="Remove Pokémon from team"
+          className="text-text-muted hover:text-danger text-sm transition-colors focus-visible:ring-2 focus-visible:ring-danger outline-none rounded p-1"
           title="Remove from team"
         >
           🗑️
@@ -166,8 +194,16 @@ export function PokemonEditor({
                   finalStat={finalStat}
                   onIvChange={(v) => updateField(ivKey, v)}
                   onEvChange={(v) => {
-                    const newTotal = evTotal - slot[evKey] + v;
-                    if (newTotal <= 510) updateField(evKey, v);
+                    const diff = v - slot[evKey];
+                    if (diff > 0) {
+                      // Attempting to increase EV
+                      const available = 510 - evTotal;
+                      const allowedIncrease = Math.min(diff, available);
+                      updateField(evKey, slot[evKey] + allowedIncrease);
+                    } else {
+                      // Attempting to decrease EV
+                      updateField(evKey, v);
+                    }
                   }}
                   nature={currentNature}
                   statKey={statKey}

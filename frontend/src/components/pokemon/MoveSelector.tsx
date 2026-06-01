@@ -53,7 +53,8 @@ export function MoveSelector({
                   setActiveSlot(isEditing ? null : idx);
                   setSearchQuery("");
                 }}
-                className={`flex flex-col items-start gap-1 p-4 rounded-xl border text-left transition-all relative overflow-hidden ${
+                aria-label={`Select move for slot ${idx + 1}`}
+                className={`flex flex-col items-start gap-1 p-4 rounded-xl border text-left transition-all relative overflow-hidden focus-visible:ring-2 focus-visible:ring-accent outline-none ${
                   isEditing
                     ? "bg-accent/10 border-accent shadow-[0_0_12px_rgba(16,185,129,0.15)] text-text-primary"
                     : "bg-bg-secondary/40 border-border/60 hover:border-border text-text-secondary hover:text-text-primary"
@@ -79,7 +80,8 @@ export function MoveSelector({
             </span>
             <button
               onClick={() => setActiveSlot(null)}
-              className="text-[10px] text-text-muted hover:text-text-primary uppercase tracking-wider font-semibold"
+              aria-label="Close move selection"
+              className="text-[10px] text-text-muted hover:text-text-primary uppercase tracking-wider font-semibold focus-visible:ring-2 focus-visible:ring-accent outline-none rounded px-1"
             >
               Close
             </button>

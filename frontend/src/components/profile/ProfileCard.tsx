@@ -10,8 +10,15 @@ export function ProfileCard() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+      <div className="space-y-8 animate-pulse">
+        <div className="border-b border-border/40 pb-3 flex justify-between">
+          <div className="h-8 w-48 bg-bg-secondary/40 rounded-xl" />
+          <div className="h-4 w-24 bg-bg-secondary/40 rounded-md" />
+        </div>
+        <div className="grid gap-8 lg:grid-cols-3">
+          <div className="lg:col-span-2 rounded-2xl bg-bg-card/40 border border-border/70 p-6 md:p-8 h-96" />
+          <div className="rounded-2xl bg-bg-card/40 border border-border/70 p-6 h-96" />
+        </div>
       </div>
     );
   }
