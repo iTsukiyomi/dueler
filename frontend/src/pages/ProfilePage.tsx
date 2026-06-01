@@ -228,8 +228,13 @@ export function ProfilePage() {
 
   if (!user || !profile) return null;
 
-  const winRate = profile.wins + profile.losses > 0
-    ? ((profile.wins / (profile.wins + profile.losses)) * 100).toFixed(1)
+  const profileWins = profile?.wins ?? 0;
+  const profileLosses = profile?.losses ?? 0;
+  const profileElo = profile?.elo ?? 1000;
+  const profileWallet = profile?.wallet ?? 0;
+
+  const winRate = profileWins + profileLosses > 0
+    ? ((profileWins / (profileWins + profileLosses)) * 100).toFixed(1)
     : "0.0";
 
   const { data: historyData } = useBattleHistory();
@@ -245,7 +250,7 @@ export function ProfilePage() {
     };
   });
 
-  const eligibleBattles = profile.wins + profile.losses >= 10;
+  const eligibleBattles = profileWins + profileLosses >= 10;
 
   return (
     <motion.div
@@ -260,7 +265,7 @@ export function ProfilePage() {
           <h1 className="font-display text-3xl font-bold tracking-wider text-text-primary">Trainer Profile</h1>
           <p className="text-xs text-text-muted mt-1">Your battle statistics and activity</p>
         </div>
-        {profile.rank && <RankBadge rank={profile.rank} />}
+        {profile?.rank && <RankBadge rank={profile.rank} />}
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
@@ -300,7 +305,7 @@ export function ProfilePage() {
             <div className="text-center sm:text-left space-y-3 flex-1">
               <div>
                 <h2 className="font-display text-2xl font-bold text-text-primary uppercase tracking-wide">
-                  {profile.username}
+                  {profile?.username}
                 </h2>
                 <p className="text-sm text-text-muted">Discord Trainer</p>
               </div>
@@ -312,16 +317,16 @@ export function ProfilePage() {
                   transition={{ delay: 0.3 }}
                   className="px-4 py-1.5 rounded-xl bg-accent/15 border border-accent/30 text-accent font-mono font-bold text-base tracking-wide"
                 >
-                  {profile.elo} ELO
+                  {profileElo} ELO
                 </motion.span>
-                {profile.rank && (
+                {profile?.rank && (
                   <motion.span
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.4 }}
                     className="px-4 py-1.5 rounded-xl bg-bg-secondary border border-border/60 text-text-secondary font-mono text-base"
                   >
-                    Rank #{profile.rank}
+                    Rank #{profile?.rank}
                   </motion.span>
                 )}
                 {eligibleBattles && (
@@ -340,10 +345,10 @@ export function ProfilePage() {
 
           {/* Stats Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-            <AnimatedStat value={profile.wins} label="Victories" icon="🏆" />
-            <AnimatedStat value={profile.losses} label="Defeats" icon="💀" />
+            <AnimatedStat value={profileWins} label="Victories" icon="🏆" />
+            <AnimatedStat value={profileLosses} label="Defeats" icon="💀" />
             <AnimatedStat value={`${winRate}%`} label="Win Rate" icon="📈" />
-            <AnimatedStat value={`₽${profile.wallet.toLocaleString()}`} label="Credits" icon="🪙" />
+            <AnimatedStat value={`₽${profileWallet.toLocaleString()}`} label="Credits" icon="🪙" />
           </div>
 
           {/* Win Rate Progress */}
@@ -366,8 +371,8 @@ export function ProfilePage() {
               />
             </div>
             <div className="flex justify-between mt-2 text-[10px] text-text-muted">
-              <span>{profile.wins} wins</span>
-              <span>{profile.losses} losses</span>
+              <span>{profileWins} wins</span>
+              <span>{profileLosses} losses</span>
             </div>
           </motion.div>
         </motion.div>
@@ -387,22 +392,22 @@ export function ProfilePage() {
               <div>
                 <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1">Active Battle Party</div>
                 <div className="text-xl font-display font-bold capitalize text-text-primary tracking-wide">
-                  {profile.active_party_name ?? "No Team Active"}
+                  {profile?.active_party_name ?? "No Team Active"}
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3 text-center">
                 <div className="bg-bg-secondary/40 rounded-xl p-3">
                   <div className="text-[10px] uppercase tracking-wider text-text-muted mb-1">Theme</div>
-                  <div className="text-sm font-semibold capitalize">🔮 {profile.theme}</div>
+                  <div className="text-sm font-semibold capitalize">🔮 {profile?.theme}</div>
                 </div>
                 <div className="bg-bg-secondary/40 rounded-xl p-3">
                   <div className="text-[10px] uppercase tracking-wider text-text-muted mb-1">Gen</div>
-                  <div className="text-sm font-semibold font-mono">Gen {profile.gen}</div>
+                  <div className="text-sm font-semibold font-mono">Gen {profile?.gen}</div>
                 </div>
               </div>
 
-              {profile.active_party_name && (
+              {profile?.active_party_name && (
                 <motion.button
                   onClick={() => navigate(`/dashboard/teams/${encodeURIComponent(profile.active_party_name!)}`)}
                   whileHover={{ scale: 1.02 }}
@@ -447,7 +452,7 @@ export function ProfilePage() {
                    parseFloat(winRate) >= 40 ? "Developing Skill" : "Keep Practicing"}
                 </div>
                 <div className="text-[10px] text-text-muted mt-0.5">
-                  Based on {profile.wins + profile.losses} battles
+                  Based on {profileWins + profileLosses} battles
                 </div>
               </div>
             </div>

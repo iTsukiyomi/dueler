@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { getDb } from "../db/mongo.js";
+import { authMiddleware } from "../middleware/auth.js";
 
 export async function statsRoutes(app: FastifyInstance): Promise<void> {
   app.get("/api/stats/global", async (request, reply) => {
@@ -82,13 +83,12 @@ export async function statsRoutes(app: FastifyInstance): Promise<void> {
   });
 
   // Battle history endpoint
-  app.get("/api/battles/history", async (request, reply) => {
-    try {
-      const userId = (request as any).user?.userId;
-      if (!userId) {
-        reply.status(401).send({ error: "Unauthorized" });
-        return;
-      }
+  app.get(
+    "/api/battles/history",
+    { preHandler: authMiddleware },
+    async (request, reply) => {
+      try {
+        const userId = request.user!.userId;
 
       const db = getDb();
       const matches = await db.collection("matches")
