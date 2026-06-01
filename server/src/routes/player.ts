@@ -17,13 +17,33 @@ export async function playerRoutes(app: FastifyInstance): Promise<void> {
       }
 
       const db = getDb();
-      const player = await db
+      let player = await db
         .collection("players")
         .findOne({ _id: userId as any });
 
       if (!player) {
-        reply.status(404).send({ error: "Player profile not found" });
-        return;
+        const now = new Date();
+        const avatar = request.user!.avatar;
+        const avatarUrl = avatar
+          ? `https://cdn.discordapp.com/avatars/${userId}/${avatar}.png?size=128`
+          : `https://cdn.discordapp.com/embed/avatars/${parseInt(userId) % 5}.png`;
+
+        player = {
+          _id: userId as any,
+          username: request.user!.username || "Trainer",
+          avatarUrl,
+          wins: 0,
+          losses: 0,
+          elo: 1000,
+          wallet: 0,
+          active_party_name: null,
+          theme: "firered",
+          gen: 5,
+          moveset_img: true,
+          created_at: now,
+          updated_at: now,
+        };
+        await db.collection("players").insertOne(player);
       }
 
       const higherCount = await db.collection("players").countDocuments({

@@ -85,20 +85,148 @@ function RankBadge({ rank }: { rank: number }) {
   );
 }
 
+function ProfileSkeleton() {
+  return (
+    <div className="space-y-8 select-none animate-pulse">
+      {/* Header Skeleton */}
+      <div className="border-b border-border/40 pb-4 flex items-center justify-between">
+        <div>
+          <div className="h-9 w-48 bg-bg-secondary/60 rounded-lg mb-2" />
+          <div className="h-4 w-64 bg-bg-secondary/40 rounded-lg" />
+        </div>
+        <div className="w-10 h-10 rounded-xl bg-bg-secondary/50 border border-border" />
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-6">
+        {/* Main Profile Card Skeleton */}
+        <div className="lg:col-span-2 rounded-2xl bg-bg-card/40 border border-border/70 p-6 md:p-8 relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-accent/20 to-transparent" />
+          
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 mb-8">
+            {/* Avatar Skeleton */}
+            <div className="w-28 h-28 rounded-2xl bg-bg-secondary/60 border-2 border-border/80 shadow-lg" />
+            
+            {/* User Info Skeleton */}
+            <div className="text-center sm:text-left space-y-3 flex-1">
+              <div className="space-y-2">
+                <div className="h-8 w-40 bg-bg-secondary/60 rounded-lg mx-auto sm:mx-0" />
+                <div className="h-4 w-24 bg-bg-secondary/40 rounded-lg mx-auto sm:mx-0" />
+              </div>
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
+                <div className="h-8 w-24 bg-bg-secondary/50 rounded-xl" />
+                <div className="h-8 w-24 bg-bg-secondary/50 rounded-xl" />
+              </div>
+            </div>
+          </div>
+
+          {/* Stats Grid Skeleton */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="rounded-2xl bg-bg-secondary/30 border border-border/50 p-5 flex flex-col items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-bg-secondary/50" />
+                <div className="h-8 w-16 bg-bg-secondary/60 rounded-lg" />
+                <div className="h-3 w-12 bg-bg-secondary/40 rounded-lg" />
+              </div>
+            ))}
+          </div>
+
+          {/* Win Rate Progress Skeleton */}
+          <div className="bg-bg-secondary/30 border border-border/30 p-5 rounded-xl space-y-3">
+            <div className="flex justify-between">
+              <div className="h-3 w-28 bg-bg-secondary/50 rounded-lg" />
+              <div className="h-3 w-10 bg-bg-secondary/50 rounded-lg" />
+            </div>
+            <div className="h-3 rounded-full bg-bg-secondary/40 border border-border/60" />
+            <div className="flex justify-between">
+              <div className="h-3 w-12 bg-bg-secondary/40 rounded-lg" />
+              <div className="h-3 w-12 bg-bg-secondary/40 rounded-lg" />
+            </div>
+          </div>
+        </div>
+
+        {/* Side Panel Skeleton */}
+        <div className="space-y-6">
+          {/* Active Party Card Skeleton */}
+          <div className="rounded-2xl bg-bg-card/40 border border-border/70 p-6 relative overflow-hidden">
+            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-accent/20 to-transparent" />
+            <div className="space-y-4">
+              <div>
+                <div className="h-3 w-28 bg-bg-secondary/50 rounded-lg mb-2" />
+                <div className="h-6 w-36 bg-bg-secondary/60 rounded-lg" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-bg-secondary/30 rounded-xl p-3 flex flex-col items-center gap-1">
+                  <div className="h-3 w-10 bg-bg-secondary/40 rounded-lg" />
+                  <div className="h-4 w-16 bg-bg-secondary/50 rounded-lg" />
+                </div>
+                <div className="bg-bg-secondary/30 rounded-xl p-3 flex flex-col items-center gap-1">
+                  <div className="h-3 w-10 bg-bg-secondary/40 rounded-lg" />
+                  <div className="h-4 w-12 bg-bg-secondary/50 rounded-lg" />
+                </div>
+              </div>
+              <div className="h-11 w-full bg-bg-secondary/50 rounded-xl" />
+            </div>
+          </div>
+
+          {/* Recent Activity Skeleton */}
+          <div className="rounded-2xl bg-bg-card/40 border border-border/70 p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="h-3 w-24 bg-bg-secondary/50 rounded-lg" />
+              <div className="h-3 w-12 bg-bg-secondary/50 rounded-lg" />
+            </div>
+            <div className="space-y-3 divide-y divide-border/20">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="flex items-center gap-3 pt-3 first:pt-0">
+                  <div className="w-5 h-5 rounded-full bg-bg-secondary/50 flex-shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 w-full bg-bg-secondary/50 rounded-lg" />
+                    <div className="h-3 w-16 bg-bg-secondary/40 rounded-lg" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Quick Stats Skeleton */}
+          <div className="rounded-2xl bg-bg-secondary/30 border border-border/40 p-5 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-bg-secondary/50 flex-shrink-0" />
+            <div className="flex-1 space-y-2">
+              <div className="h-4 w-24 bg-bg-secondary/50 rounded-lg" />
+              <div className="h-3 w-32 bg-bg-secondary/40 rounded-lg" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ProfilePage() {
   const { user } = useAuthStore();
-  const { data: profile, isLoading } = usePlayerProfile();
+  const { data: profile, isLoading, error, refetch } = usePlayerProfile();
   const navigate = useNavigate();
 
   if (isLoading) {
+    return <ProfileSkeleton />;
+  }
+
+  if (error || (!isLoading && !profile)) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-10 h-10 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+      <div className="flex flex-col items-center justify-center h-[50vh] space-y-4 text-center">
+        <div className="text-4xl animate-bounce">⚠️</div>
+        <h2 className="font-display text-xl font-bold text-text-primary">Failed to load Trainer profile</h2>
+        <p className="text-sm text-text-muted max-w-xs">Could not retrieve your data. Please check your connection or try again.</p>
+        <button
+          onClick={() => refetch()}
+          className="px-6 py-2.5 rounded-xl bg-accent text-bg-primary font-display font-bold text-xs uppercase tracking-widest hover:bg-accent-glow hover:shadow-[0_0_12px_rgba(207,162,64,0.3)] transition-all cursor-pointer"
+        >
+          Retry Fetch
+        </button>
       </div>
     );
   }
 
-  if (!profile || !user) return null;
+  if (!user || !profile) return null;
 
   const winRate = profile.wins + profile.losses > 0
     ? ((profile.wins / (profile.wins + profile.losses)) * 100).toFixed(1)
