@@ -1,3 +1,6 @@
 ## 2024-12-06 - Replacing Spinners with Skeletons
 **Learning:** Adding skeleton loaders to complex data dashboards (`PokemonEditor`, `TeamEditor`) greatly improves perceived performance and reduces layout shift compared to basic spinners. For EV inputs, users find it frustrating when an over-limit input is completely rejected; intelligently capping the input to the remaining available budget provides a significantly smoother user experience.
 **Action:** When adding loading states to complex layouts, default to skeletons matching the layout. When dealing with strict numeric budgets (like EVs), calculate the difference and apply the maximum allowed amount instead of rejecting the entire input.
+## 2024-12-06 - Production Grade Landing Pages
+**Learning:** Moving complex, stylized landing pages out of main routing components (`App.tsx`) and into dedicated components (`Hero.tsx`) makes the code significantly easier to maintain. Modern UI patterns like glow effects and animated mockups greatly increase the perceived value of the app.
+**Action:** Always extract major page structures into their own components rather than inlining them in routing files. When designing landing pages, include visual mockups or representations of the app to show value quickly.
