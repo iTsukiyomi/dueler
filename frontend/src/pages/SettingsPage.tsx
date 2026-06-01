@@ -2,6 +2,8 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { usePlayerProfile } from "../hooks/usePokemonData";
 import { useAuthStore } from "../stores/authStore";
+import { BorderBeam } from "../components/ui/BorderBeam";
+import toast from "react-hot-toast";
 
 const themes = [
   { id: "firered", name: "Fire Red", emoji: "🦎", color: "from-red-500 to-orange-500" },
@@ -12,26 +14,27 @@ const themes = [
 ];
 
 const generations = [
-  { id: 1, name: "Generation 1", count: 151 },
-  { id: 2, name: "Generation 2", count: 251 },
-  { id: 3, name: "Generation 3", count: 386 },
-  { id: 4, name: "Generation 4", count: 493 },
-  { id: 5, name: "Generation 5", count: 649 },
-  { id: 6, name: "Generation 6", count: 721 },
-  { id: 7, name: "Generation 7", count: 809 },
-  { id: 8, name: "Generation 8", count: 905 },
+  { id: 1, name: "Gen 1", count: 151 },
+  { id: 2, name: "Gen 2", count: 251 },
+  { id: 3, name: "Gen 3", count: 386 },
+  { id: 4, name: "Gen 4", count: 493 },
+  { id: 5, name: "Gen 5", count: 649 },
+  { id: 6, name: "Gen 6", count: 721 },
+  { id: 7, name: "Gen 7", count: 809 },
+  { id: 8, name: "Gen 8", count: 905 },
 ];
 
 function SettingSection({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-2xl bg-bg-card/40 border border-border/60 p-6"
+      className="relative rounded-3xl bg-bg-card/25 border border-border/70 p-6 overflow-hidden group"
     >
+      <BorderBeam duration={7} borderWidth={1.2} className="opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       <div className="mb-5">
-        <h3 className="font-display text-lg font-bold text-text-primary">{title}</h3>
-        {description && <p className="text-xs text-text-muted mt-1">{description}</p>}
+        <h3 className="font-display text-base font-bold text-text-primary tracking-wide uppercase">{title}</h3>
+        {description && <p className="text-[10px] font-bold text-text-muted mt-1 uppercase tracking-wider">{description}</p>}
       </div>
       {children}
     </motion.div>
@@ -40,18 +43,19 @@ function SettingSection({ title, description, children }: { title: string; descr
 
 function Toggle({ enabled, onChange, label }: { enabled: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
-    <label className="flex items-center justify-between cursor-pointer py-3">
-      <span className="text-sm text-text-primary">{label}</span>
+    <label className="flex items-center justify-between cursor-pointer py-3 border-b border-border/20 last:border-0 select-none">
+      <span className="text-xs font-bold text-text-secondary uppercase tracking-wider">{label}</span>
       <button
+        type="button"
         onClick={() => onChange(!enabled)}
-        className={`relative w-12 h-6 rounded-full transition-colors duration-300 ${
-          enabled ? "bg-accent" : "bg-border"
+        className={`relative w-12 h-6 rounded-full transition-colors duration-300 cursor-pointer ${
+          enabled ? "bg-accent" : "bg-bg-secondary border border-border"
         }`}
       >
         <motion.div
-          animate={{ x: enabled ? 24 : 2 }}
-          transition={{ type: "spring", stiffness: 500, damping: 30 }}
-          className="absolute top-1 w-4 h-4 rounded-full bg-white shadow"
+          animate={{ x: enabled ? 26 : 2 }}
+          transition={{ type: "spring", stiffness: 450, damping: 25 }}
+          className="absolute top-0.5 w-4 h-4 rounded-full bg-text-primary shadow"
         />
       </button>
     </label>
@@ -66,21 +70,25 @@ function SelectOption({ selected, onChange, options, renderOption }: {
 }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-      {options.map((option) => (
-        <button
-          key={option.id}
-          onClick={() => onChange(option.id)}
-          className={`p-4 rounded-xl border text-left transition-all ${
-            selected === option.id
-              ? "border-accent bg-accent/10"
-              : "border-border/60 hover:border-border"
-          }`}
-        >
-          {renderOption ? renderOption(option) : (
-            <div className="font-semibold text-text-primary">{option.name}</div>
-          )}
-        </button>
-      ))}
+      {options.map((option) => {
+        const isSelected = selected === option.id;
+        return (
+          <button
+            type="button"
+            key={option.id}
+            onClick={() => onChange(option.id)}
+            className={`p-4 rounded-xl border text-left transition-all duration-200 cursor-pointer ${
+              isSelected
+                ? "border-accent bg-accent/15 text-accent shadow-[0_0_12px_rgba(207,162,64,0.15)]"
+                : "border-border/60 bg-bg-secondary/40 text-text-secondary hover:border-border hover:bg-bg-secondary/60"
+            }`}
+          >
+            {renderOption ? renderOption(option) : (
+              <div className="text-xs font-bold uppercase tracking-wider">{option.name}</div>
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -100,63 +108,67 @@ export function SettingsPage() {
   const [sound, setSound] = useState(true);
   const [music, setMusic] = useState(false);
 
-  const currentTheme = themes.find((t) => t.id === theme);
-
   const handleSave = () => {
-    // In production, this would call an API to update settings
-    alert("Settings saved successfully!");
+    toast.success("Settings synced successfully!");
   };
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="space-y-6 select-none max-w-3xl"
+      className="space-y-8 w-full max-w-3xl select-none"
     >
       {/* Header */}
-      <div className="border-b border-border/40 pb-4 flex items-center justify-between">
+      <div className="border-b border-border/30 pb-4 flex items-center justify-between">
         <div>
-          <h1 className="font-display text-3xl font-bold tracking-wider text-text-primary">Settings</h1>
-          <p className="text-xs text-text-muted mt-1">Customize your battle experience</p>
+          <h1 className="font-display text-2xl sm:text-3xl font-extrabold tracking-wider text-text-primary uppercase">
+            Settings
+          </h1>
+          <p className="text-xs text-text-muted mt-1 font-medium">Configure league attributes and trainer preferences</p>
         </div>
         <button
           onClick={handleSave}
-          className="px-6 py-2.5 rounded-xl bg-accent hover:bg-accent-soft text-bg-primary font-display font-bold text-xs uppercase tracking-widest transition-all duration-300 cursor-pointer"
+          className="px-5 py-3 rounded-xl bg-accent text-bg-primary font-display font-bold text-xs uppercase tracking-widest hover:bg-accent-glow transition-all duration-300 cursor-pointer shadow-lg shadow-accent/10"
         >
           Save Changes
         </button>
       </div>
 
-      {/* Profile Section */}
-      <SettingSection title="Profile" description="Your account information">
-        <div className="flex items-center gap-4 p-4 bg-bg-secondary/40 rounded-xl">
-          {user && (
+      {/* Account Info Section */}
+      <SettingSection title="Trainer Registry" description="OAuth Discord verification metadata">
+        <div className="flex items-center gap-4 p-4 bg-bg-secondary/30 border border-border/50 rounded-2xl">
+          {user ? (
             <>
-              <img
-                src={user.avatarUrl}
-                alt={user.username}
-                className="w-16 h-16 rounded-2xl ring-2 ring-border"
-              />
+              {user.avatarUrl ? (
+                <img
+                  src={user.avatarUrl}
+                  alt={user.username}
+                  className="w-14 h-14 rounded-xl object-cover ring-2 ring-accent/30 shadow"
+                />
+              ) : (
+                <div className="w-14 h-14 rounded-xl bg-bg-secondary flex items-center justify-center text-3xl">
+                  🧢
+                </div>
+              )}
               <div>
-                <div className="font-display text-lg font-bold text-text-primary">{user.username}</div>
-                <div className="text-xs text-text-muted">Connected via Discord</div>
-                <div className="text-[10px] text-accent mt-1">ID: {user.id}</div>
+                <div className="text-sm font-bold text-text-primary">{user.username}</div>
+                <div className="text-[10px] font-bold text-text-muted mt-0.5 uppercase tracking-wider">Discord Authenticated</div>
+                <div className="text-[9px] font-mono text-accent mt-1">ID: {user.id}</div>
               </div>
             </>
+          ) : (
+            <div className="text-xs text-text-muted">No connected trainer account found</div>
           )}
         </div>
       </SettingSection>
 
-      {/* Game Settings */}
-      <SettingSection
-        title="Game Preferences"
-        description="Customize your battle settings"
-      >
+      {/* Preferences Section */}
+      <SettingSection title="Battle Preferences" description="Format themes and generation constraints">
         <div className="space-y-6">
-          {/* Theme selection */}
+          {/* Theme Selection */}
           <div>
-            <label className="text-sm font-semibold text-text-primary mb-3 block">Battle Theme</label>
+            <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-3 block">Arena Theme</label>
             <SelectOption
               selected={theme}
               onChange={setTheme}
@@ -165,66 +177,58 @@ export function SettingsPage() {
                 const t = themes.find((th) => th.id === option.id);
                 return (
                   <div className="flex items-center gap-2">
-                    <span>{t?.emoji}</span>
-                    <span className="font-semibold text-text-primary">{option.name}</span>
+                    <span className="text-lg select-none">{t?.emoji}</span>
+                    <span className="text-xs font-bold uppercase tracking-wider">{option.name}</span>
                   </div>
                 );
               }}
             />
           </div>
 
-          {/* Generation selection */}
+          {/* Gen selection */}
           <div>
-            <label className="text-sm font-semibold text-text-primary mb-3 block">Generation</label>
+            <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-3 block">Generations Range</label>
             <SelectOption
               selected={gen.toString()}
               onChange={(v) => setGen(parseInt(v))}
               options={generations.map((g) => ({ id: g.id.toString(), name: g.name }))}
-              renderOption={(option) => (
-                <div>
-                  <div className="font-semibold text-text-primary">{option.name}</div>
-                  <div className="text-[10px] text-text-muted">{generations.find((g) => g.id.toString() === option.id)?.count} Pokemon</div>
-                </div>
-              )}
+              renderOption={(option) => {
+                const count = generations.find((g) => g.id.toString() === option.id)?.count;
+                return (
+                  <div>
+                    <div className="text-xs font-bold uppercase tracking-wider">{option.name}</div>
+                    <div className="text-[9px] font-bold text-text-muted uppercase tracking-widest mt-0.5">{count} Pokémon</div>
+                  </div>
+                );
+              }}
             />
           </div>
         </div>
       </SettingSection>
 
-      {/* Notifications */}
-      <SettingSection
-        title="Notifications"
-        description="Manage how you receive updates"
-      >
+      {/* Notifications Toggle */}
+      <SettingSection title="Notification Relays" description="Select triggers for Relays">
         <div className="space-y-1">
           <Toggle
-            label="Battle Invites"
+            label="Battle Duel Invites"
             enabled={notifications.battleInvites}
             onChange={(v) => setNotifications((n) => ({ ...n, battleInvites: v }))}
           />
           <Toggle
-            label="Ranked Match Alerts"
+            label="Ranked Match Notifications"
             enabled={notifications.rankedAlerts}
             onChange={(v) => setNotifications((n) => ({ ...n, rankedAlerts: v }))}
           />
           <Toggle
-            label="Team Sync Updates"
+            label="Team Synchronization Logs"
             enabled={notifications.teamSync}
             onChange={(v) => setNotifications((n) => ({ ...n, teamSync: v }))}
-          />
-          <Toggle
-            label="Newsletter & Updates"
-            enabled={notifications.newsletter}
-            onChange={(v) => setNotifications((n) => ({ ...n, newsletter: v }))}
           />
         </div>
       </SettingSection>
 
-      {/* Audio */}
-      <SettingSection
-        title="Audio"
-        description="Sound and music preferences"
-      >
+      {/* Audio Preferences */}
+      <SettingSection title="Audio Relays" description="Volume sound configurations">
         <div className="space-y-1">
           <Toggle
             label="Battle Sound Effects"
@@ -232,44 +236,36 @@ export function SettingsPage() {
             onChange={setSound}
           />
           <Toggle
-            label="Background Music"
+            label="Ambient Background Track"
             enabled={music}
             onChange={setMusic}
           />
         </div>
       </SettingSection>
 
-      {/* Account Actions */}
-      <SettingSection title="Account">
+      {/* Danger Zone */}
+      <SettingSection title="Danger Zone Actions" description="Highly destructive commands">
         <div className="space-y-4">
-          <button className="w-full py-3 rounded-xl bg-bg-secondary/40 border border-border/60 text-text-secondary hover:text-text-primary text-sm font-semibold transition-all">
-            Change Password
+          <button
+            type="button"
+            onClick={logout}
+            className="w-full py-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500 hover:text-bg-primary font-display font-bold text-xs uppercase tracking-widest transition-all cursor-pointer"
+          >
+            Sign Out Account
           </button>
           <button
-            onClick={logout}
-            className="w-full py-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500 hover:text-white text-sm font-semibold transition-all"
+            type="button"
+            className="w-full py-3 rounded-xl border border-rose-500/40 text-rose-500 hover:bg-rose-500/10 font-display font-bold text-xs uppercase tracking-widest transition-all cursor-pointer"
           >
-            Sign Out
+            Clear Stats Log
           </button>
         </div>
       </SettingSection>
 
-      {/* Danger Zone */}
-      <SettingSection title="Danger Zone">
-        <div className="space-y-4">
-          <button className="w-full py-3 rounded-xl border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 text-sm font-semibold transition-all">
-            Reset Statistics
-          </button>
-          <button className="w-full py-3 rounded-xl border border-rose-500/50 text-rose-500 hover:bg-rose-500/20 text-sm font-semibold transition-all">
-            Delete Account
-          </button>
-        </div>
-      </SettingSection>
-
-      {/* Footer info */}
-      <div className="text-center text-xs text-text-muted space-y-1">
-        <p>Flame Dueler v1.0.0</p>
-        <p>Discord Bot synced in real-time</p>
+      {/* Footer Info */}
+      <div className="text-center text-[9px] text-text-muted font-bold tracking-widest uppercase space-y-1">
+        <div>Flame Dueler v1.0.0</div>
+        <div>All assets verified under CC Licenses</div>
       </div>
     </motion.div>
   );

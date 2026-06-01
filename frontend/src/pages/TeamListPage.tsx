@@ -5,6 +5,28 @@ import { useTeamsList, useCreateTeam } from "../hooks/useTeams";
 import { TeamCard } from "../components/teams/TeamCard";
 import { defaultPokemonSlot } from "../types";
 
+function TeamListSkeleton() {
+  return (
+    <div className="space-y-6 animate-pulse w-full">
+      {/* Header Skeleton */}
+      <div className="flex items-center justify-between border-b border-border/30 pb-4">
+        <div className="space-y-2">
+          <div className="h-8 w-36 bg-bg-card/85 rounded-lg" />
+          <div className="h-4 w-48 bg-bg-card/45 rounded-lg" />
+        </div>
+        <div className="h-10 w-28 bg-bg-card/60 rounded-xl" />
+      </div>
+
+      {/* Grid Cards Skeleton */}
+      <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-32 bg-bg-card/30 border border-border/40 rounded-2xl" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function TeamListPage() {
   const { data: teams, isLoading } = useTeamsList();
   const navigate = useNavigate();
@@ -27,37 +49,33 @@ export function TeamListPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-10 h-10 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+    return <TeamListSkeleton />;
   }
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="space-y-6 select-none w-full"
+      className="space-y-8 w-full select-none"
     >
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-border/40 pb-4">
+      <div className="flex items-center justify-between border-b border-border/30 pb-4">
         <div>
-          <h1 className="font-display text-3xl font-bold tracking-wider text-text-primary">Teams</h1>
-          <p className="text-xs text-text-muted mt-1">{teams?.length || 0} battle parties created</p>
+          <h1 className="font-display text-2xl sm:text-3xl font-extrabold tracking-wider text-text-primary uppercase">
+            Battle Squads
+          </h1>
+          <p className="text-xs text-text-muted mt-1 font-medium">Configure and select active six-Pokémon teams</p>
         </div>
-        <motion.button
+        <button
           onClick={() => setShowCreate(true)}
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.98 }}
-          className="px-6 py-3 rounded-xl bg-accent hover:bg-accent-soft text-bg-primary font-display font-bold text-xs uppercase tracking-widest transition-all duration-300 cursor-pointer shadow-lg shadow-accent/20"
+          className="px-5 py-3 rounded-xl bg-accent text-bg-primary font-display font-bold text-xs uppercase tracking-widest hover:bg-accent-glow transition-all duration-300 cursor-pointer shadow-lg shadow-accent/10 shrink-0"
         >
-          + New Team
-        </motion.button>
+          + New Squad
+        </button>
       </div>
 
-      {/* Create team form */}
+      {/* Create Team Inline Form */}
       <AnimatePresence>
         {showCreate && (
           <motion.div
@@ -66,29 +84,33 @@ export function TeamListPage() {
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
           >
-            <div className="rounded-2xl bg-bg-card/50 border border-border p-6">
-              <div className="flex flex-col sm:flex-row gap-4">
+            <div className="rounded-2xl bg-bg-card/25 border border-border/60 p-5 space-y-4">
+              <div className="text-[10px] uppercase font-bold text-accent tracking-widest">Register New Battle Squad</div>
+              <div className="flex flex-col sm:flex-row gap-3">
                 <input
                   type="text"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-                  placeholder="Name your legendary squad..."
+                  placeholder="Enter unique squad name..."
                   maxLength={32}
                   autoFocus
-                  className="flex-1 px-5 py-3.5 rounded-xl bg-bg-secondary/60 border border-border/60 text-text-primary placeholder:text-text-muted focus:border-accent outline-none text-sm font-semibold"
+                  className="flex-1 px-4 py-3 rounded-xl bg-bg-secondary/50 border border-border/60 text-text-primary placeholder:text-text-muted focus:border-accent outline-none text-xs font-bold uppercase tracking-wider"
                 />
-                <div className="flex gap-3">
+                <div className="flex gap-2">
                   <button
                     onClick={handleCreate}
                     disabled={createTeam.isPending || !newName.trim()}
-                    className="px-6 py-3.5 rounded-xl bg-accent text-bg-primary font-display font-bold text-xs uppercase tracking-wider hover:bg-accent-soft transition-all disabled:opacity-50 cursor-pointer"
+                    className="px-5 py-3 rounded-xl bg-accent text-bg-primary font-display font-bold text-xs uppercase tracking-wider hover:bg-accent-glow transition-all disabled:opacity-50 cursor-pointer shrink-0"
                   >
-                    {createTeam.isPending ? "Creating..." : "Create Team"}
+                    {createTeam.isPending ? "Syncing..." : "Create"}
                   </button>
                   <button
-                    onClick={() => { setShowCreate(false); setNewName(""); }}
-                    className="px-6 py-3.5 rounded-xl bg-bg-secondary/40 border border-border/60 text-text-muted hover:text-text-primary text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                    onClick={() => {
+                      setShowCreate(false);
+                      setNewName("");
+                    }}
+                    className="px-5 py-3 rounded-xl bg-bg-secondary/40 border border-border/60 text-text-muted hover:text-text-primary text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer shrink-0"
                   >
                     Cancel
                   </button>
@@ -99,15 +121,15 @@ export function TeamListPage() {
         )}
       </AnimatePresence>
 
-      {/* Teams grid */}
+      {/* Teams Grid */}
       {teams && teams.length > 0 ? (
         <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
           {teams.map((team, idx) => (
             <motion.div
               key={team.name}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.05 }}
+              transition={{ delay: idx * 0.04 }}
             >
               <TeamCard
                 name={team.name}
@@ -119,25 +141,19 @@ export function TeamListPage() {
           ))}
         </div>
       ) : (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center py-20 rounded-2xl bg-bg-card/10 border border-dashed border-border/40"
-        >
-          <div className="text-6xl mb-4">🎒</div>
-          <div className="font-display text-xl font-bold text-text-secondary tracking-wide">No Teams Yet</div>
-          <div className="text-sm mt-2 text-text-muted max-w-sm mx-auto">
-            Create your first battle party to start competing in the arena
+        <div className="text-center py-20 rounded-2xl bg-bg-card/10 border border-dashed border-border/40">
+          <div className="text-5xl mb-4 select-none">🎒</div>
+          <div className="font-display text-lg font-bold text-text-secondary">No Battle Squads Configured</div>
+          <div className="text-[10px] mt-1.5 text-text-muted font-bold uppercase tracking-widest max-w-xs mx-auto leading-relaxed">
+            Register your first team assembly to deploy active fighters in battles
           </div>
-          <motion.button
+          <button
             onClick={() => setShowCreate(true)}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="mt-6 px-8 py-3 rounded-xl bg-accent/10 border border-accent/30 text-accent font-display font-bold text-xs uppercase tracking-widest hover:bg-accent hover:text-bg-primary transition-all"
+            className="mt-6 px-6 py-3 rounded-xl bg-accent/10 border border-accent/25 text-accent font-display font-bold text-xs uppercase tracking-widest hover:bg-accent hover:text-bg-primary transition-all duration-350 cursor-pointer"
           >
-            Create First Team
-          </motion.button>
-        </motion.div>
+            Deploy First Squad
+          </button>
+        </div>
       )}
     </motion.div>
   );
