@@ -15,32 +15,30 @@ import {
   AlertCircle, 
   Loader2, 
   Edit3, 
-  Sliders, 
-  HelpCircle,
-  FolderOpen
+  Sliders
 } from "lucide-react";
 
 function TeamEditorSkeleton() {
   return (
     <div className="space-y-6 animate-pulse w-full">
-      <div className="flex items-center justify-between border-b border-border-subtle pb-4">
+      <div className="flex items-center justify-between border-b border-[var(--border-default)] pb-4">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-20 bg-bg-raised rounded" />
-          <div className="h-8 w-44 bg-bg-raised rounded" />
+          <div className="h-10 w-20 bg-[var(--bg-raised)] rounded" />
+          <div className="h-8 w-44 bg-[var(--bg-raised)] rounded" />
         </div>
         <div className="flex gap-2">
-          <div className="h-10 w-24 bg-bg-raised rounded" />
-          <div className="h-10 w-20 bg-bg-raised rounded" />
+          <div className="h-10 w-24 bg-[var(--bg-raised)] rounded" />
+          <div className="h-10 w-20 bg-[var(--bg-raised)] rounded" />
         </div>
       </div>
 
       <div className="grid lg:grid-cols-12 gap-8">
         <div className="lg:col-span-7 grid grid-cols-3 gap-4">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="h-28 bg-bg-raised border border-border-subtle rounded" />
+            <div key={i} className="h-28 bg-[var(--bg-raised)] border border-[var(--border-default)] rounded" />
           ))}
         </div>
-        <div className="lg:col-span-5 h-64 bg-bg-raised border border-border-subtle rounded" />
+        <div className="lg:col-span-5 h-64 bg-[var(--bg-raised)] border border-[var(--border-default)] rounded" />
       </div>
     </div>
   );
@@ -142,7 +140,7 @@ export function TeamEditor() {
   return (
     <div className="space-y-8 w-full select-none">
       {/* Header Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border-subtle pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--border-default)] pb-5">
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate("/dashboard/teams")}
@@ -171,7 +169,7 @@ export function TeamEditor() {
               ) : (
                 <h1
                   onClick={() => setIsEditingName(true)}
-                  className="text-xl sm:text-2xl font-display font-black capitalize cursor-pointer hover:text-poke-yellow transition-colors flex items-center gap-2 group tracking-wide uppercase"
+                  className="text-xl sm:text-2xl font-display font-black capitalize cursor-pointer hover:text-[var(--poke-yellow)] transition-colors flex items-center gap-2 group tracking-wide uppercase"
                 >
                   {editingTeam.name}
                   <Edit3 className="w-3.5 h-3.5 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -184,7 +182,7 @@ export function TeamEditor() {
                     Saving
                   </span>
                 ) : isDirty ? (
-                  <span className="text-poke-yellow flex items-center gap-1">
+                  <span className="text-[var(--poke-yellow)] flex items-center gap-1">
                     <AlertCircle className="w-3 h-3" />
                     Unsaved
                   </span>
@@ -203,7 +201,7 @@ export function TeamEditor() {
           <button
             onClick={handleActivate}
             disabled={activateTeam.isPending}
-            className="btn-secondary border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300"
+            className="btn-secondary border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10"
           >
             <Check className="w-4 h-4" />
             <span>Activate</span>
@@ -211,7 +209,7 @@ export function TeamEditor() {
           <button
             onClick={handleDelete}
             disabled={deleteTeam.isPending}
-            className="btn-danger"
+            className="btn-danger animate-pulse-slow"
           >
             <Trash2 className="w-4 h-4" />
             <span>Delete</span>
@@ -223,7 +221,7 @@ export function TeamEditor() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left Side: 6 Slots Grid */}
         <div className="lg:col-span-7 space-y-4">
-          <h2 className="font-rajdhani text-xs font-bold uppercase tracking-widest text-text-muted mb-2 border-b border-border-subtle pb-1">
+          <h2 className="font-rajdhani text-xs font-bold uppercase tracking-widest text-text-muted mb-2 border-b border-[var(--border-default)] pb-1">
             Squad Members
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -232,7 +230,6 @@ export function TeamEditor() {
               const slot = hasSlot ? pokemonList[idx] : undefined;
               const isSelected = selectedSlot === idx;
 
-              // Only show filled slots + 1 empty slot at end
               if (idx > totalSlots) return null;
 
               return (
@@ -252,7 +249,7 @@ export function TeamEditor() {
         {/* Right Side: Slot Editor Panel */}
         <div className="lg:col-span-5">
           {selectedSlot !== null && selectedSlot < totalSlots ? (
-            <div className="card p-4 border-l-2 border-poke-red">
+            <div className="card p-4 border-l-2 border-[var(--poke-red)]">
               <PokemonEditor
                 slot={pokemonList[selectedSlot]}
                 onChange={(updated) => updatePokemonSlot(selectedSlot, updated)}
@@ -261,8 +258,8 @@ export function TeamEditor() {
               />
             </div>
           ) : (
-            <div className="card p-8 text-center text-text-muted flex flex-col items-center justify-center space-y-4 border-dashed">
-              <div className="w-12 h-12 rounded-full bg-bg-overlay border border-border-subtle flex items-center justify-center text-text-secondary">
+            <div className="card p-8 text-center text-text-muted flex flex-col items-center justify-center space-y-4 border-dashed border-[var(--border-default)]">
+              <div className="w-12 h-12 rounded-full bg-[var(--bg-overlay)] border border-[var(--border-default)] flex items-center justify-center text-text-secondary">
                 <Sliders className="w-6 h-6 text-text-muted" />
               </div>
               <div>

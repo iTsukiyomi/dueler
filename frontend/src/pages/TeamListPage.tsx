@@ -9,17 +9,17 @@ import { Plus, FolderPlus, FolderOpen, X } from "lucide-react";
 function TeamListSkeleton() {
   return (
     <div className="space-y-6 animate-pulse w-full">
-      <div className="flex items-center justify-between border-b border-border-subtle pb-4">
+      <div className="flex items-center justify-between border-b border-[var(--border-default)] pb-4">
         <div className="space-y-2">
-          <div className="h-3 w-28 bg-bg-raised rounded" />
-          <div className="h-8 w-36 bg-bg-raised rounded" />
+          <div className="h-3 w-28 bg-[var(--bg-raised)] rounded" />
+          <div className="h-8 w-36 bg-[var(--bg-raised)] rounded" />
         </div>
-        <div className="h-10 w-28 bg-bg-raised rounded" />
+        <div className="h-10 w-28 bg-[var(--bg-raised)] rounded" />
       </div>
 
       <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-32 bg-bg-raised border border-border-subtle rounded" />
+          <div key={i} className="h-32 bg-[var(--bg-raised)] border border-[var(--border-default)] rounded" />
         ))}
       </div>
     </div>
@@ -59,7 +59,7 @@ export function TeamListPage() {
       className="space-y-8 w-full select-none"
     >
       {/* Page Header */}
-      <div className="flex items-center justify-between border-b border-border-subtle pb-4">
+      <div className="flex items-center justify-between border-b border-[var(--border-default)] pb-4">
         <div>
           <div className="mono text-[10px] text-text-muted uppercase tracking-widest mb-1">
             Terminal / Battle Squads
@@ -86,8 +86,8 @@ export function TeamListPage() {
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
           >
-            <div className="card p-5 space-y-4 border-l-2 border-poke-yellow">
-              <div className="font-rajdhani text-xs font-bold text-poke-yellow tracking-widest uppercase flex items-center gap-2">
+            <div className="card p-5 space-y-4 border-l-2 border-[var(--poke-yellow)]">
+              <div className="font-rajdhani text-xs font-bold text-[var(--poke-yellow)] tracking-widest uppercase flex items-center gap-2">
                 <FolderPlus className="w-4 h-4" />
                 <span>Register New Battle Squad</span>
               </div>
@@ -147,7 +147,7 @@ export function TeamListPage() {
           ))}
         </div>
       ) : (
-        <div className="text-center py-16 rounded-lg bg-bg-raised border border-dashed border-border-default flex flex-col items-center justify-center">
+        <div className="text-center py-16 rounded-[var(--radius-lg)] bg-[var(--bg-raised)] border border-dashed border-[var(--border-default)] flex flex-col items-center justify-center">
           <FolderOpen className="w-12 h-12 text-text-muted mb-4" />
           <h3 className="font-display text-base font-bold text-text-secondary uppercase tracking-wide">
             Registry Database Empty

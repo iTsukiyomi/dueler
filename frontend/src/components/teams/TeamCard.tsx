@@ -16,27 +16,27 @@ export function TeamCard({ name, pokemon, isActive, onClick }: TeamCardProps) {
       onClick={onClick}
       className={`card p-6 cursor-pointer flex flex-col justify-between select-none ${
         isActive
-          ? "border-poke-yellow/60 shadow-[0_0_20px_var(--poke-yellow-glow)] bg-bg-float"
+          ? "border-[var(--poke-yellow)]/50 bg-[var(--bg-float)] shadow-md"
           : ""
       }`}
     >
       {isActive && (
-        <div className="absolute top-4 right-4 px-2 py-0.5 rounded bg-poke-yellow-glow border border-poke-yellow/30 text-poke-yellow text-[9px] font-bold uppercase tracking-widest font-rajdhani">
+        <div className="absolute top-4 right-4 px-2 py-0.5 rounded-[var(--radius-sm)] bg-[var(--poke-yellow-glow)] border border-[var(--poke-yellow)]/30 text-[var(--poke-yellow)] text-[9px] font-bold uppercase tracking-widest font-rajdhani">
           Active Squad
         </div>
       )}
 
       <div>
-        <h3 className="font-display text-base font-bold capitalize text-text-primary mb-4 pr-16 tracking-wide truncate">
+        <h3 className="font-display text-sm font-bold capitalize text-text-primary mb-5 pr-16 tracking-wide truncate">
           {name}
         </h3>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
           {Array.from({ length: 6 }).map((_, i) => {
             const poke = pokemon[i];
             return (
               <div
                 key={i}
-                className="w-10 h-10 rounded bg-bg-overlay border border-border-subtle flex items-center justify-center overflow-hidden hover:border-border-bright transition-colors"
+                className="w-10 h-10 rounded-full bg-[var(--bg-overlay)] border border-[var(--border-default)] flex items-center justify-center overflow-hidden hover:border-[var(--border-bright)] transition-colors"
               >
                 {poke ? (
                   <img
@@ -63,4 +63,3 @@ export function TeamCard({ name, pokemon, isActive, onClick }: TeamCardProps) {
 }
 
 export default TeamCard;
-

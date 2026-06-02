@@ -5,6 +5,7 @@ import { useAuthStore } from "../../stores/authStore";
 import { usePlayerProfile } from "../../hooks/usePokemonData";
 import toast from "react-hot-toast";
 import { PokeDexScan } from "../pokemon/PokeDexScan";
+import { Search, User, LogOut, Terminal, ShieldAlert } from "lucide-react";
 
 interface ManifestPokemon {
   id: number;
@@ -103,55 +104,28 @@ export function Navbar() {
   return (
     <>
       <nav className="navbar select-none">
-        {/* Logo Zone (Left) */}
-        <Link to="/dashboard" className="flex items-center gap-3 shrink-0 group">
-          <div className="relative w-8 h-8 rounded-full border border-border-default bg-bg-raised flex items-center justify-center overflow-hidden">
-            {/* Poké Ball outline structure */}
-            <svg width="18" height="18" viewBox="0 0 32 32" className="text-text-secondary group-hover:text-poke-red transition-colors duration-200">
-              <circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" strokeWidth="2" />
-              <path d="M 3.05 16 A 13 13 0 0 1 28.95 16 Z" fill="currentColor" opacity="0.25" />
-              <line x1="2" y1="16" x2="30" y2="16" stroke="currentColor" strokeWidth="2" />
-              <circle cx="16" cy="16" r="4.5" fill="var(--bg-raised)" stroke="currentColor" strokeWidth="2" />
-            </svg>
-            {/* Spark animation ring on hover */}
-            <span className="absolute inset-0 border border-poke-blue opacity-0 scale-75 group-hover:scale-100 group-hover:opacity-40 transition-all duration-300 rounded-full" />
-          </div>
-          <div className="flex flex-col">
-            <span className="font-display text-xs font-black text-text-primary tracking-widest leading-none">
-              POKÉBOT
-            </span>
-            <span className="mono text-[8px] text-text-muted mt-0.5 uppercase tracking-wider">
-              Silph OS v1.0
-            </span>
-          </div>
-        </Link>
+        {/* Left Side: Monospace Navigation Node/Breadcrumb */}
+        <div className="flex items-center gap-2 text-[10px] font-mono text-text-muted uppercase tracking-widest">
+          <Terminal className="w-3.5 h-3.5 text-text-muted" />
+          <span className="text-text-secondary">Silph OS</span>
+          <span>/</span>
+          <span className="text-[var(--poke-blue)]">Terminal Link</span>
+        </div>
 
-        {/* Spacer & Search (Center) */}
+        {/* Center: Search Bar */}
         <div className="flex-1 flex justify-center items-center px-4">
-          <div ref={searchRef} className="relative z-raised">
+          <div ref={searchRef} className="relative w-full max-w-[320px]">
             <div className="search-bar">
-              {/* magnifying glass in Pokédex style */}
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                className="text-text-muted"
-              >
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
+              <Search className="w-4 h-4 text-text-muted" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => setSearchFocused(true)}
-                placeholder="Search Pokémon or type..."
-                className="bg-transparent text-text-primary font-sans text-xs outline-none w-44 md:w-56 focus:w-64 transition-all duration-300"
+                placeholder="Search database..."
+                className="bg-transparent text-text-primary font-sans text-xs outline-none w-full"
               />
-              <span className="mono text-[8px] bg-bg-overlay border border-border-subtle text-text-muted px-1.5 py-0.5 rounded">
+              <span className="mono text-[8px] bg-[var(--bg-overlay)] border border-[var(--border-default)] text-text-muted px-1.5 py-0.5 rounded">
                 /
               </span>
             </div>
@@ -163,10 +137,10 @@ export function Navbar() {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 8 }}
-                  transition={{ duration: 0.15 }}
-                  className="absolute left-0 right-0 mt-2 bg-bg-float border border-border-default rounded-lg shadow-2xl p-2 z-float max-h-80 overflow-y-auto"
+                  transition={{ duration: 0.12 }}
+                  className="absolute left-0 right-0 mt-2 bg-[var(--bg-float)] border border-[var(--border-bright)] rounded-[var(--radius-md)] shadow-2xl p-2 z-float max-h-80 overflow-y-auto"
                 >
-                  <div className="mono text-[8px] text-text-muted uppercase tracking-widest px-3 py-1 pb-2 border-b border-border-subtle mb-1.5">
+                  <div className="mono text-[8px] text-text-muted uppercase tracking-widest px-3 py-1 pb-2 border-b border-[var(--border-default)] mb-1.5">
                     Query Matches
                   </div>
                   {searchResults.map((p) => (
@@ -177,7 +151,7 @@ export function Navbar() {
                         setSearchQuery("");
                         setSearchFocused(false);
                       }}
-                      className="flex items-center justify-between p-2 rounded-md hover:bg-bg-overlay cursor-pointer transition-colors"
+                      className="flex items-center justify-between p-2 rounded hover:bg-[var(--bg-overlay)] cursor-pointer transition-colors"
                     >
                       <div className="flex items-center gap-2.5">
                         <img
@@ -198,7 +172,7 @@ export function Navbar() {
                         {p.types.map((type) => (
                           <span
                             key={type}
-                            className="text-[8px] uppercase tracking-wider font-semibold border border-border-subtle rounded px-1 text-text-secondary"
+                            className="text-[8px] uppercase tracking-wider font-semibold border border-[var(--border-default)] rounded px-1.5 py-0.5 text-text-secondary bg-[var(--bg-raised)]"
                           >
                             {type}
                           </span>
@@ -212,34 +186,33 @@ export function Navbar() {
           </div>
         </div>
 
-        {/* Right Auth Zone */}
+        {/* Right Side: Auth Menu */}
         <div className="flex items-center gap-4 shrink-0">
           {isAuthenticated && user ? (
-            /* State B: Logged In */
             <div ref={profileRef} className="relative">
               <button
                 onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-bg-raised border border-border-default hover:border-border-bright hover:bg-bg-float transition-all cursor-pointer select-none"
+                className="flex items-center gap-2.5 px-3 py-1.5 rounded-[var(--radius-md)] bg-[var(--bg-raised)] border border-[var(--border-default)] hover:border-[var(--border-bright)] transition-all cursor-pointer select-none"
               >
                 <div className="relative">
                   {user.avatarUrl ? (
                     <img
                       src={user.avatarUrl}
                       alt={user.username}
-                      className="w-7 h-7 rounded-full object-cover ring-2 ring-poke-yellow shadow-md"
+                      className="w-6 h-6 rounded-full object-cover shadow-md"
                     />
                   ) : (
-                    <div className="w-7 h-7 rounded-full bg-bg-overlay flex items-center justify-center text-sm border border-poke-yellow">
-                      🧢
+                    <div className="w-6 h-6 rounded-full bg-[var(--bg-secondary)] flex items-center justify-center text-xs border border-[var(--border-default)]">
+                      <User className="w-3.5 h-3.5 text-text-muted" />
                     </div>
                   )}
                   {/* Status dot */}
-                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-[#57F287] border-2 border-bg-base" />
+                  <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-[#10b981] border-2 border-bg-base" />
                 </div>
                 <span className="hidden md:inline font-sans text-xs font-semibold text-text-primary">
                   {user.username}
                 </span>
-                <span className="caret text-xs">▾</span>
+                <span className="text-text-muted text-xs">▾</span>
               </button>
 
               {/* Profile dropdown container */}
@@ -249,19 +222,19 @@ export function Navbar() {
                     initial={{ opacity: 0, y: -8 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -8 }}
-                    transition={{ duration: 0.15 }}
-                    className="absolute right-0 mt-2 w-56 bg-bg-float border border-border-default rounded-lg shadow-2xl p-2 z-float flex flex-col"
+                    transition={{ duration: 0.12 }}
+                    className="absolute right-0 mt-2 w-52 bg-[var(--bg-float)] border border-[var(--border-bright)] rounded-[var(--radius-md)] shadow-2xl p-1.5 z-float flex flex-col"
                   >
-                    <div className="flex items-center gap-3 p-3 pb-2 border-b border-border-subtle mb-1.5">
+                    <div className="flex items-center gap-3 p-3 pb-2 border-b border-[var(--border-default)] mb-1.5">
                       {user.avatarUrl ? (
                         <img
                           src={user.avatarUrl}
                           alt=""
-                          className="w-10 h-10 rounded-lg object-cover border border-poke-yellow"
+                          className="w-8 h-8 rounded object-cover border border-[var(--border-default)]"
                         />
                       ) : (
-                        <div className="w-10 h-10 rounded-lg bg-bg-overlay flex items-center justify-center text-lg border border-poke-yellow">
-                          🧢
+                        <div className="w-8 h-8 rounded bg-[var(--bg-overlay)] flex items-center justify-center border border-[var(--border-default)]">
+                          <User className="w-4 h-4 text-text-muted" />
                         </div>
                       )}
                       <div className="min-w-0">
@@ -269,22 +242,19 @@ export function Navbar() {
                           {user.username}
                         </div>
                         {profile && (
-                          <div className="mono text-[9px] text-text-brand mt-0.5">
-                            {profile.elo} ELO Rating
+                          <div className="mono text-[9px] text-[var(--poke-yellow)] mt-0.5">
+                            {profile.elo} ELO
                           </div>
                         )}
                       </div>
                     </div>
 
-                    {/* Nav Items */}
                     <Link
                       to="/dashboard"
                       onClick={() => setProfileDropdownOpen(false)}
                       className="dropdown-item"
                     >
-                      <svg className="w-4 h-4 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
+                      <User className="w-4 h-4 text-text-secondary" />
                       <span className="font-rajdhani font-semibold uppercase tracking-wider text-xs">Profile Center</span>
                     </Link>
                     <Link
@@ -292,37 +262,29 @@ export function Navbar() {
                       onClick={() => setProfileDropdownOpen(false)}
                       className="dropdown-item"
                     >
-                      <svg className="w-4 h-4 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      <span className="font-rajdhani font-semibold uppercase tracking-wider text-xs">OS Configuration</span>
+                      <Terminal className="w-4 h-4 text-text-secondary" />
+                      <span className="font-rajdhani font-semibold uppercase tracking-wider text-xs">OS Config</span>
                     </Link>
 
                     {/* Divider */}
-                    <div className="h-px bg-border-subtle my-1" />
+                    <div className="h-px bg-[var(--border-default)] my-1" />
 
-                    {/* Logout */}
                     <button
                       onClick={handleLogout}
-                      className="dropdown-item text-text-danger hover:bg-poke-red/10 rounded-md"
+                      className="dropdown-item text-text-danger hover:bg-red-500/10"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                      </svg>
-                      <span className="font-rajdhani font-semibold uppercase tracking-wider text-xs">Terminate Hook</span>
+                      <LogOut className="w-4 h-4 text-[var(--poke-red)]" />
+                      <span className="font-rajdhani font-semibold uppercase tracking-wider text-xs">Disconnect</span>
                     </button>
                   </motion.div>
                 )}
               </AnimatePresence>
             </div>
           ) : (
-            /* State A: Logged Out */
             <button
               onClick={handleDiscordLogin}
-              className="flex items-center gap-2 px-4 py-2.5 rounded border border-[#5865F2]/70 text-[#5865F2] hover:bg-[#5865F2]/10 hover:text-white transition-all duration-200 text-xs font-bold uppercase tracking-wider font-rajdhani cursor-pointer"
+              className="flex items-center gap-2 px-4 py-2 rounded-[var(--radius-md)] border border-[#5865F2]/75 text-[#5865F2] hover:bg-[#5865F2]/10 hover:text-white transition-all text-xs font-bold uppercase tracking-wider font-rajdhani cursor-pointer"
             >
-              <span>⊙</span>
               <span>Login with Discord</span>
             </button>
           )}

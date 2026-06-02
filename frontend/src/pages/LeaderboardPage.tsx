@@ -1,20 +1,12 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { useAuthStore } from "../stores/authStore";
-import { useLeaderboard, LeaderboardEntry } from "../api/stats";
-import { 
-  Award, 
-  Crown, 
-  User, 
-  HelpCircle,
-  TrendingUp,
-  ShieldCheck,
-  ChevronRight
-} from "lucide-react";
+import { useLeaderboard } from "../api/stats";
+import { Award, Crown, User } from "lucide-react";
 
 function RankMedal({ rank }: { rank: number }) {
   if (rank === 1) {
-    return <Award className="w-5 h-5 text-poke-yellow" />;
+    return <Award className="w-5 h-5 text-[var(--poke-yellow)]" />;
   }
   if (rank === 2) {
     return <Award className="w-5 h-5 text-text-secondary" />;
@@ -28,18 +20,18 @@ function RankMedal({ rank }: { rank: number }) {
 function LeaderboardSkeleton() {
   return (
     <div className="space-y-6 animate-pulse w-full">
-      <div className="border-b border-border-subtle pb-4 space-y-2">
-        <div className="h-3 w-28 bg-bg-raised rounded" />
-        <div className="h-8 w-44 bg-bg-raised rounded" />
+      <div className="border-b border-[var(--border-default)] pb-4 space-y-2">
+        <div className="h-3 w-28 bg-[var(--bg-raised)] rounded" />
+        <div className="h-8 w-44 bg-[var(--bg-raised)] rounded" />
       </div>
 
       <div className="grid sm:grid-cols-3 gap-4">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-48 bg-bg-raised border border-border-subtle rounded" />
+          <div key={i} className="h-48 bg-[var(--bg-raised)] border border-[var(--border-default)] rounded" />
         ))}
       </div>
 
-      <div className="h-48 bg-bg-raised border border-border-subtle rounded" />
+      <div className="h-48 bg-[var(--bg-raised)] border border-[var(--border-default)] rounded" />
     </div>
   );
 }
@@ -69,7 +61,7 @@ export function LeaderboardPage() {
       className="space-y-8 w-full select-none"
     >
       {/* Page Header */}
-      <div className="border-b border-border-subtle pb-4">
+      <div className="border-b border-[var(--border-default)] pb-4">
         <div className="mono text-[10px] text-text-muted uppercase tracking-widest mb-1">
           Terminal / Hall of Fame
         </div>
@@ -91,7 +83,7 @@ export function LeaderboardPage() {
                 transition={{ delay: idx * 0.08 }}
                 className={`card p-6 flex flex-col justify-between ${
                   isRank1
-                    ? "border-poke-yellow bg-bg-float sm:py-8 shadow-[0_0_24px_var(--poke-yellow-glow)] sm:order-2"
+                    ? "border-[var(--poke-yellow)] bg-[var(--bg-float)] sm:py-8 shadow-md sm:order-2"
                     : "sm:order-1"
                 }`}
               >
@@ -105,11 +97,11 @@ export function LeaderboardPage() {
                       src={entry.avatarUrl}
                       alt={entry.username}
                       className={`w-14 h-14 rounded mx-auto mt-2 object-cover ${
-                        isRank1 ? "ring-2 ring-poke-yellow" : "ring-1 ring-border-default"
+                        isRank1 ? "ring-2 ring-[var(--poke-yellow)]" : "ring-1 ring-[var(--border-default)]"
                       }`}
                     />
                   ) : (
-                    <div className="w-14 h-14 rounded bg-bg-overlay border border-border-subtle flex items-center justify-center mx-auto mt-2">
+                    <div className="w-14 h-14 rounded bg-[var(--bg-overlay)] border border-[var(--border-default)] flex items-center justify-center mx-auto mt-2">
                       <User className="w-7 h-7 text-text-muted" />
                     </div>
                   )}
@@ -119,12 +111,12 @@ export function LeaderboardPage() {
                   </h3>
 
                   <div className="mt-3 space-y-1">
-                    <div className="mono text-2xl font-bold text-poke-yellow">{entry.elo}</div>
+                    <div className="mono text-2xl font-bold text-[var(--poke-yellow)]">{entry.elo}</div>
                     <div className="font-rajdhani text-[8px] uppercase font-bold tracking-widest text-text-muted">ELO Rating</div>
                   </div>
 
                   {isRank1 && (
-                    <div className="absolute -top-3 right-0 text-poke-yellow animate-bounce">
+                    <div className="absolute -top-3 right-0 text-[var(--poke-yellow)] animate-bounce">
                       <Crown className="w-5 h-5" />
                     </div>
                   )}
@@ -135,7 +127,7 @@ export function LeaderboardPage() {
         </div>
       )}
 
-      {/* Leaderboard List container using pokedex-table */}
+      {/* Leaderboard List */}
       <div className="overflow-x-auto">
         <table className="pokedex-table">
           <thead>
@@ -148,12 +140,12 @@ export function LeaderboardPage() {
             </tr>
           </thead>
           <tbody>
-            {leaderboard.map((entry, index) => {
+            {leaderboard.map((entry) => {
               const isCurrentUser = user?.username === entry.username;
               return (
                 <tr 
                   key={entry.rank}
-                  className={isCurrentUser ? "bg-poke-yellow-glow" : ""}
+                  className={isCurrentUser ? "bg-[var(--poke-yellow-glow)]" : ""}
                 >
                   <td className="text-center">
                     <div className="flex justify-center items-center">
@@ -169,21 +161,21 @@ export function LeaderboardPage() {
                           className="w-8 h-8 rounded object-cover"
                         />
                       ) : (
-                        <div className="w-8 h-8 rounded bg-bg-overlay border border-border-subtle flex items-center justify-center">
+                        <div className="w-8 h-8 rounded bg-[var(--bg-overlay)] border border-[var(--border-default)] flex items-center justify-center">
                           <User className="w-4 h-4 text-text-muted" />
                         </div>
                       )}
                       <span className="font-rajdhani font-bold uppercase tracking-wide text-xs">
                         {entry.username}
                         {isCurrentUser && (
-                          <span className="ml-2 font-mono text-[8px] text-poke-yellow uppercase font-bold">
+                          <span className="ml-2 font-mono text-[8px] text-[var(--poke-yellow)] uppercase font-bold">
                             [Self]
                           </span>
                         )}
                       </span>
                     </div>
                   </td>
-                  <td className="text-right mono font-bold text-poke-yellow">
+                  <td className="text-right mono font-bold text-[var(--poke-yellow)]">
                     {entry.elo}
                   </td>
                   <td className="text-right hidden sm:table-cell mono text-xs text-text-secondary">

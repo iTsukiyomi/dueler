@@ -2,16 +2,12 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useBattleHistory, BattleEntry } from "../api/stats";
 import { 
-  Trophy, 
   Swords, 
   User, 
   ChevronDown, 
   ChevronUp, 
-  Skull, 
-  History,
-  AlertTriangle,
-  Clock,
-  RotateCcw,
+  Clock, 
+  RotateCcw, 
   Calendar
 } from "lucide-react";
 
@@ -27,8 +23,8 @@ function BattleCard({ battle }: { battle: BattleEntry }) {
       exit={{ opacity: 0, y: -8 }}
       className={`card p-4 transition-all duration-200 overflow-hidden relative group ${
         isWin
-          ? "border-emerald-500/20 hover:border-emerald-500/40 bg-bg-raised/40"
-          : "border-poke-red/20 hover:border-poke-red/40 bg-bg-raised/40"
+          ? "border-emerald-500/20 hover:border-emerald-500/40 bg-[var(--bg-raised)]/40"
+          : "border-[var(--poke-red)]/20 hover:border-[var(--poke-red)]/40 bg-[var(--bg-raised)]/40"
       }`}
     >
       {/* Header Block */}
@@ -38,10 +34,10 @@ function BattleCard({ battle }: { battle: BattleEntry }) {
       >
         {/* Result Indicator Badge */}
         <div
-          className={`w-14 h-12 rounded flex flex-col items-center justify-center text-[10px] font-black border transition-transform duration-200 group-hover:scale-105 font-rajdhani tracking-wider ${
+          className={`w-14 h-12 rounded-[var(--radius-sm)] flex flex-col items-center justify-center text-[10px] font-black border transition-transform duration-200 group-hover:scale-105 font-rajdhani tracking-wider ${
             isWin
               ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
-              : "bg-poke-red-dim/15 border-poke-red/20 text-poke-red"
+              : "bg-[var(--poke-red-dim)]/15 border-[var(--poke-red)]/20 text-[var(--poke-red)]"
           }`}
         >
           {isWin ? "VICT" : "DEFE"}
@@ -54,10 +50,10 @@ function BattleCard({ battle }: { battle: BattleEntry }) {
               <img
                 src={battle.opponentAvatar}
                 alt={battle.opponent}
-                className="w-8 h-8 rounded object-cover shrink-0 border border-border-subtle"
+                className="w-8 h-8 rounded object-cover shrink-0 border border-[var(--border-default)]"
               />
             ) : (
-              <div className="w-8 h-8 rounded bg-bg-overlay border border-border-subtle flex items-center justify-center shrink-0">
+              <div className="w-8 h-8 rounded bg-[var(--bg-overlay)] border border-[var(--border-default)] flex items-center justify-center shrink-0">
                 <User className="w-4 h-4 text-text-secondary" />
               </div>
             )}
@@ -74,7 +70,7 @@ function BattleCard({ battle }: { battle: BattleEntry }) {
 
         {/* ELO Changes */}
         <div className="text-right shrink-0">
-          <div className={`font-mono text-sm font-bold ${isWin ? "text-emerald-400" : "text-poke-red"}`}>
+          <div className={`font-mono text-sm font-bold ${isWin ? "text-emerald-400" : "text-[var(--poke-red)]"}`}>
             {isWin ? "+" : ""}{battle.eloChange}
           </div>
           <div className="font-rajdhani text-[8px] font-bold text-text-muted uppercase tracking-widest">ELO Points</div>
@@ -96,7 +92,7 @@ function BattleCard({ battle }: { battle: BattleEntry }) {
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="px-1 pb-2 pt-4 border-t border-border-subtle mt-3 grid grid-cols-3 gap-4 text-center">
+            <div className="px-1 pb-2 pt-4 border-t border-[var(--border-default)] mt-3 grid grid-cols-3 gap-4 text-center">
               <div className="flex flex-col items-center">
                 <Clock className="w-4.5 h-4.5 text-text-muted mb-1" />
                 <span className="mono text-xs font-bold text-text-primary">{battle.duration}</span>
@@ -123,20 +119,20 @@ function BattleCard({ battle }: { battle: BattleEntry }) {
 function BattleHistorySkeleton() {
   return (
     <div className="space-y-6 animate-pulse w-full">
-      <div className="border-b border-border-subtle pb-4 space-y-2">
-        <div className="h-3 w-28 bg-bg-raised rounded" />
-        <div className="h-8 w-44 bg-bg-raised rounded" />
+      <div className="border-b border-[var(--border-default)] pb-4 space-y-2">
+        <div className="h-3 w-28 bg-[var(--bg-raised)] rounded" />
+        <div className="h-8 w-44 bg-[var(--bg-raised)] rounded" />
       </div>
 
       <div className="grid sm:grid-cols-3 gap-4">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-20 bg-bg-raised border border-border-subtle rounded" />
+          <div key={i} className="h-20 bg-[var(--bg-raised)] border border-[var(--border-default)] rounded" />
         ))}
       </div>
 
       <div className="space-y-3">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-16 bg-bg-raised border border-border-subtle rounded" />
+          <div key={i} className="h-16 bg-[var(--bg-raised)] border border-[var(--border-default)] rounded" />
         ))}
       </div>
     </div>
@@ -151,12 +147,10 @@ export function BattleHistoryPage() {
   const battles = historyData?.battles || [];
 
   const filteredBattles = battles.filter((battle) => {
-    // Filter by Win/Loss
     if (filter !== "all") {
       const matchResult = filter === "wins" ? "win" : "loss";
       if (battle.result !== matchResult) return false;
     }
-    // Filter by type
     if (battleType === "ranked" && battle.eloChange === 0) return false;
     if (battleType === "casual" && battle.eloChange !== 0) return false;
 
@@ -178,7 +172,7 @@ export function BattleHistoryPage() {
       className="space-y-8 w-full select-none"
     >
       {/* Page Header */}
-      <div className="border-b border-border-subtle pb-4">
+      <div className="border-b border-[var(--border-default)] pb-4">
         <div className="mono text-[10px] text-text-muted uppercase tracking-widest mb-1">
           Terminal / Battle Logs
         </div>
@@ -197,23 +191,23 @@ export function BattleHistoryPage() {
           <div className="mono text-2xl font-bold text-emerald-400">{winCount}</div>
           <div className="font-rajdhani text-[9px] uppercase tracking-widest text-emerald-400 mt-1 font-bold">Victories</div>
         </div>
-        <div className="card p-5 text-center flex flex-col items-center justify-center border-l-2 border-poke-red bg-poke-red-glow">
-          <div className="mono text-2xl font-bold text-poke-red">{lossCount}</div>
-          <div className="font-rajdhani text-[9px] uppercase tracking-widest text-poke-red mt-1 font-bold">Defeats</div>
+        <div className="card p-5 text-center flex flex-col items-center justify-center border-l-2 border-[var(--poke-red)] bg-[var(--poke-red-glow)]">
+          <div className="mono text-2xl font-bold text-[var(--poke-red)]">{lossCount}</div>
+          <div className="font-rajdhani text-[9px] uppercase tracking-widest text-[var(--poke-red)] mt-1 font-bold">Defeats</div>
         </div>
       </div>
 
       {/* Filters toolbar */}
       <div className="flex flex-wrap gap-4 items-center">
         {/* Win/Loss filter */}
-        <div className="flex bg-bg-raised border border-border-default rounded p-0.5">
+        <div className="flex bg-[var(--bg-raised)] border border-[var(--border-default)] rounded-[var(--radius-sm)] p-0.5">
           {(["all", "wins", "losses"] as const).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`px-3.5 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider font-rajdhani transition-all cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-[var(--radius-sm)] text-[10px] font-bold uppercase tracking-wider font-rajdhani transition-all cursor-pointer ${
                 filter === f
-                  ? "bg-poke-red text-white"
+                  ? "bg-[var(--poke-red)] text-white"
                   : "text-text-secondary hover:text-text-primary"
               }`}
             >
@@ -223,14 +217,14 @@ export function BattleHistoryPage() {
         </div>
 
         {/* Ranked/Casual filter */}
-        <div className="flex bg-bg-raised border border-border-default rounded p-0.5">
+        <div className="flex bg-[var(--bg-raised)] border border-[var(--border-default)] rounded-[var(--radius-sm)] p-0.5">
           {(["all", "ranked", "casual"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setBattleType(t)}
-              className={`px-3.5 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider font-rajdhani transition-all cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-[var(--radius-sm)] text-[10px] font-bold uppercase tracking-wider font-rajdhani transition-all cursor-pointer ${
                 battleType === t
-                  ? "bg-poke-red text-white"
+                  ? "bg-[var(--poke-red)] text-white"
                   : "text-text-secondary hover:text-text-primary"
               }`}
             >

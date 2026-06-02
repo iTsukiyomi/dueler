@@ -13,16 +13,15 @@ import {
   Sparkles, 
   Layers, 
   AlertTriangle,
-  History,
-  Edit,
-  ArrowUpRight
+  ArrowUpRight,
+  Edit
 } from "lucide-react";
 
 function StatWidget({ 
   value, 
   label, 
   icon: Icon, 
-  colorClass = "text-text-brand" 
+  colorClass = "text-[var(--text-brand)]" 
 }: { 
   value: string | number; 
   label: string; 
@@ -30,14 +29,14 @@ function StatWidget({
   colorClass?: string;
 }) {
   return (
-    <div className="card p-5 text-center flex flex-col items-center justify-center relative group">
-      <div className="w-10 h-10 rounded bg-bg-overlay border border-border-subtle flex items-center justify-center text-text-secondary group-hover:text-poke-yellow group-hover:border-border-default transition-colors mb-3">
+    <div className="card p-6 text-center flex flex-col items-center justify-center relative group">
+      <div className="w-10 h-10 rounded-[var(--radius-md)] bg-[var(--bg-overlay)] border border-[var(--border-default)] flex items-center justify-center text-text-secondary group-hover:text-[var(--poke-yellow)] group-hover:border-[var(--border-bright)] transition-colors mb-4">
         <Icon className="w-5 h-5" />
       </div>
       <div className={`font-mono text-2xl font-bold ${colorClass}`}>
         {value}
       </div>
-      <div className="font-rajdhani text-[9px] uppercase tracking-widest text-text-muted mt-1.5 font-bold">
+      <div className="font-rajdhani text-[9px] uppercase tracking-widest text-text-muted mt-2 font-bold">
         {label}
       </div>
     </div>
@@ -47,34 +46,34 @@ function StatWidget({
 function ProfileSkeleton() {
   return (
     <div className="space-y-8 animate-pulse w-full">
-      <div className="border-b border-border-subtle pb-4 flex items-center justify-between">
+      <div className="border-b border-[var(--border-default)] pb-5 flex items-center justify-between">
         <div className="space-y-2">
-          <div className="h-4 w-28 bg-bg-raised rounded" />
-          <div className="h-8 w-44 bg-bg-raised rounded" />
+          <div className="h-4 w-28 bg-[var(--bg-raised)] rounded" />
+          <div className="h-8 w-44 bg-[var(--bg-raised)] rounded" />
         </div>
-        <div className="w-12 h-12 rounded bg-bg-raised" />
+        <div className="w-12 h-12 rounded bg-[var(--bg-raised)]" />
       </div>
 
-      <div className="grid lg:grid-cols-12 gap-6">
+      <div className="grid lg:grid-cols-12 gap-8">
         <div className="lg:col-span-8 space-y-6">
           <div className="card p-6 md:p-8 space-y-6">
             <div className="flex items-center gap-6">
-              <div className="w-20 h-20 rounded bg-bg-overlay" />
+              <div className="w-20 h-20 rounded bg-[var(--bg-overlay)]" />
               <div className="space-y-2 flex-1">
-                <div className="h-6 w-36 bg-bg-overlay rounded" />
-                <div className="h-4 w-24 bg-bg-overlay rounded" />
+                <div className="h-6 w-36 bg-[var(--bg-overlay)] rounded" />
+                <div className="h-4 w-24 bg-[var(--bg-overlay)] rounded" />
               </div>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="h-24 bg-bg-overlay rounded border border-border-subtle" />
+                <div key={i} className="h-24 bg-[var(--bg-overlay)] rounded border border-[var(--border-default)]" />
               ))}
             </div>
           </div>
         </div>
         <div className="lg:col-span-4 space-y-6">
-          <div className="h-48 bg-bg-raised rounded border border-border-subtle" />
-          <div className="h-64 bg-bg-raised rounded border border-border-subtle" />
+          <div className="h-48 bg-[var(--bg-raised)] rounded border border-[var(--border-default)]" />
+          <div className="h-64 bg-[var(--bg-raised)] rounded border border-[var(--border-default)]" />
         </div>
       </div>
     </div>
@@ -94,7 +93,7 @@ export function ProfilePage() {
   if (error || !profile) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4 text-center">
-        <AlertTriangle className="w-12 h-12 text-poke-red animate-bounce" />
+        <AlertTriangle className="w-12 h-12 text-[var(--poke-red)] animate-bounce" />
         <h2 className="font-rajdhani text-lg font-bold text-text-primary uppercase tracking-wide">
           Sync Status Offline
         </h2>
@@ -121,7 +120,6 @@ export function ProfilePage() {
   const battles = historyData?.battles || [];
   const recentBattles = battles.slice(0, 4);
 
-  // Performance Rating tier
   const ratingTier = parseFloat(winRate) >= 65 ? "S" : parseFloat(winRate) >= 50 ? "A" : parseFloat(winRate) >= 40 ? "B" : "C";
   const ratingTitle = parseFloat(winRate) >= 65 ? "Elite Master" : parseFloat(winRate) >= 50 ? "Expert Dueler" : parseFloat(winRate) >= 40 ? "Challenger" : "Apprentice";
 
@@ -132,8 +130,8 @@ export function ProfilePage() {
       transition={{ duration: 0.25 }}
       className="space-y-8 w-full"
     >
-      {/* Page Header (secondary fixed zone skeleton) */}
-      <div className="border-b border-border-subtle pb-4 flex items-center justify-between">
+      {/* Page Header */}
+      <div className="border-b border-[var(--border-default)] pb-4 flex items-center justify-between">
         <div>
           <div className="mono text-[10px] text-text-muted uppercase tracking-widest mb-1">
             Terminal / Trainer Card
@@ -143,14 +141,14 @@ export function ProfilePage() {
           </h1>
         </div>
         {profile.rank && (
-          <div className="w-12 h-12 rounded border border-poke-yellow/30 bg-poke-yellow-glow flex flex-col items-center justify-center">
+          <div className="w-12 h-12 rounded-[var(--radius-md)] border border-[var(--poke-yellow)]/30 bg-[var(--poke-yellow-glow)] flex flex-col items-center justify-center">
             <span className="font-rajdhani text-[8px] font-bold text-text-muted uppercase">Rank</span>
-            <span className="mono text-sm font-bold text-poke-yellow">#{profile.rank}</span>
+            <span className="mono text-sm font-bold text-[var(--poke-yellow)]">#{profile.rank}</span>
           </div>
         )}
       </div>
 
-      <div className="grid lg:grid-cols-12 gap-6 items-start">
+      <div className="grid lg:grid-cols-12 gap-8 items-start">
         {/* Main Info Card */}
         <div className="lg:col-span-8 space-y-6">
           <div className="card p-6 md:p-8">
@@ -161,14 +159,14 @@ export function ProfilePage() {
                   <img
                     src={user.avatarUrl}
                     alt={user.username}
-                    className="w-20 h-20 rounded object-cover ring-2 ring-border-default border border-bg-void"
+                    className="w-20 h-20 rounded-[var(--radius-lg)] object-cover ring-2 ring-[var(--border-default)] border border-[var(--bg-void)]"
                   />
                 ) : (
-                  <div className="w-20 h-20 rounded bg-bg-overlay border border-border-default flex items-center justify-center text-3xl select-none">
+                  <div className="w-20 h-20 rounded-[var(--radius-lg)] bg-[var(--bg-overlay)] border border-[var(--border-default)] flex items-center justify-center text-3xl select-none">
                     <User className="w-10 h-10 text-text-muted" />
                   </div>
                 )}
-                <div className="absolute -bottom-2 -right-2 px-1.5 py-0.5 rounded bg-poke-red border border-border-brand text-white font-mono text-[9px] uppercase tracking-wider font-bold">
+                <div className="absolute -bottom-2 -right-2 px-1.5 py-0.5 rounded bg-[var(--poke-red)] border border-[var(--poke-red)] text-white font-mono text-[9px] uppercase tracking-wider font-bold">
                   LV100
                 </div>
               </div>
@@ -184,10 +182,10 @@ export function ProfilePage() {
                 </div>
 
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-1">
-                  <span className="px-3 py-1 rounded bg-poke-red-glow border border-poke-red/20 text-poke-red font-mono text-xs font-bold">
+                  <span className="px-3 py-1 rounded bg-[var(--poke-red-glow)] border border-[var(--poke-red)]/20 text-[var(--poke-red)] font-mono text-xs font-bold">
                     {elo} ELO Rating
                   </span>
-                  <span className="px-3 py-1 rounded bg-bg-overlay border border-border-subtle text-text-secondary font-mono text-xs font-bold">
+                  <span className="px-3 py-1 rounded bg-[var(--bg-overlay)] border border-[var(--border-default)] text-text-secondary font-mono text-xs font-bold">
                     ₽{wallet.toLocaleString()} Credits
                   </span>
                 </div>
@@ -197,23 +195,23 @@ export function ProfilePage() {
             {/* Performance Stats Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <StatWidget value={wins} label="Victories" icon={Trophy} colorClass="text-emerald-400" />
-              <StatWidget value={losses} label="Defeats" icon={Swords} colorClass="text-poke-red" />
-              <StatWidget value={`${winRate}%`} label="Win Ratio" icon={TrendingUp} colorClass="text-poke-yellow" />
-              <StatWidget value={`₽${wallet}`} label="Wallet Bal" icon={Coins} colorClass="text-poke-blue" />
+              <StatWidget value={losses} label="Defeats" icon={Swords} colorClass="text-[var(--poke-red)]" />
+              <StatWidget value={`${winRate}%`} label="Win Ratio" icon={TrendingUp} colorClass="text-[var(--poke-yellow)]" />
+              <StatWidget value={`₽${wallet}`} label="Wallet Bal" icon={Coins} colorClass="text-[var(--poke-blue)]" />
             </div>
 
             {/* Win Rate Progress Meter */}
-            <div className="mt-8 bg-bg-base border border-border-subtle p-5 rounded-lg">
+            <div className="mt-8 bg-[var(--bg-base)] border border-[var(--border-default)] p-5 rounded-[var(--radius-lg)]">
               <div className="flex justify-between text-[9px] font-bold uppercase tracking-widest text-text-muted mb-3 font-rajdhani">
                 <span>Battle Victory Ratio Vector</span>
-                <span className="text-poke-yellow font-mono font-bold">{winRate}%</span>
+                <span className="text-[var(--poke-yellow)] font-mono font-bold">{winRate}%</span>
               </div>
-              <div className="stat-bar-track relative">
+              <div className="w-full h-2.5 bg-[var(--bg-overlay)] border border-[var(--border-default)] rounded-[var(--radius-sm)] overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${winRate}%` }}
                   transition={{ duration: 0.8, ease: "easeOut" }}
-                  className="h-full rounded bg-gradient-to-r from-poke-red/70 to-poke-yellow shadow-[0_0_12px_var(--poke-red-glow)]"
+                  className="h-full bg-gradient-to-r from-[var(--poke-red)] to-[var(--poke-yellow)]"
                 />
               </div>
               <div className="flex justify-between mt-2.5 mono text-[9px] text-text-muted tracking-wide">
@@ -239,17 +237,17 @@ export function ProfilePage() {
               </div>
 
               <div className="grid grid-cols-2 gap-3 text-center">
-                <div className="bg-bg-overlay rounded p-3 border border-border-subtle flex flex-col items-center">
+                <div className="bg-[var(--bg-overlay)] rounded-[var(--radius-md)] p-3 border border-[var(--border-default)] flex flex-col items-center">
                   <span className="mono text-[8px] uppercase tracking-wider text-text-muted mb-1">Theme</span>
                   <div className="text-xs font-bold capitalize text-text-secondary flex items-center gap-1">
-                    <Sparkles className="w-3 h-3 text-poke-yellow" />
+                    <Sparkles className="w-3 h-3 text-[var(--poke-yellow)]" />
                     <span>{profile.theme}</span>
                   </div>
                 </div>
-                <div className="bg-bg-overlay rounded p-3 border border-border-subtle flex flex-col items-center">
+                <div className="bg-[var(--bg-overlay)] rounded-[var(--radius-md)] p-3 border border-[var(--border-default)] flex flex-col items-center">
                   <span className="mono text-[8px] uppercase tracking-wider text-text-muted mb-1">Limit</span>
                   <div className="text-xs font-bold font-mono text-text-secondary flex items-center gap-1">
-                    <Layers className="w-3 h-3 text-poke-blue" />
+                    <Layers className="w-3 h-3 text-[var(--poke-blue)]" />
                     <span>Gen {profile.gen}</span>
                   </div>
                 </div>
@@ -275,12 +273,12 @@ export function ProfilePage() {
           </div>
 
           {/* Performance Tier Rating */}
-          <div className="card p-5 flex items-center gap-4 border-l-2 border-poke-yellow">
-            <div className="w-12 h-12 rounded bg-bg-overlay border border-poke-yellow/30 flex items-center justify-center text-xl font-display font-black text-poke-yellow shadow-[0_0_12px_var(--poke-yellow-glow)] select-none">
+          <div className="card p-5 flex items-center gap-4 border-l-2 border-[var(--poke-yellow)]">
+            <div className="w-12 h-12 rounded-[var(--radius-md)] bg-[var(--bg-overlay)] border border-[var(--poke-yellow)]/30 flex items-center justify-center text-xl font-display font-black text-[var(--poke-yellow)] select-none">
               {ratingTier}
             </div>
             <div>
-              <div className="font-rajdhani text-[9px] font-bold uppercase tracking-widest text-poke-yellow">
+              <div className="font-rajdhani text-[9px] font-bold uppercase tracking-widest text-[var(--poke-yellow)]">
                 Performance Rating Index
               </div>
               <div className="text-xs font-bold text-text-primary mt-0.5 uppercase tracking-wide font-rajdhani">
@@ -294,13 +292,13 @@ export function ProfilePage() {
 
           {/* Recent Activity Mini-Feed */}
           <div className="card p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-border-subtle pb-3">
+            <div className="flex items-center justify-between border-b border-[var(--border-default)] pb-3">
               <span className="mono text-[9px] font-bold uppercase tracking-widest text-text-muted">
                 Frequency Feed
               </span>
               <button
                 onClick={() => navigate("/dashboard/battles")}
-                className="font-rajdhani text-[9px] uppercase font-bold text-text-link hover:text-poke-blue transition-colors cursor-pointer flex items-center gap-0.5"
+                className="font-rajdhani text-[9px] uppercase font-bold text-text-link hover:text-[var(--poke-blue)] transition-colors cursor-pointer flex items-center gap-0.5"
               >
                 <span>Logs</span>
                 <ArrowUpRight className="w-3 h-3" />
@@ -317,7 +315,7 @@ export function ProfilePage() {
                         {isWin ? (
                           <Trophy className="w-4 h-4 text-emerald-400 shrink-0" />
                         ) : (
-                          <Swords className="w-4 h-4 text-poke-red shrink-0" />
+                          <Swords className="w-4 h-4 text-[var(--poke-red)] shrink-0" />
                         )}
                         <div className="min-w-0">
                           <div className="font-semibold text-text-primary truncate uppercase font-rajdhani tracking-wide text-xs">
@@ -326,7 +324,7 @@ export function ProfilePage() {
                           <div className="mono text-[8px] text-text-muted mt-0.5">{battle.timestamp}</div>
                         </div>
                       </div>
-                      <span className={`font-mono text-xs font-bold shrink-0 ${isWin ? "text-emerald-400" : "text-poke-red"}`}>
+                      <span className={`font-mono text-xs font-bold shrink-0 ${isWin ? "text-emerald-400" : "text-[var(--poke-red)]"}`}>
                         {isWin ? "+" : ""}{battle.eloChange} ELO
                       </span>
                     </div>
@@ -334,7 +332,7 @@ export function ProfilePage() {
                 })
               ) : (
                 <div className="mono text-[9px] text-text-muted py-2 text-center uppercase">
-                  No battle frequency records found
+                  No battle records found
                 </div>
               )}
             </div>

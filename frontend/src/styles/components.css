@@ -1,34 +1,135 @@
 /* ── Pokémon Design System Components ──────────────────────── */
 
-/* ── 1. Card Styles ────────────────────────────────────────── */
+/* ── 1. Layout & Shell Structures ──────────────────────────── */
+
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 240px;
+  right: 0;
+  height: 64px;
+  background: rgba(10, 11, 14, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-default);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-6);
+  z-index: var(--z-nav);
+  transition: left 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  background: var(--bg-input);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 8px 14px;
+  width: 100%;
+  max-width: 420px;
+  transition: all 0.15s ease;
+}
+
+.search-bar:focus-within {
+  border-color: var(--border-bright);
+  box-shadow: 0 0 0 2px rgba(28, 32, 48, 0.5);
+}
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 240px;
+  background: var(--bg-base);
+  border-right: 1px solid var(--border-default);
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-6) 0;
+  z-index: var(--z-sidebar);
+  transition: width 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 10px var(--space-6);
+  color: var(--text-secondary);
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-left: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+
+.sidebar-item:hover {
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-primary);
+}
+
+.sidebar-item.active {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  border-left-color: var(--poke-red);
+}
+
+.sidebar-group-label {
+  padding: var(--space-4) var(--space-6) var(--space-2) var(--space-6);
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: 'Share Tech Mono', monospace;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 768px) {
+  .navbar {
+    left: 48px;
+    padding: 0 var(--space-4);
+  }
+  .sidebar {
+    width: 48px;
+  }
+  .sidebar-label {
+    display: none;
+  }
+  .sidebar-item {
+    padding: 12px 14px;
+    justify-content: center;
+  }
+  .sidebar-group-label {
+    display: none;
+  }
+}
+
+/* ── 2. Card Styles ────────────────────────────────────────── */
 .card {
   background: var(--bg-raised);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
-  box-shadow: var(--glow-card);
-  transition: border-color 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
   position: relative;
   overflow: hidden;
 }
 
-.card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
-}
-
 .card:hover {
   border-color: var(--border-bright);
-  box-shadow: var(--glow-card), 0 0 0 1px var(--border-bright);
 }
 
 .card.featured {
   border-left: 2px solid var(--poke-red);
 }
 
-/* ── 2. Button System ──────────────────────────────────────── */
+/* ── 3. Button System ──────────────────────────────────────── */
 .btn-primary {
   background: var(--poke-red);
   color: #ffffff;
@@ -39,35 +140,20 @@
   font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  padding: 9px 20px;
+  padding: 10px 22px;
   cursor: pointer;
-  transition: all 0.15s;
-  position: relative;
-  overflow: hidden;
+  transition: all 0.15s ease;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+  text-decoration: none;
+  outline: none;
 }
 
 .btn-primary:hover {
-  background: transparent;
-  color: var(--poke-red);
-  box-shadow: var(--glow-red);
-  border-color: var(--poke-red);
-}
-
-.btn-primary::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.15) 50%, transparent 60%);
-  transform: translateX(-100%);
-  transition: transform 0.4s;
-}
-
-.btn-primary:hover::after {
-  transform: translateX(100%);
+  background: #ff5252;
+  border-color: #ff5252;
 }
 
 .btn-secondary {
@@ -80,23 +166,25 @@
   font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  padding: 9px 20px;
+  padding: 10px 22px;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.15s ease;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+  text-decoration: none;
+  outline: none;
 }
 
 .btn-secondary:hover {
   border-color: var(--text-primary);
-  background: rgba(255,255,255,0.04);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .btn-danger {
-  background: var(--poke-red-dim);
-  color: var(--text-primary);
+  background: transparent;
+  color: var(--poke-red);
   border: 1px solid var(--poke-red);
   border-radius: var(--radius-md);
   font-family: 'Rajdhani', sans-serif;
@@ -104,43 +192,43 @@
   font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  padding: 9px 20px;
+  padding: 10px 22px;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.15s ease;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+  text-decoration: none;
+  outline: none;
 }
 
 .btn-danger:hover {
-  background: transparent;
-  color: var(--poke-red);
-  box-shadow: var(--glow-red);
-  border-color: var(--poke-red);
+  background: rgba(255, 62, 62, 0.08);
 }
 
 .btn-icon {
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: transparent;
-  border: 1px solid transparent;
+  border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.15s ease;
+  outline: none;
 }
 
 .btn-icon:hover {
   background: var(--bg-raised);
-  border-color: var(--border-default);
+  border-color: var(--border-bright);
   color: var(--text-primary);
 }
 
-/* ── 3. Custom Dropdown & Input System ─────────────────────── */
+/* ── 4. Dropdown & Input System ────────────────────────────── */
 .dropdown-trigger {
   display: flex;
   align-items: center;
@@ -149,24 +237,13 @@
   min-width: 140px;
 }
 
-.dropdown-trigger .caret {
-  transition: transform 0.2s;
-  color: var(--text-muted);
-}
-
-.dropdown-trigger[aria-expanded="true"] .caret {
-  transform: rotate(180deg);
-  color: var(--text-primary);
-}
-
 .dropdown-menu {
   background: var(--bg-float);
   border: 1px solid var(--border-bright);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 16px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04);
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
   padding: var(--space-2);
   min-width: 160px;
-  animation: dropIn 0.15s var(--ease-spring);
 }
 
 .dropdown-item {
@@ -179,25 +256,18 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  transition: all 0.1s;
+  transition: all 0.1s ease;
+  text-decoration: none;
 }
 
 .dropdown-item:hover {
-  background: rgba(255,255,255,0.06);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--text-primary);
 }
 
 .dropdown-item.selected {
   color: var(--poke-yellow);
-  background: rgba(255,179,0,0.08);
-}
-
-.dropdown-item.type::before {
-  content: '';
-  width: 3px;
-  height: 14px;
-  border-radius: 2px;
-  background: var(--type-color, #999999);
+  background: rgba(255, 210, 0, 0.06);
 }
 
 .input {
@@ -207,29 +277,25 @@
   color: var(--text-primary);
   font-family: 'Outfit', sans-serif;
   font-size: 14px;
-  padding: 9px 14px;
+  padding: 10px 14px;
   width: 100%;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color 0.15s ease;
   outline: none;
 }
 
-.input::placeholder {
-  color: var(--text-muted);
-}
-
 .input:focus {
-  border-color: var(--poke-blue);
-  box-shadow: 0 0 0 3px rgba(0,191,255,0.12);
+  border-color: var(--border-bright);
 }
 
-/* ── 4. Pokédex Table ──────────────────────────────────────── */
+/* ── 5. Pokédex Table ──────────────────────────────────────── */
 .pokedex-table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
   overflow: hidden;
+  background: var(--bg-raised);
 }
 
 .pokedex-table thead {
@@ -241,37 +307,34 @@
   font-weight: 700;
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--text-muted);
-  padding: 12px var(--space-4);
+  letter-spacing: 0.1em;
+  color: var(--text-secondary);
+  padding: 14px var(--space-4);
   text-align: left;
   border-bottom: 1px solid var(--border-default);
 }
 
 .pokedex-table tbody tr {
-  background: var(--bg-raised);
-  border-bottom: 1px solid var(--border-subtle);
-  position: relative;
-  transition: background 0.1s;
+  transition: background-color 0.1s ease;
 }
 
 .pokedex-table tbody tr:hover {
-  background: var(--bg-float);
+  background-color: rgba(255, 255, 255, 0.02);
 }
 
 .pokedex-table tbody td {
-  padding: 12px var(--space-4);
+  padding: 14px var(--space-4);
   font-size: 14px;
   color: var(--text-primary);
   vertical-align: middle;
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-default);
 }
 
 .pokedex-table tbody tr:last-child td {
   border-bottom: none;
 }
 
-/* ── 5. Toast alerts ───────────────────────────────────────── */
+/* ── 6. Toast alerts ───────────────────────────────────────── */
 .toast {
   background: var(--bg-float);
   border: 1px solid var(--border-bright);
@@ -283,16 +346,16 @@
   gap: var(--space-3);
   min-width: 280px;
   max-width: 400px;
-  box-shadow: 0 12px 32px rgba(0,0,0,0.6);
-  animation: toastIn 0.25s var(--ease-spring);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
 }
 
-/* ── 6. Modal / Dialog ─────────────────────────────────────── */
+/* ── 7. Modal / Dialog ─────────────────────────────────────── */
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(6,8,15,0.85);
+  background: rgba(5, 6, 8, 0.8);
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   z-index: var(--z-modal);
   display: flex;
   align-items: center;
@@ -301,28 +364,19 @@
 }
 
 .modal {
-  background: var(--bg-float);
-  border: 1px solid var(--border-bright);
-  border-radius: var(--radius-xl);
-  box-shadow: 0 32px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.04);
+  background: var(--bg-raised);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
   max-width: 560px;
   width: 100%;
-  animation: modalIn 0.25s var(--ease-spring);
   position: relative;
   overflow: hidden;
 }
 
-.modal::before {
-  content: '';
-  display: block;
-  height: 2px;
-  background: linear-gradient(90deg, var(--poke-red), var(--poke-yellow));
-  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-}
-
 .modal-header {
   padding: var(--space-6);
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-default);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -334,32 +388,32 @@
 
 .modal-footer {
   padding: var(--space-6);
-  border-top: 1px solid var(--border-subtle);
+  border-top: 1px solid var(--border-default);
   display: flex;
   justify-content: flex-end;
   gap: var(--space-3);
 }
 
-/* ── 7. Tabs System ────────────────────────────────────────── */
+/* ── 8. Tabs System ────────────────────────────────────────── */
 .tab-list {
   display: flex;
-  gap: 2px;
-  border-bottom: 1px solid var(--border-subtle);
+  gap: var(--space-2);
+  border-bottom: 1px solid var(--border-default);
   padding-bottom: 0;
 }
 
 .tab {
   font-family: 'Rajdhani', sans-serif;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--text-muted);
-  padding: 10px 16px;
+  color: var(--text-secondary);
+  padding: 12px 18px;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.15s ease;
   background: transparent;
   border-top: none;
   border-left: none;
@@ -367,7 +421,7 @@
 }
 
 .tab:hover {
-  color: var(--text-secondary);
+  color: var(--text-primary);
 }
 
 .tab.active {

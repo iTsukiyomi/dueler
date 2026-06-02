@@ -11,6 +11,8 @@ import { LeaderboardPage } from "./pages/LeaderboardPage";
 import { BattleHistoryPage } from "./pages/BattleHistoryPage";
 import { SettingsPage } from "./pages/SettingsPage";
 
+import { ShieldAlert } from "lucide-react";
+
 interface ErrorBoundaryProps {
   children: ReactNode;
 }
@@ -37,13 +39,17 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   public render() {
     if (this.state.hasError) {
       return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-[#08070b] p-6 text-center text-[#f5f4f0]">
-          <div className="text-5xl mb-4">🔮</div>
-          <h1 className="font-display text-2xl font-bold text-[#cfa240] mb-2">Trainer Error Detected</h1>
-          <p className="text-sm text-[#a3a099] max-w-md mb-6 leading-relaxed">
-            The Pokédex encountered an unexpected anomaly. Check the logs or reload.
+        <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--bg-void)] p-6 text-center text-text-primary">
+          <div className="mb-4">
+            <ShieldAlert className="w-12 h-12 text-[var(--poke-red)]" />
+          </div>
+          <h1 className="font-display text-xl font-bold text-text-primary mb-2 uppercase tracking-wider">
+            Trainer Terminal Crash
+          </h1>
+          <p className="text-xs text-text-secondary max-w-md mb-6 leading-relaxed font-sans">
+            The Pokédex encountered an unexpected anomaly. Check the logs or reload the terminal interface.
           </p>
-          <pre className="text-xs font-mono bg-[#15131e] p-4 rounded-xl border border-[#282537] text-rose-400 max-w-xl overflow-auto mb-6 text-left w-full">
+          <pre className="text-xs font-mono bg-[var(--bg-input)] p-4 rounded-lg border border-[var(--border-default)] text-[var(--poke-red)] max-w-xl overflow-auto mb-6 text-left w-full">
             {this.state.error?.stack || this.state.error?.message}
           </pre>
           <button
@@ -51,9 +57,9 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
               this.setState({ hasError: false, error: null });
               window.location.href = "/";
             }}
-            className="px-6 py-3 rounded-xl bg-[#cfa240] text-[#08070b] font-display font-bold text-xs uppercase tracking-widest hover:bg-[#f1cd7c] transition-all cursor-pointer"
+            className="btn-primary"
           >
-            Reboot Arena
+            Reboot Terminal
           </button>
         </div>
       );

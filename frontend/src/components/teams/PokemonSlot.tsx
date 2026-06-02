@@ -29,10 +29,10 @@ export function PokemonSlotCard({
       <button
         onClick={onClick}
         type="button"
-        className={`w-full aspect-square bg-bg-raised border border-dashed border-border-default hover:border-poke-yellow hover:bg-bg-float flex flex-col items-center justify-center gap-2 transition-all duration-200 group cursor-pointer`}
+        className="w-full aspect-square bg-[var(--bg-raised)] border border-dashed border-[var(--border-default)] hover:border-[var(--poke-yellow)] hover:bg-[var(--bg-float)] flex flex-col items-center justify-center gap-2 transition-all duration-200 group cursor-pointer"
         style={{ borderRadius: "var(--radius-lg)" }}
       >
-        <div className="w-8 h-8 rounded-full bg-bg-overlay border border-border-subtle flex items-center justify-center text-text-secondary group-hover:text-poke-yellow group-hover:border-border-default transition-colors">
+        <div className="w-8 h-8 rounded-full bg-[var(--bg-overlay)] border border-[var(--border-default)] flex items-center justify-center text-text-secondary group-hover:text-[var(--poke-yellow)] group-hover:border-[var(--border-bright)] transition-colors">
           <Plus className="w-4 h-4" />
         </div>
         <span className="font-rajdhani text-[10px] font-bold uppercase tracking-widest text-text-muted">
@@ -46,10 +46,10 @@ export function PokemonSlotCard({
     <button
       onClick={onClick}
       type="button"
-      className={`w-full bg-bg-raised border p-4 flex flex-col items-center gap-3 transition-all duration-200 cursor-pointer ${
+      className={`w-full bg-[var(--bg-raised)] border p-4 flex flex-col items-center gap-3 transition-all duration-200 cursor-pointer ${
         isSelected
-          ? "border-poke-yellow shadow-[0_0_18px_var(--poke-yellow-glow)] bg-bg-float"
-          : "border-border-default hover:border-border-bright"
+          ? "border-[var(--poke-yellow)] bg-[var(--bg-float)] shadow-md"
+          : "border-[var(--border-default)] hover:border-[var(--border-bright)]"
       }`}
       style={{
         borderRadius: "var(--radius-lg)",
@@ -61,7 +61,7 @@ export function PokemonSlotCard({
           <img
             src={spriteUrl(id, slot.shiny)}
             alt={slot.pokname}
-            className="w-16 h-16 object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
+            className="w-16 h-16 object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)]"
             style={{ imageRendering: "pixelated" }}
             loading="lazy"
             onError={(e) => {
@@ -74,7 +74,7 @@ export function PokemonSlotCard({
         )}
         {slot.shiny && (
           <span title="Shiny Variant" className="absolute -top-1 -right-1 flex">
-            <Sparkles className="w-4 h-4 text-poke-yellow" />
+            <Sparkles className="w-4 h-4 text-[var(--poke-yellow)]" />
           </span>
         )}
       </div>
