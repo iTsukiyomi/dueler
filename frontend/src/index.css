@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "./styles/animations.css";
+@import "./styles/components.css";
 
 @theme {
   /* ── Core Background Mappings ──────────────── */
@@ -74,9 +76,6 @@
   --font-mono: "Share Tech Mono", monospace;
   --font-rajdhani: "Rajdhani", sans-serif;
 }
-
-@import "./styles/animations.css";
-@import "./styles/components.css";
 
 /* ── Absolute CSS Variable Authority ─────────────── */
 :root {
