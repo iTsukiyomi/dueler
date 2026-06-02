@@ -1,64 +1,80 @@
-import { useEffect } from "react";
+import React from "react";
 import { motion } from "framer-motion";
 import { usePlayerProfile } from "../hooks/usePokemonData";
 import { useAuthStore } from "../stores/authStore";
 import { useBattleHistory } from "../api/stats";
 import { useNavigate } from "react-router-dom";
-import { BorderBeam } from "../components/ui/BorderBeam";
+import { 
+  Trophy, 
+  Swords, 
+  TrendingUp, 
+  Coins, 
+  User, 
+  Sparkles, 
+  Layers, 
+  AlertTriangle,
+  History,
+  Edit,
+  ArrowUpRight
+} from "lucide-react";
 
-function StatCard({ value, label, icon, delay = 0 }: { value: string | number; label: string; icon: string; delay?: number }) {
+function StatWidget({ 
+  value, 
+  label, 
+  icon: Icon, 
+  colorClass = "text-text-brand" 
+}: { 
+  value: string | number; 
+  label: string; 
+  icon: React.ComponentType<{ className?: string }>; 
+  colorClass?: string;
+}) {
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.4, delay }}
-      className="relative rounded-2xl bg-bg-card/40 border border-border/50 p-5 text-center group hover:border-accent/40 transition-all duration-300 overflow-hidden"
-    >
-      <BorderBeam duration={4} borderWidth={1.2} className="opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-      <div className="text-3xl mb-2 select-none">{icon}</div>
-      <div className="font-mono text-2xl font-extrabold text-accent group-hover:text-accent-glow transition-colors">
+    <div className="card p-5 text-center flex flex-col items-center justify-center relative group">
+      <div className="w-10 h-10 rounded bg-bg-overlay border border-border-subtle flex items-center justify-center text-text-secondary group-hover:text-poke-yellow group-hover:border-border-default transition-colors mb-3">
+        <Icon className="w-5 h-5" />
+      </div>
+      <div className={`font-mono text-2xl font-bold ${colorClass}`}>
         {value}
       </div>
-      <div className="text-[9px] uppercase tracking-widest text-text-muted font-bold mt-1.5">{label}</div>
-    </motion.div>
+      <div className="font-rajdhani text-[9px] uppercase tracking-widest text-text-muted mt-1.5 font-bold">
+        {label}
+      </div>
+    </div>
   );
 }
 
 function ProfileSkeleton() {
   return (
     <div className="space-y-8 animate-pulse w-full">
-      {/* Header Skeleton */}
-      <div className="border-b border-border/30 pb-4 flex items-center justify-between">
+      <div className="border-b border-border-subtle pb-4 flex items-center justify-between">
         <div className="space-y-2">
-          <div className="h-8 w-44 bg-bg-card/80 rounded-lg" />
-          <div className="h-4 w-56 bg-bg-card/45 rounded-lg" />
+          <div className="h-4 w-28 bg-bg-raised rounded" />
+          <div className="h-8 w-44 bg-bg-raised rounded" />
         </div>
-        <div className="w-10 h-10 rounded-xl bg-bg-card/60" />
+        <div className="w-12 h-12 rounded bg-bg-raised" />
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          {/* Main Card Skeleton */}
-          <div className="rounded-2xl bg-bg-card/30 border border-border/50 p-6 md:p-8 space-y-6">
-            <div className="flex flex-col sm:flex-row items-center gap-6">
-              <div className="w-24 h-24 rounded-2xl bg-bg-card/80" />
-              <div className="space-y-2 flex-1 text-center sm:text-left">
-                <div className="h-6 w-36 bg-bg-card/80 rounded-md mx-auto sm:mx-0" />
-                <div className="h-4 w-24 bg-bg-card/45 rounded-md mx-auto sm:mx-0" />
+      <div className="grid lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-8 space-y-6">
+          <div className="card p-6 md:p-8 space-y-6">
+            <div className="flex items-center gap-6">
+              <div className="w-20 h-20 rounded bg-bg-overlay" />
+              <div className="space-y-2 flex-1">
+                <div className="h-6 w-36 bg-bg-overlay rounded" />
+                <div className="h-4 w-24 bg-bg-overlay rounded" />
               </div>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="h-24 bg-bg-card/30 border border-border/30 rounded-xl" />
+                <div key={i} className="h-24 bg-bg-overlay rounded border border-border-subtle" />
               ))}
             </div>
           </div>
         </div>
-
-        {/* Sidebar Panel Skeleton */}
-        <div className="space-y-6">
-          <div className="h-48 bg-bg-card/30 border border-border/50 rounded-2xl" />
-          <div className="h-64 bg-bg-card/30 border border-border/50 rounded-2xl" />
+        <div className="lg:col-span-4 space-y-6">
+          <div className="h-48 bg-bg-raised rounded border border-border-subtle" />
+          <div className="h-64 bg-bg-raised rounded border border-border-subtle" />
         </div>
       </div>
     </div>
@@ -78,14 +94,18 @@ export function ProfilePage() {
   if (error || !profile) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4 text-center">
-        <div className="text-4xl animate-bounce">⚠️</div>
-        <h2 className="font-display text-lg font-bold text-text-primary">Failed to sync Trainer Data</h2>
-        <p className="text-xs text-text-secondary max-w-xs leading-relaxed">Could not load profile statistics from server databases.</p>
+        <AlertTriangle className="w-12 h-12 text-poke-red animate-bounce" />
+        <h2 className="font-rajdhani text-lg font-bold text-text-primary uppercase tracking-wide">
+          Sync Status Offline
+        </h2>
+        <p className="text-xs text-text-secondary max-w-xs leading-relaxed font-sans">
+          Could not establish frequency synchronization link with central databases.
+        </p>
         <button
           onClick={() => refetch()}
-          className="px-5 py-2 rounded-xl bg-accent text-bg-primary font-display font-bold text-xs uppercase tracking-widest hover:bg-accent-glow transition-all cursor-pointer"
+          className="btn-primary mt-2"
         >
-          Force Retry
+          Force Retry link
         </button>
       </div>
     );
@@ -107,23 +127,25 @@ export function ProfilePage() {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 15 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
+      transition={{ duration: 0.25 }}
       className="space-y-8 w-full"
     >
-      {/* Page Header */}
-      <div className="border-b border-border/30 pb-4 flex items-center justify-between">
+      {/* Page Header (secondary fixed zone skeleton) */}
+      <div className="border-b border-border-subtle pb-4 flex items-center justify-between">
         <div>
-          <h1 className="font-display text-2xl sm:text-3xl font-extrabold tracking-wider text-text-primary uppercase">
-            Trainer ID Card
+          <div className="mono text-[10px] text-text-muted uppercase tracking-widest mb-1">
+            Terminal / Trainer Card
+          </div>
+          <h1 className="font-display text-2xl font-bold text-text-primary uppercase tracking-tight">
+            Trainer ID Profile
           </h1>
-          <p className="text-xs text-text-muted mt-1 font-medium">Verify your registered bot battle attributes and league ratings</p>
         </div>
         {profile.rank && (
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-accent/20 to-accent/10 border border-accent/40 flex flex-col items-center justify-center">
-            <span className="text-[9px] uppercase font-bold text-text-muted">Rank</span>
-            <span className="font-mono text-sm font-black text-accent">#{profile.rank}</span>
+          <div className="w-12 h-12 rounded border border-poke-yellow/30 bg-poke-yellow-glow flex flex-col items-center justify-center">
+            <span className="font-rajdhani text-[8px] font-bold text-text-muted uppercase">Rank</span>
+            <span className="mono text-sm font-bold text-poke-yellow">#{profile.rank}</span>
           </div>
         )}
       </div>
@@ -131,9 +153,7 @@ export function ProfilePage() {
       <div className="grid lg:grid-cols-12 gap-6 items-start">
         {/* Main Info Card */}
         <div className="lg:col-span-8 space-y-6">
-          <div className="relative rounded-3xl bg-bg-card/30 border border-border/70 p-6 md:p-8 overflow-hidden group">
-            <BorderBeam duration={8} borderWidth={1.5} />
-
+          <div className="card p-6 md:p-8">
             {/* Profile Hero Block */}
             <div className="flex flex-col sm:flex-row items-center gap-6 mb-8 text-center sm:text-left">
               <div className="relative">
@@ -141,31 +161,33 @@ export function ProfilePage() {
                   <img
                     src={user.avatarUrl}
                     alt={user.username}
-                    className="w-24 h-24 rounded-2xl object-cover ring-4 ring-bg-secondary border border-border/50"
+                    className="w-20 h-20 rounded object-cover ring-2 ring-border-default border border-bg-void"
                   />
                 ) : (
-                  <div className="w-24 h-24 rounded-2xl bg-bg-secondary flex items-center justify-center text-4xl select-none">
-                    🧢
+                  <div className="w-20 h-20 rounded bg-bg-overlay border border-border-default flex items-center justify-center text-3xl select-none">
+                    <User className="w-10 h-10 text-text-muted" />
                   </div>
                 )}
-                <div className="absolute -bottom-2 -right-2 px-2 py-0.5 rounded bg-accent text-bg-primary font-display font-black text-[9px] uppercase tracking-widest shadow-md">
+                <div className="absolute -bottom-2 -right-2 px-1.5 py-0.5 rounded bg-poke-red border border-border-brand text-white font-mono text-[9px] uppercase tracking-wider font-bold">
                   LV100
                 </div>
               </div>
 
               <div className="space-y-2 flex-1">
                 <div>
-                  <h2 className="font-display text-2xl font-bold text-text-primary tracking-wide">
+                  <h2 className="font-display text-xl font-bold text-text-primary uppercase tracking-wide">
                     {profile.username}
                   </h2>
-                  <div className="text-xs text-text-muted font-medium mt-0.5">League Competitor</div>
+                  <div className="font-rajdhani text-[10px] text-text-muted uppercase tracking-wider font-bold">
+                    League Competitor Registered
+                  </div>
                 </div>
 
-                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                  <span className="px-3 py-1 rounded-lg bg-accent/15 border border-accent/30 text-accent font-mono text-xs font-bold">
-                    {elo} ELO
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-1">
+                  <span className="px-3 py-1 rounded bg-poke-red-glow border border-poke-red/20 text-poke-red font-mono text-xs font-bold">
+                    {elo} ELO Rating
                   </span>
-                  <span className="px-3 py-1 rounded-lg bg-bg-secondary border border-border/60 text-text-secondary font-mono text-xs font-semibold">
+                  <span className="px-3 py-1 rounded bg-bg-overlay border border-border-subtle text-text-secondary font-mono text-xs font-bold">
                     ₽{wallet.toLocaleString()} Credits
                   </span>
                 </div>
@@ -174,29 +196,29 @@ export function ProfilePage() {
 
             {/* Performance Stats Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <StatCard value={wins} label="Victories" icon="🏆" delay={0.05} />
-              <StatCard value={losses} label="Defeats" icon="💀" delay={0.1} />
-              <StatCard value={`${winRate}%`} label="Win Rate" icon="📈" delay={0.15} />
-              <StatCard value={`₽${wallet}`} label="Wallet" icon="🪙" delay={0.2} />
+              <StatWidget value={wins} label="Victories" icon={Trophy} colorClass="text-emerald-400" />
+              <StatWidget value={losses} label="Defeats" icon={Swords} colorClass="text-poke-red" />
+              <StatWidget value={`${winRate}%`} label="Win Ratio" icon={TrendingUp} colorClass="text-poke-yellow" />
+              <StatWidget value={`₽${wallet}`} label="Wallet Bal" icon={Coins} colorClass="text-poke-blue" />
             </div>
 
             {/* Win Rate Progress Meter */}
-            <div className="mt-8 bg-bg-secondary/40 border border-border/30 p-5 rounded-2xl">
-              <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-text-muted mb-3">
-                <span>Battle Victory Ratio</span>
-                <span className="text-accent font-mono font-bold">{winRate}%</span>
+            <div className="mt-8 bg-bg-base border border-border-subtle p-5 rounded-lg">
+              <div className="flex justify-between text-[9px] font-bold uppercase tracking-widest text-text-muted mb-3 font-rajdhani">
+                <span>Battle Victory Ratio Vector</span>
+                <span className="text-poke-yellow font-mono font-bold">{winRate}%</span>
               </div>
-              <div className="h-3 rounded-full bg-bg-primary overflow-hidden border border-border/60 relative">
+              <div className="stat-bar-track relative">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${winRate}%` }}
-                  transition={{ duration: 1.0, ease: "easeOut" }}
-                  className="h-full rounded-full bg-gradient-to-r from-accent/70 to-accent shadow-[0_0_12px_rgba(207,162,64,0.3)]"
+                  transition={{ duration: 0.8, ease: "easeOut" }}
+                  className="h-full rounded bg-gradient-to-r from-poke-red/70 to-poke-yellow shadow-[0_0_12px_var(--poke-red-glow)]"
                 />
               </div>
-              <div className="flex justify-between mt-2.5 text-[9px] font-bold text-text-muted tracking-wide">
-                <span>{wins} WINS</span>
-                <span>{losses} LOSSES</span>
+              <div className="flex justify-between mt-2.5 mono text-[9px] text-text-muted tracking-wide">
+                <span>{wins} VICTORIES</span>
+                <span>{losses} DEFEATS</span>
               </div>
             </div>
           </div>
@@ -205,59 +227,83 @@ export function ProfilePage() {
         {/* Sidebar Overview Panel */}
         <div className="lg:col-span-4 space-y-6">
           {/* Active Battle Team */}
-          <div className="relative rounded-3xl bg-bg-card/30 border border-border/70 p-6 overflow-hidden group">
-            <BorderBeam duration={6} borderWidth={1.5} />
+          <div className="card p-6">
             <div className="space-y-4">
               <div>
-                <div className="text-[9px] font-bold uppercase tracking-widest text-text-muted mb-1">Active Squad</div>
-                <h3 className="text-lg font-display font-extrabold capitalize text-text-primary tracking-wide">
+                <div className="mono text-[9px] font-bold uppercase tracking-widest text-text-muted mb-1">
+                  Active Battle Squad
+                </div>
+                <h3 className="text-base font-display font-extrabold capitalize text-text-primary tracking-wide">
                   {profile.active_party_name ?? "No Squad Active"}
                 </h3>
               </div>
 
               <div className="grid grid-cols-2 gap-3 text-center">
-                <div className="bg-bg-secondary/40 rounded-xl p-3 border border-border/20">
-                  <div className="text-[9px] uppercase tracking-wider text-text-muted mb-1 font-bold">Theme</div>
-                  <div className="text-xs font-bold capitalize text-text-secondary">🔮 {profile.theme}</div>
+                <div className="bg-bg-overlay rounded p-3 border border-border-subtle flex flex-col items-center">
+                  <span className="mono text-[8px] uppercase tracking-wider text-text-muted mb-1">Theme</span>
+                  <div className="text-xs font-bold capitalize text-text-secondary flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-poke-yellow" />
+                    <span>{profile.theme}</span>
+                  </div>
                 </div>
-                <div className="bg-bg-secondary/40 rounded-xl p-3 border border-border/20">
-                  <div className="text-[9px] uppercase tracking-wider text-text-muted mb-1 font-bold">Limit</div>
-                  <div className="text-xs font-bold font-mono text-text-secondary">Gen {profile.gen}</div>
+                <div className="bg-bg-overlay rounded p-3 border border-border-subtle flex flex-col items-center">
+                  <span className="mono text-[8px] uppercase tracking-wider text-text-muted mb-1">Limit</span>
+                  <div className="text-xs font-bold font-mono text-text-secondary flex items-center gap-1">
+                    <Layers className="w-3 h-3 text-poke-blue" />
+                    <span>Gen {profile.gen}</span>
+                  </div>
                 </div>
               </div>
 
-              {profile.active_party_name && (
+              {profile.active_party_name ? (
                 <button
                   onClick={() => navigate(`/dashboard/teams/${encodeURIComponent(profile.active_party_name!)}`)}
-                  className="w-full py-3 rounded-xl bg-accent/10 border border-accent/20 hover:bg-accent hover:text-bg-primary text-accent font-display font-bold text-xs uppercase tracking-widest transition-all duration-300 cursor-pointer"
+                  className="btn-primary w-full py-2.5"
                 >
-                  Manage Squad Attributes
+                  <Edit className="w-3.5 h-3.5" />
+                  <span>Configure Squad Attributes</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => navigate("/dashboard/teams")}
+                  className="btn-secondary w-full py-2.5"
+                >
+                  <span>Build Battle Squad</span>
                 </button>
               )}
             </div>
           </div>
 
           {/* Performance Tier Rating */}
-          <div className="rounded-3xl bg-gradient-to-br from-accent/15 to-transparent border border-accent/35 p-5 flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-bg-card border-2 border-accent flex items-center justify-center text-3xl font-display font-black text-accent shadow-[0_0_15px_rgba(207,162,64,0.2)] select-none">
+          <div className="card p-5 flex items-center gap-4 border-l-2 border-poke-yellow">
+            <div className="w-12 h-12 rounded bg-bg-overlay border border-poke-yellow/30 flex items-center justify-center text-xl font-display font-black text-poke-yellow shadow-[0_0_12px_var(--poke-yellow-glow)] select-none">
               {ratingTier}
             </div>
             <div>
-              <div className="text-[10px] font-bold uppercase tracking-widest text-accent">Performance Tier</div>
-              <div className="text-sm font-bold text-text-primary mt-0.5">{ratingTitle}</div>
-              <div className="text-[9px] text-text-muted mt-0.5 font-medium">Ranked over {total} completed duels</div>
+              <div className="font-rajdhani text-[9px] font-bold uppercase tracking-widest text-poke-yellow">
+                Performance Rating Index
+              </div>
+              <div className="text-xs font-bold text-text-primary mt-0.5 uppercase tracking-wide font-rajdhani">
+                {ratingTitle}
+              </div>
+              <div className="mono text-[9px] text-text-muted mt-0.5">
+                Computed over {total} active logs
+              </div>
             </div>
           </div>
 
           {/* Recent Activity Mini-Feed */}
-          <div className="rounded-3xl bg-bg-card/20 border border-border/50 p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-border/20 pb-3">
-              <span className="text-[9px] font-bold uppercase tracking-widest text-text-muted">Recent Activity</span>
+          <div className="card p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-border-subtle pb-3">
+              <span className="mono text-[9px] font-bold uppercase tracking-widest text-text-muted">
+                Frequency Feed
+              </span>
               <button
                 onClick={() => navigate("/dashboard/battles")}
-                className="text-[9px] uppercase font-bold text-accent hover:text-accent-glow transition-colors cursor-pointer"
+                className="font-rajdhani text-[9px] uppercase font-bold text-text-link hover:text-poke-blue transition-colors cursor-pointer flex items-center gap-0.5"
               >
-                Log Info
+                <span>Logs</span>
+                <ArrowUpRight className="w-3 h-3" />
               </button>
             </div>
 
@@ -268,22 +314,28 @@ export function ProfilePage() {
                   return (
                     <div key={battle.id} className="flex items-center justify-between text-xs py-1">
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <span className="text-base select-none">{isWin ? "🏆" : "💀"}</span>
+                        {isWin ? (
+                          <Trophy className="w-4 h-4 text-emerald-400 shrink-0" />
+                        ) : (
+                          <Swords className="w-4 h-4 text-poke-red shrink-0" />
+                        )}
                         <div className="min-w-0">
-                          <div className="font-semibold text-text-primary truncate">
-                            {isWin ? "Beat" : "Lost to"} {battle.opponent}
+                          <div className="font-semibold text-text-primary truncate uppercase font-rajdhani tracking-wide text-xs">
+                            {isWin ? "Vict" : "Defe"} vs {battle.opponent}
                           </div>
-                          <div className="text-[9px] text-text-muted mt-0.5 font-medium">{battle.timestamp}</div>
+                          <div className="mono text-[8px] text-text-muted mt-0.5">{battle.timestamp}</div>
                         </div>
                       </div>
-                      <span className={`font-mono font-bold shrink-0 ${isWin ? "text-emerald-400" : "text-rose-400"}`}>
+                      <span className={`font-mono text-xs font-bold shrink-0 ${isWin ? "text-emerald-400" : "text-poke-red"}`}>
                         {isWin ? "+" : ""}{battle.eloChange} ELO
                       </span>
                     </div>
                   );
                 })
               ) : (
-                <div className="text-xs text-text-muted py-2 text-center font-medium">No recent battles log found</div>
+                <div className="mono text-[9px] text-text-muted py-2 text-center uppercase">
+                  No battle frequency records found
+                </div>
               )}
             </div>
           </div>

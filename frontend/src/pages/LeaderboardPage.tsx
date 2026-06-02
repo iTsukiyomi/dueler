@@ -1,94 +1,46 @@
+import React from "react";
 import { motion } from "framer-motion";
 import { useAuthStore } from "../stores/authStore";
 import { useLeaderboard, LeaderboardEntry } from "../api/stats";
-import { BorderBeam } from "../components/ui/BorderBeam";
+import { 
+  Award, 
+  Crown, 
+  User, 
+  HelpCircle,
+  TrendingUp,
+  ShieldCheck,
+  ChevronRight
+} from "lucide-react";
 
 function RankMedal({ rank }: { rank: number }) {
-  const medals: Record<number, { emoji: string; class: string }> = {
-    1: { emoji: "🏆", class: "text-yellow-400" },
-    2: { emoji: "⭐", class: "text-gray-300" },
-    3: { emoji: "🌟", class: "text-amber-600" },
-  };
-
-  if (medals[rank]) {
-    return <span className={`text-xl ${medals[rank].class} select-none`}>{medals[rank].emoji}</span>;
+  if (rank === 1) {
+    return <Award className="w-5 h-5 text-poke-yellow" />;
   }
-
-  return <span className="w-8 text-center font-mono text-xs font-bold text-text-muted">#{rank}</span>;
+  if (rank === 2) {
+    return <Award className="w-5 h-5 text-text-secondary" />;
+  }
+  if (rank === 3) {
+    return <Award className="w-5 h-5 text-amber-600" />;
+  }
+  return <span className="mono text-[11px] font-bold text-text-muted">#{rank}</span>;
 }
 
 function LeaderboardSkeleton() {
   return (
     <div className="space-y-6 animate-pulse w-full">
-      {/* Header Skeleton */}
-      <div className="border-b border-border/30 pb-4 space-y-2">
-        <div className="h-8 w-44 bg-bg-card/85 rounded-lg" />
-        <div className="h-4 w-60 bg-bg-card/45 rounded-lg" />
+      <div className="border-b border-border-subtle pb-4 space-y-2">
+        <div className="h-3 w-28 bg-bg-raised rounded" />
+        <div className="h-8 w-44 bg-bg-raised rounded" />
       </div>
 
-      {/* Top 3 Skeleton */}
       <div className="grid sm:grid-cols-3 gap-4">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-48 bg-bg-card/30 border border-border/40 rounded-2xl" />
+          <div key={i} className="h-48 bg-bg-raised border border-border-subtle rounded" />
         ))}
       </div>
 
-      {/* List Skeleton */}
-      <div className="rounded-2xl bg-bg-card/20 border border-border/40 p-4 space-y-3">
-        {[1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="h-14 bg-bg-card/40 rounded-xl" />
-        ))}
-      </div>
+      <div className="h-48 bg-bg-raised border border-border-subtle rounded" />
     </div>
-  );
-}
-
-function LeaderboardRow({ entry, index, isCurrentUser }: { entry: LeaderboardEntry; index: number; isCurrentUser: boolean }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, x: -15 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.04 }}
-      className={`flex items-center gap-4 py-4 px-4 rounded-xl transition-all duration-300 ${
-        isCurrentUser
-          ? "bg-accent/15 border border-accent/30 shadow-[0_0_12px_rgba(207,162,64,0.1)]"
-          : "hover:bg-bg-card/30 border border-transparent"
-      }`}
-    >
-      <div className="w-10 flex justify-center">
-        <RankMedal rank={entry.rank} />
-      </div>
-
-      <div className="flex items-center gap-3.5 flex-1 min-w-0">
-        {entry.avatarUrl ? (
-          <img
-            src={entry.avatarUrl}
-            alt={entry.username}
-            className="w-10 h-10 rounded-xl ring-2 ring-border/80 object-cover"
-          />
-        ) : (
-          <div className="w-10 h-10 rounded-xl bg-bg-secondary flex items-center justify-center text-xl select-none">
-            🧢
-          </div>
-        )}
-        <div className="min-w-0">
-          <div className="text-sm font-bold text-text-primary truncate flex items-center gap-1.5">
-            {entry.username}
-            {isCurrentUser && <span className="text-[9px] uppercase font-black text-accent tracking-widest">(You)</span>}
-          </div>
-        </div>
-      </div>
-
-      <div className="text-right">
-        <div className="font-mono text-sm font-bold text-accent">{entry.elo}</div>
-        <div className="text-[8px] font-bold text-text-muted uppercase tracking-widest">ELO</div>
-      </div>
-
-      <div className="text-right hidden sm:block w-24">
-        <div className="font-mono text-xs font-bold text-emerald-400">{entry.wins}W - {entry.losses}L</div>
-        <div className="text-[8px] font-bold text-text-muted uppercase tracking-widest">{entry.winRate}% WR</div>
-      </div>
-    </motion.div>
   );
 }
 
@@ -101,9 +53,7 @@ export function LeaderboardPage() {
     return <LeaderboardSkeleton />;
   }
 
-  // Slice leaderboard to get top 3 safely
   const topThree = leaderboard.slice(0, 3);
-  // Sort them so rank 1 is in center [Rank 2, Rank 1, Rank 3]
   const sortedTopThree = [...topThree];
   if (sortedTopThree.length === 3) {
     const temp = sortedTopThree[0];
@@ -113,40 +63,40 @@ export function LeaderboardPage() {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 15 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
+      transition={{ duration: 0.25 }}
       className="space-y-8 w-full select-none"
     >
-      {/* Header */}
-      <div className="border-b border-border/30 pb-4">
-        <h1 className="font-display text-2xl sm:text-3xl font-extrabold tracking-wider text-text-primary uppercase">
-          Leaderboard
+      {/* Page Header */}
+      <div className="border-b border-border-subtle pb-4">
+        <div className="mono text-[10px] text-text-muted uppercase tracking-widest mb-1">
+          Terminal / Hall of Fame
+        </div>
+        <h1 className="font-display text-2xl font-bold text-text-primary uppercase tracking-tight">
+          League Standings
         </h1>
-        <p className="text-xs text-text-muted mt-1 font-medium">Top arena trainers sorted by calculated ELO metrics</p>
       </div>
 
       {/* Top 3 Podiums */}
       {topThree.length > 0 && (
-        <div className="grid sm:grid-cols-3 gap-4 items-end">
+        <div className="grid sm:grid-cols-3 gap-6 items-end">
           {sortedTopThree.map((entry, idx) => {
             const isRank1 = entry.rank === 1;
             return (
               <motion.div
                 key={entry.rank}
-                initial={{ opacity: 0, y: 25 }}
+                initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.1 }}
-                className={`relative rounded-3xl p-6 overflow-hidden ${
+                transition={{ delay: idx * 0.08 }}
+                className={`card p-6 flex flex-col justify-between ${
                   isRank1
-                    ? "bg-gradient-to-br from-accent/15 to-accent/5 border-2 border-accent/50 sm:order-2 sm:py-10"
-                    : "bg-bg-card/25 border border-border/60"
+                    ? "border-poke-yellow bg-bg-float sm:py-8 shadow-[0_0_24px_var(--poke-yellow-glow)] sm:order-2"
+                    : "sm:order-1"
                 }`}
               >
-                {isRank1 && <BorderBeam duration={5} borderWidth={2} />}
-
                 <div className="text-center relative">
-                  <div className="absolute -top-1 left-1/2 -translate-x-1/2">
+                  <div className="flex justify-center mb-2">
                     <RankMedal rank={entry.rank} />
                   </div>
 
@@ -154,27 +104,29 @@ export function LeaderboardPage() {
                     <img
                       src={entry.avatarUrl}
                       alt={entry.username}
-                      className={`w-16 h-16 rounded-2xl mx-auto mt-6 ring-4 ${
-                        isRank1 ? "ring-accent shadow-lg shadow-accent/25" : "ring-border/80"
-                      } object-cover`}
+                      className={`w-14 h-14 rounded mx-auto mt-2 object-cover ${
+                        isRank1 ? "ring-2 ring-poke-yellow" : "ring-1 ring-border-default"
+                      }`}
                     />
                   ) : (
-                    <div className="w-16 h-16 rounded-2xl bg-bg-secondary flex items-center justify-center text-3xl mx-auto mt-6">
-                      🧢
+                    <div className="w-14 h-14 rounded bg-bg-overlay border border-border-subtle flex items-center justify-center mx-auto mt-2">
+                      <User className="w-7 h-7 text-text-muted" />
                     </div>
                   )}
 
-                  <h3 className="font-display text-base font-bold text-text-primary mt-4 truncate">
+                  <h3 className="font-rajdhani text-sm font-bold text-text-primary mt-4 truncate uppercase tracking-wider">
                     {entry.username}
                   </h3>
 
-                  <div className="mt-2 space-y-1">
-                    <div className="font-mono text-2xl font-black text-accent">{entry.elo}</div>
-                    <div className="text-[8px] uppercase font-bold tracking-widest text-text-muted">ELO Rating</div>
+                  <div className="mt-3 space-y-1">
+                    <div className="mono text-2xl font-bold text-poke-yellow">{entry.elo}</div>
+                    <div className="font-rajdhani text-[8px] uppercase font-bold tracking-widest text-text-muted">ELO Rating</div>
                   </div>
 
                   {isRank1 && (
-                    <div className="absolute -top-4 right-0 text-3xl animate-bounce select-none">👑</div>
+                    <div className="absolute -top-3 right-0 text-poke-yellow animate-bounce">
+                      <Crown className="w-5 h-5" />
+                    </div>
                   )}
                 </div>
               </motion.div>
@@ -183,32 +135,73 @@ export function LeaderboardPage() {
         </div>
       )}
 
-      {/* Leaderboard List container */}
-      <div className="rounded-3xl bg-bg-card/25 border border-border/70 overflow-hidden">
-        {/* Header row */}
-        <div className="flex items-center gap-4 py-3 px-5 border-b border-border/30 text-[9px] uppercase tracking-widest text-text-muted font-bold">
-          <div className="w-10 text-center">Rank</div>
-          <div className="flex-1">Trainer</div>
-          <div className="text-right">ELO</div>
-          <div className="text-right hidden sm:block w-24">Record</div>
-        </div>
-
-        {/* List rows */}
-        <div className="divide-y divide-border/20 px-1">
-          {leaderboard.map((entry, index) => (
-            <LeaderboardRow
-              key={entry.rank}
-              entry={entry}
-              index={index}
-              isCurrentUser={user?.username === entry.username}
-            />
-          ))}
-        </div>
+      {/* Leaderboard List container using pokedex-table */}
+      <div className="overflow-x-auto">
+        <table className="pokedex-table">
+          <thead>
+            <tr>
+              <th className="w-16 text-center">Rank</th>
+              <th>Trainer</th>
+              <th className="text-right">ELO</th>
+              <th className="text-right hidden sm:table-cell">Battles</th>
+              <th className="text-right hidden sm:table-cell">Win Rate</th>
+            </tr>
+          </thead>
+          <tbody>
+            {leaderboard.map((entry, index) => {
+              const isCurrentUser = user?.username === entry.username;
+              return (
+                <tr 
+                  key={entry.rank}
+                  className={isCurrentUser ? "bg-poke-yellow-glow" : ""}
+                >
+                  <td className="text-center">
+                    <div className="flex justify-center items-center">
+                      <RankMedal rank={entry.rank} />
+                    </div>
+                  </td>
+                  <td>
+                    <div className="flex items-center gap-3">
+                      {entry.avatarUrl ? (
+                        <img
+                          src={entry.avatarUrl}
+                          alt=""
+                          className="w-8 h-8 rounded object-cover"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded bg-bg-overlay border border-border-subtle flex items-center justify-center">
+                          <User className="w-4 h-4 text-text-muted" />
+                        </div>
+                      )}
+                      <span className="font-rajdhani font-bold uppercase tracking-wide text-xs">
+                        {entry.username}
+                        {isCurrentUser && (
+                          <span className="ml-2 font-mono text-[8px] text-poke-yellow uppercase font-bold">
+                            [Self]
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="text-right mono font-bold text-poke-yellow">
+                    {entry.elo}
+                  </td>
+                  <td className="text-right hidden sm:table-cell mono text-xs text-text-secondary">
+                    {entry.wins}W - {entry.losses}L
+                  </td>
+                  <td className="text-right hidden sm:table-cell mono text-xs text-text-secondary">
+                    {entry.winRate}%
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
 
       {/* Footer message */}
-      <div className="text-center text-[10px] text-text-muted font-bold tracking-wider uppercase">
-        Leaderboard updates in real-time • Syncs with bot matches
+      <div className="text-center mono text-[8px] text-text-muted tracking-widest uppercase">
+        Silph Database Registry active • Updates on battle session close
       </div>
     </motion.div>
   );

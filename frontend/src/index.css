@@ -1,48 +1,179 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg-primary: #08070b;
-  --color-bg-secondary: #0e0d14;
-  --color-bg-card: #15131e;
-  --color-bg-hover: #1e1b2a;
-  --color-border: #282537;
-  --color-border-light: #3e3a55;
-  --color-accent: #cfa240;
-  --color-accent-soft: #a87f2a;
-  --color-accent-glow: #f1cd7c;
-  --color-discord: #5865f2;
-  --color-discord-hover: #4752c4;
-  --color-success: #10b981;
-  --color-warning: #f59e0b;
-  --color-danger: #ef4444;
-  --color-text-primary: #f5f4f0;
-  --color-text-secondary: #a3a099;
-  --color-text-muted: #6c6961;
+  /* ── Core Background Mappings ──────────────── */
+  --color-bg-void: #06080F;
+  --color-bg-base: #0A0D16;
+  --color-bg-raised: #0F1520;
+  --color-bg-float: #151D2E;
+  --color-bg-overlay: #1C2638;
+  --color-bg-input: #0D1219;
 
-  --color-type-normal: #a8a878;
-  --color-type-fire: #f08030;
-  --color-type-water: #6890f0;
-  --color-type-electric: #f8d030;
-  --color-type-grass: #78c850;
-  --color-type-ice: #98d8d8;
-  --color-type-fighting: #c03028;
-  --color-type-poison: #a040a0;
-  --color-type-ground: #e0c068;
-  --color-type-flying: #a890f0;
-  --color-type-psychic: #f85888;
-  --color-type-bug: #a8b820;
-  --color-type-rock: #b8a038;
+  /* ── Pokémon Brand Colors ──────────────────── */
+  --color-poke-red: #E3350D;
+  --color-poke-red-dim: #8C1F08;
+  --color-poke-yellow: #FFB300;
+  --color-poke-yellow-dim: #7A5500;
+  --color-poke-blue: #00BFFF;
+  --color-poke-blue-dim: #004466;
+
+  /* ── Borders ───────────────────────────────── */
+  --color-border-subtle: #151E30;
+  --color-border-default: #1E2D45;
+  --color-border-bright: #2D4870;
+  --color-border-active: #3D6090;
+  --color-border-brand: #E3350D;
+
+  /* ── Text ──────────────────────────────────── */
+  --color-text-primary: #DDE4F0;
+  --color-text-secondary: #7A8FA6;
+  --color-text-muted: #3D5068;
+  --color-text-brand: #FFB300;
+  --color-text-link: #00BFFF;
+  --color-text-danger: #E3350D;
+
+  /* ── Backward Compatibility Mappings ───────── */
+  --color-bg-primary: #06080F;
+  --color-bg-secondary: #0A0D16;
+  --color-bg-card: #0F1520;
+  --color-bg-hover: #151D2E;
+  --color-border: #1E2D45;
+  --color-border-light: #2D4870;
+  --color-accent: #E3350D;
+  --color-accent-soft: #8C1F08;
+  --color-accent-glow: #00BFFF;
+  --color-discord: #5865F2;
+  --color-discord-hover: #4752C4;
+  --color-success: #78C850;
+  --color-warning: #FFB300;
+  --color-danger: #E3350D;
+
+  /* ── Pokémon Type Spectrum ─────────────────── */
+  --color-type-normal: #A8A878;
+  --color-type-fire: #F08030;
+  --color-type-water: #6890F0;
+  --color-type-electric: #F8D030;
+  --color-type-grass: #78C850;
+  --color-type-ice: #98D8D8;
+  --color-type-fighting: #C03028;
+  --color-type-poison: #A040A0;
+  --color-type-ground: #E0C068;
+  --color-type-flying: #A890F0;
+  --color-type-psychic: #F85888;
+  --color-type-bug: #A8B820;
+  --color-type-rock: #B8A038;
   --color-type-ghost: #705898;
-  --color-type-dragon: #7038f8;
+  --color-type-dragon: #7038F8;
   --color-type-dark: #705848;
-  --color-type-steel: #b8b8d0;
-  --color-type-fairy: #ee99ac;
+  --color-type-steel: #B8B8D0;
+  --color-type-fairy: #EE99AC;
 
-  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Cinzel", serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  /* ── Typography Roles ──────────────────────── */
+  --font-sans: "Outfit", system-ui, -apple-system, sans-serif;
+  --font-display: "Unbounded", sans-serif;
+  --font-mono: "Share Tech Mono", monospace;
+  --font-rajdhani: "Rajdhani", sans-serif;
 }
 
+@import "./styles/animations.css";
+@import "./styles/components.css";
+
+/* ── Absolute CSS Variable Authority ─────────────── */
+:root {
+  /* Backgrounds */
+  --bg-void:        #06080F;
+  --bg-base:        #0A0D16;
+  --bg-raised:      #0F1520;
+  --bg-float:       #151D2E;
+  --bg-overlay:     #1C2638;
+  --bg-input:       #0D1219;
+
+  /* Brand Core */
+  --poke-red:       #E3350D;
+  --poke-red-dim:   #8C1F08;
+  --poke-red-glow:  rgba(227,53,13,0.25);
+  --poke-yellow:    #FFB300;
+  --poke-yellow-dim:#7A5500;
+  --poke-yellow-glow: rgba(255,179,0,0.20);
+  --poke-blue:      #00BFFF;
+  --poke-blue-dim:  #004466;
+  --poke-blue-glow: rgba(0,191,255,0.20);
+
+  /* Borders */
+  --border-subtle:  #151E30;
+  --border-default: #1E2D45;
+  --border-bright:  #2D4870;
+  --border-active:  #3D6090;
+  --border-brand:   #E3350D;
+  --border-glow:    rgba(0,191,255,0.4);
+
+  /* Text */
+  --text-primary:   #DDE4F0;
+  --text-secondary: #7A8FA6;
+  --text-muted:     #3D5068;
+  --text-brand:     #FFB300;
+  --text-link:      #00BFFF;
+  --text-danger:    #E3350D;
+
+  /* Pokémon Type Colors */
+  --type-normal:    #A8A878;
+  --type-fire:      #F08030;
+  --type-water:     #6890F0;
+  --type-electric:  #F8D030;
+  --type-grass:     #78C850;
+  --type-ice:       #98D8D8;
+  --type-fighting:  #C03028;
+  --type-poison:    #A040A0;
+  --type-ground:    #E0C068;
+  --type-flying:    #A890F0;
+  --type-psychic:   #F85888;
+  --type-bug:       #A8B820;
+  --type-rock:      #B8A038;
+  --type-ghost:     #705898;
+  --type-dragon:    #7038F8;
+  --type-dark:      #705848;
+  --type-steel:     #B8B8D0;
+  --type-fairy:     #EE99AC;
+
+  /* Glows & FX */
+  --glow-red:    0 0 20px rgba(227,53,13,0.5), 0 0 60px rgba(227,53,13,0.15);
+  --glow-yellow: 0 0 20px rgba(255,179,0,0.5), 0 0 60px rgba(255,179,0,0.15);
+  --glow-blue:   0 0 20px rgba(0,191,255,0.5), 0 0 60px rgba(0,191,255,0.15);
+  --glow-card:   0 4px 24px rgba(0,0,0,0.6), 0 1px 0 rgba(255,255,255,0.04) inset;
+
+  /* Spacing Scale */
+  --space-1: 4px;  --space-2: 8px;   --space-3: 12px;
+  --space-4: 16px; --space-5: 20px;  --space-6: 24px;
+  --space-8: 32px; --space-10: 40px; --space-12: 48px;
+  --space-16: 64px; --space-20: 80px;
+
+  /* Radii */
+  --radius-sm:  4px;
+  --radius-md:  6px;
+  --radius-lg:  10px;
+  --radius-xl:  16px;
+  --radius-pill: 999px;
+
+  /* Z-Index Scale */
+  --z-base:    1;
+  --z-raised:  10;
+  --z-float:   100;
+  --z-nav:     200;
+  --z-sidebar: 300;
+  --z-modal:   400;
+  --z-toast:   500;
+
+  /* Motion Easings */
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 100ms;
+  --duration-normal: 200ms;
+  --duration-slow: 350ms;
+  --duration-spring: 500ms;
+}
+
+/* ── Typography & Defaults Reset ─────────────────── */
 * {
   margin: 0;
   padding: 0;
@@ -56,16 +187,53 @@ html {
 }
 
 body {
-  font-family: var(--font-sans);
-  background: var(--color-bg-primary);
-  color: var(--color-text-primary);
+  font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  background-color: var(--bg-void);
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    ),
+    url("data:image/svg+xml,%3Csvg width='60' height='52' viewBox='0 0 60 52' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M15 0 L45 0 L60 26 L45 52 L15 52 L0 26 Z' fill='none' stroke='rgba(45,72,112,0.12)' stroke-width='1'/%3E%3C/svg%3E"),
+    radial-gradient(ellipse 120% 80% at 50% 0%, rgba(0,100,180,0.04) 0%, transparent 70%),
+    var(--bg-void);
+  background-attachment: fixed;
   width: 100%;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  margin: 0;
-  padding: 0;
   overflow-x: hidden;
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: var(--z-raised);
+  opacity: 0.5;
+}
+
+h1, h2 {
+  font-family: 'Unbounded', sans-serif;
+  letter-spacing: -0.02em;
+}
+
+h3, h4, h5, .label, .nav-item, .badge {
+  font-family: 'Rajdhani', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.stat, .number, .id, code, .mono {
+  font-family: 'Share Tech Mono', monospace;
 }
 
 #root {
@@ -75,83 +243,44 @@ body {
   flex-direction: column;
 }
 
+/* ── Custom Scrollbar ────────────────────────────── */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--bg-base);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: 3px;
+  background: var(--border-bright);
+  border-radius: 4px;
+  border: 2px solid var(--bg-base);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-border-light);
+  background: var(--border-active);
 }
 
-/* Custom slider styling */
-input[type="range"] {
-  -webkit-appearance: none;
-  appearance: none;
-  height: 6px;
-  border-radius: 3px;
-  background: var(--color-border);
-  outline: none;
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-bright) var(--bg-base);
 }
 
-input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--color-accent);
-  cursor: pointer;
-  border: 2px solid var(--color-bg-primary);
-  box-shadow: 0 0 8px rgba(230, 57, 70, 0.4);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+/* ── Selection & Focus ───────────────────────────── */
+::selection {
+  background: rgba(227, 53, 13, 0.3);
+  color: var(--text-primary);
 }
 
-input[type="range"]::-webkit-slider-thumb:hover {
-  transform: scale(1.15);
-  box-shadow: 0 0 12px rgba(230, 57, 70, 0.6);
-}
-
-input[type="range"]::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--color-accent);
-  cursor: pointer;
-  border: 2px solid var(--color-bg-primary);
-  box-shadow: 0 0 8px rgba(230, 57, 70, 0.4);
-}
-
-/* Smooth focus ring */
-*:focus-visible {
-  outline: 2px solid var(--color-accent);
+:focus-visible {
+  outline: 2px solid var(--poke-blue);
   outline-offset: 2px;
+  border-radius: var(--radius-sm);
 }
 
-/* Spin animation for loading */
-@keyframes spin {
-  to { transform: rotate(360deg); }
+/* Utility Animations */
+.animate-spin-pokeball {
+  animation: rotatePokeball 0.8s linear infinite;
 }
-
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 8px rgba(230, 57, 70, 0.3); }
-  50% { box-shadow: 0 0 20px rgba(230, 57, 70, 0.6); }
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-12px); }
-}
-
-.animate-spin { animation: spin 1s linear infinite; }
-.animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
-.animate-float { animation: float 3s ease-in-out infinite; }

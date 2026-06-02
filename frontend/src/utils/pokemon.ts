@@ -54,9 +54,8 @@ export function displayName(identifier: string): string {
 }
 
 export function spriteUrl(pokemonId: number, shiny = false): string {
-  const base =
-    "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon";
-  return shiny ? `${base}/shiny/${pokemonId}.png` : `${base}/${pokemonId}.png`;
+  if (!pokemonId) return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%233D5068' stroke-width='1.5'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cline x1='2' y1='12' x2='22' y2='12'/%3E%3C/svg%3E";
+  return `/pokemon-icons/${shiny ? "shiny-" : ""}${pokemonId}.png`;
 }
 
 export function totalEvs(slot: {

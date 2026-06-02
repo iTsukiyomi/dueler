@@ -1,8 +1,20 @@
-import { useEffect, useState, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { useAuthStore } from "../stores/authStore";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { BorderBeam } from "../components/ui/BorderBeam";
+import { motion } from "framer-motion";
+import { useAuthStore } from "../stores/authStore";
+import { 
+  Swords, 
+  ShieldAlert, 
+  Trophy, 
+  BookOpen, 
+  RefreshCw, 
+  Cpu, 
+  ChevronRight,
+  Database,
+  Users,
+  Server,
+  Activity
+} from "lucide-react";
 
 interface LandingStats {
   totalUsers: number;
@@ -10,43 +22,40 @@ interface LandingStats {
   totalBattles: number;
 }
 
-// Simple floating element component
-function FloatingSprite({ emoji, delay = 0, x = 0, y = 0 }: { emoji: string; delay?: number; x?: number; y?: number }) {
+function FeatureCard({ 
+  icon: Icon, 
+  title, 
+  description, 
+  delay = 0 
+}: { 
+  icon: React.ComponentType<{ className?: string }>; 
+  title: string; 
+  description: string; 
+  delay?: number;
+}) {
   return (
     <motion.div
-      className="absolute text-5xl md:text-6xl select-none pointer-events-none z-0 opacity-25 md:opacity-40"
-      style={{ left: `${x}%`, top: `${y}%` }}
-      animate={{
-        y: [0, -15, 0],
-        rotate: [-3, 3, -3],
-      }}
-      transition={{
-        duration: 5 + delay,
-        repeat: Infinity,
-        delay,
-        ease: "easeInOut",
-      }}
-    >
-      {emoji}
-    </motion.div>
-  );
-}
-
-// Centered features card
-function FeatureCard({ icon, title, description, delay = 0 }: { icon: string; title: string; description: string; delay?: number }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 30 }}
+      initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
-      transition={{ duration: 0.5, delay }}
-      whileHover={{ y: -6 }}
-      className="relative rounded-2xl bg-bg-card/45 border border-border/40 p-6 backdrop-blur-md transition-all duration-300 hover:shadow-[0_0_30px_rgba(207,162,64,0.1)] group overflow-hidden"
+      transition={{ duration: 0.4, delay }}
+      className="card p-6 flex flex-col justify-between group h-full"
     >
-      <BorderBeam duration={5} borderWidth={1.5} className="opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-      <div className="text-4xl mb-4 select-none">{icon}</div>
-      <h3 className="font-display text-lg font-bold text-text-primary mb-2 tracking-wide">{title}</h3>
-      <p className="text-sm text-text-secondary leading-relaxed">{description}</p>
+      <div>
+        <div className="w-10 h-10 rounded bg-bg-overlay border border-border-default flex items-center justify-center text-text-secondary group-hover:text-poke-red group-hover:border-border-bright transition-colors mb-4">
+          <Icon className="w-5 h-5" />
+        </div>
+        <h3 className="font-rajdhani text-lg font-bold text-text-primary mb-2 tracking-wide uppercase">
+          {title}
+        </h3>
+        <p className="text-xs text-text-secondary leading-relaxed font-sans">
+          {description}
+        </p>
+      </div>
+      <div className="mt-4 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-text-muted group-hover:text-poke-yellow transition-colors">
+        <span>Systems Online</span>
+        <ChevronRight className="w-3 h-3" />
+      </div>
     </motion.div>
   );
 }
@@ -76,157 +85,164 @@ export function LandingPage() {
     fetchStats();
   }, []);
 
+  const handleDiscordLogin = () => {
+    window.location.href = "/api/auth/login";
+  };
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-bg-primary text-text-primary">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-12 h-12 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-          <span className="font-display text-xs uppercase tracking-widest text-text-muted">Loading Arena</span>
+      <div className="flex items-center justify-center min-h-screen bg-bg-void text-text-primary">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-2 border-poke-blue border-t-transparent rounded-full animate-spin-pokeball" />
+          <span className="font-rajdhani text-xs uppercase tracking-widest text-text-muted">Initiating Arena Interface</span>
         </div>
       </div>
     );
   }
 
-  const handleDiscordLogin = () => {
-    window.location.href = "/api/auth/login";
-  };
-
   return (
-    <div className="min-h-screen w-full bg-bg-primary text-text-primary flex flex-col items-center relative overflow-x-hidden font-sans">
+    <div className="min-h-screen w-full bg-bg-void text-text-primary flex flex-col items-center relative overflow-x-hidden font-sans">
       {/* Background Matrix Grid */}
-      <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_0%,#1a1635_0%,transparent_60%)] opacity-40 pointer-events-none" />
-      <div className="fixed inset-0 bg-[radial-gradient(#282537_1px,transparent_1px)] [background-size:32px_32px] opacity-15 pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(227,53,13,0.04)_0%,transparent_60%)] pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_100%,rgba(0,191,255,0.03)_0%,transparent_60%)] pointer-events-none" />
 
-      {/* Floating Pokemon Sprites (Thematic Emojis) */}
-      <FloatingSprite emoji="🐭" delay={0} x={8} y={15} />
-      <FloatingSprite emoji="🦎" delay={1.2} x={82} y={20} />
-      <FloatingSprite emoji="🐢" delay={2.5} x={74} y={65} />
-      <FloatingSprite emoji="🐸" delay={0.6} x={15} y={70} />
-      <FloatingSprite emoji="👾" delay={1.8} x={88} y={45} />
-      <FloatingSprite emoji="🐲" delay={3.0} x={5} y={45} />
+      {/* Header Bar */}
+      <header className="w-full h-16 border-b border-border-subtle flex items-center justify-between px-8 z-30 bg-bg-void/50 backdrop-blur-md">
+        <div className="flex items-center gap-3">
+          <svg width="20" height="20" viewBox="0 0 32 32" className="text-poke-red">
+            <circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" strokeWidth="2" />
+            <path d="M 3.05 16 A 13 13 0 0 1 28.95 16 Z" fill="currentColor" opacity="0.3" />
+            <line x1="2" y1="16" x2="30" y2="16" stroke="currentColor" strokeWidth="2" />
+            <circle cx="16" cy="16" r="4.5" fill="var(--bg-void)" stroke="currentColor" strokeWidth="2" />
+          </svg>
+          <span className="font-display text-xs font-black text-text-primary tracking-widest uppercase">
+            FLAME DUELER
+          </span>
+        </div>
+        <div>
+          <button
+            onClick={() => (isAuthenticated ? navigate("/dashboard") : handleDiscordLogin())}
+            className="flex items-center gap-2 px-4 py-2 rounded border border-[#5865F2]/70 text-[#5865F2] hover:bg-[#5865F2]/10 hover:text-white transition-all text-xs font-bold uppercase tracking-wider font-rajdhani cursor-pointer"
+          >
+            <span>⊙</span>
+            <span>{isAuthenticated ? "Enter Terminal" : "Trainer Connect"}</span>
+          </button>
+        </div>
+      </header>
 
-      {/* Hero Section Container */}
-      <div className="max-w-6xl w-full mx-auto flex-1 flex flex-col items-center justify-center px-6 py-16 md:py-24 z-10">
-        <div className="grid lg:grid-cols-12 gap-12 items-center justify-center w-full">
-          {/* Hero left content */}
+      {/* Hero Banner Zone */}
+      <div className="max-w-6xl w-full mx-auto px-8 pt-16 pb-12 z-10 relative">
+        <div className="grid lg:grid-cols-12 gap-8 items-center w-full relative">
+          
+          {/* Left Text Zone */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6 }}
-            className="lg:col-span-7 flex flex-col items-center lg:items-start text-center lg:text-left space-y-6"
+            transition={{ duration: 0.5 }}
+            className="lg:col-span-8 flex flex-col space-y-6 text-left"
           >
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20 text-accent text-xs font-bold uppercase tracking-widest">
-              <span className="w-2.5 h-2.5 rounded-full bg-accent animate-pulse" />
-              🔴 Pokemon Duel Arena
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded bg-poke-red-glow border border-poke-red/25 text-poke-red text-[10px] font-bold uppercase tracking-widest font-rajdhani w-fit">
+              <span className="w-2 h-2 rounded-full bg-poke-red animate-pulse" />
+              Arena Interface Link Online
             </div>
 
-            <h1 className="font-display text-5xl sm:text-6xl md:text-7xl font-black leading-tight tracking-wider uppercase">
+            <h1 className="font-display text-4xl sm:text-5xl md:text-6xl font-black leading-tight tracking-wider uppercase">
               <span className="text-text-primary">FLAME</span>
               <br />
-              <span className="bg-gradient-to-r from-accent via-[#f1cd7c] to-amber-500 bg-clip-text text-transparent filter drop-shadow-[0_0_15px_rgba(207,162,64,0.25)] animate-pulse">
+              <span className="text-poke-red filter drop-shadow-[0_0_15px_var(--poke-red-glow)]">
                 DUELER
               </span>
             </h1>
 
-            <p className="text-base sm:text-lg text-text-secondary max-w-lg leading-relaxed font-medium">
+            <p className="text-sm md:text-base text-text-secondary max-w-xl leading-relaxed font-sans">
               Enter the ultimate Pokémon discord battle arena. Synthesize legendary teams, master competitive stats,
-              and fight your way up the global leaderboard.
+              and fight your way up the global leaderboard. All credentials synced via secure OAuth verification.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+            <div className="flex flex-col sm:flex-row gap-4 pt-2">
               <button
                 onClick={() => (isAuthenticated ? navigate("/dashboard") : handleDiscordLogin())}
-                className="px-8 py-4 rounded-xl bg-accent text-bg-primary font-display font-bold text-xs uppercase tracking-widest hover:bg-accent-glow hover:shadow-[0_0_30px_rgba(207,162,64,0.3)] transition-all duration-300 cursor-pointer"
+                className="btn-primary"
               >
-                {isAuthenticated ? "Enter Dashboard" : "Start Battle Journey"}
+                {isAuthenticated ? "Enter Arena Dashboard" : "Initiate Connect Hook"}
               </button>
               <button
                 onClick={() => (isAuthenticated ? navigate("/dashboard/battles") : handleDiscordLogin())}
-                className="px-8 py-4 rounded-xl bg-bg-card/50 border border-border/60 hover:border-accent/40 text-text-primary font-display font-bold text-xs uppercase tracking-widest transition-all duration-300 cursor-pointer"
+                className="btn-secondary"
               >
                 View Live Battles
               </button>
             </div>
           </motion.div>
 
-          {/* Hero right: Glassmorphic panel */}
+          {/* Right Silhouette Zone */}
           <motion.div
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, delay: 0.15 }}
-            className="lg:col-span-5 w-full flex justify-center"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6 }}
+            className="lg:col-span-4 hidden lg:flex justify-end pr-4 pointer-events-none select-none relative"
           >
-            <div className="relative w-full max-w-md rounded-3xl bg-bg-card/30 border border-border/70 p-8 backdrop-blur-xl group overflow-hidden">
-              {/* Magic Border Beam */}
-              <BorderBeam duration={7} borderWidth={2} />
-
-              <div className="space-y-6">
-                <div>
-                  <div className="font-display text-[10px] uppercase tracking-widest text-text-muted mb-1 font-bold">Trainer Gateway</div>
-                  <h2 className="font-display text-2xl font-bold text-text-primary">Join the Arena</h2>
-                </div>
-
-                <p className="text-sm text-text-secondary leading-relaxed">
-                  Authenticate using Discord to sync your teams in real-time, track ratings, and challenge opponents inside the bots or web portal.
-                </p>
-
-                <div className="space-y-3.5">
-                  <div className="flex items-center gap-3.5 text-xs text-text-secondary font-medium">
-                    <span className="w-6 h-6 rounded-lg bg-accent/15 text-accent flex items-center justify-center text-[11px] font-bold">1</span>
-                    <span>Direct sync with discord bot command sets</span>
-                  </div>
-                  <div className="flex items-center gap-3.5 text-xs text-text-secondary font-medium">
-                    <span className="w-6 h-6 rounded-lg bg-accent/15 text-accent flex items-center justify-center text-[11px] font-bold">2</span>
-                    <span>Advanced stat tuning & EV/IV sliders</span>
-                  </div>
-                  <div className="flex items-center gap-3.5 text-xs text-text-secondary font-medium">
-                    <span className="w-6 h-6 rounded-lg bg-accent/15 text-accent flex items-center justify-center text-[11px] font-bold">3</span>
-                    <span>Climb ladder rankings and claim rewards</span>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => (isAuthenticated ? navigate("/dashboard") : handleDiscordLogin())}
-                  className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-xl bg-discord hover:bg-discord-hover text-white font-display font-bold text-xs uppercase tracking-widest transition-all duration-300 hover:shadow-[0_0_20px_rgba(88,101,242,0.4)] cursor-pointer"
-                >
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
-                  </svg>
-                  {isAuthenticated ? "Enter Arena" : "Connect Discord"}
-                </button>
-              </div>
-            </div>
+            {/* Tech Silhouette Grid backdrop */}
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-72 h-72 rounded-full bg-[radial-gradient(circle_at_center,rgba(0,191,255,0.06)_0%,transparent_60%)]" />
+            <svg
+              viewBox="0 0 100 100"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="0.8"
+              className="w-64 h-64 text-poke-blue/15 drop-shadow-[0_0_8px_rgba(0,191,255,0.15)] animate-pulse"
+            >
+              {/* High-tech abstract legendary geometric beast outline (Rayquaza-inspired) */}
+              <path d="M50 5 L35 25 L45 35 L15 50 L45 55 L35 75 L50 95 L65 75 L55 55 L85 50 L55 35 L65 25 Z" strokeDasharray="3 2" />
+              <path d="M35 25 C45 30 55 30 65 25" />
+              <path d="M45 55 C48 60 52 60 55 55" />
+              <circle cx="50" cy="45" r="8" strokeWidth="0.5" strokeDasharray="2 1" />
+              <line x1="50" y1="5" x2="50" y2="95" strokeWidth="0.3" strokeDasharray="1 3" />
+              <circle cx="35" cy="25" r="1.5" fill="currentColor" />
+              <circle cx="65" cy="25" r="1.5" fill="currentColor" />
+            </svg>
           </motion.div>
+        </div>
+
+        {/* Poké Ball split line motif */}
+        <div className="relative w-full mt-12 flex items-center justify-center">
+          <div className="absolute inset-x-0 h-px bg-border-subtle" />
+          <div className="relative w-6 h-6 rounded-full bg-bg-void border border-border-default flex items-center justify-center text-text-muted">
+            <svg width="12" height="12" viewBox="0 0 32 32" fill="currentColor">
+              <circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" strokeWidth="2" />
+              <path d="M 3.05 16 A 13 13 0 0 1 28.95 16 Z" fill="currentColor" opacity="0.3" />
+              <line x1="2" y1="16" x2="30" y2="16" stroke="currentColor" strokeWidth="2" />
+              <circle cx="16" cy="16" r="5" fill="var(--bg-void)" stroke="currentColor" strokeWidth="2" />
+            </svg>
+          </div>
         </div>
       </div>
 
-      {/* Stats Counter Section (Centered & Skeletons added) */}
-      <section className="w-full py-16 bg-bg-secondary/40 border-y border-border/30 flex justify-center z-10">
-        <div className="max-w-6xl w-full px-6 grid grid-cols-3 gap-6 text-center">
+      {/* Stats Widget Row */}
+      <section className="w-full py-8 bg-bg-base border-y border-border-subtle flex justify-center z-10">
+        <div className="max-w-6xl w-full px-8 grid grid-cols-3 gap-4 md:gap-8">
           {statsLoading ? (
             [1, 2, 3].map((i) => (
-              <div key={i} className="flex flex-col items-center justify-center space-y-2 animate-pulse">
-                <div className="h-4 w-12 bg-bg-card rounded-md" />
-                <div className="h-8 w-24 bg-bg-card rounded-lg" />
-                <div className="h-3 w-16 bg-bg-card rounded-md" />
+              <div key={i} className="flex flex-col items-center justify-center py-4 bg-bg-raised border border-border-subtle rounded-lg animate-pulse space-y-2">
+                <div className="h-3 w-10 bg-bg-overlay rounded" />
+                <div className="h-6 w-20 bg-bg-overlay rounded" />
               </div>
             ))
           ) : stats ? (
             <>
-              <div className="space-y-1">
-                <div className="text-3xl select-none">🧢</div>
-                <div className="font-mono text-3xl font-extrabold text-accent">{stats.totalUsers}</div>
-                <div className="text-[10px] uppercase font-bold text-text-muted tracking-widest">Trainers</div>
+              <div className="flex flex-col items-center justify-center py-4 bg-bg-raised border border-border-subtle rounded-lg group hover:border-border-bright transition-colors duration-200">
+                <Users className="w-4 h-4 text-text-muted group-hover:text-poke-blue transition-colors mb-1.5" />
+                <div className="mono text-2xl font-bold text-text-primary">{stats.totalUsers}</div>
+                <div className="mono text-[8px] uppercase font-bold text-text-muted tracking-widest mt-1">Trainers Active</div>
               </div>
-              <div className="space-y-1">
-                <div className="text-3xl select-none">🏰</div>
-                <div className="font-mono text-3xl font-extrabold text-accent">{stats.totalServers}</div>
-                <div className="text-[10px] uppercase font-bold text-text-muted tracking-widest">Guilds</div>
+              <div className="flex flex-col items-center justify-center py-4 bg-bg-raised border border-border-subtle rounded-lg group hover:border-border-bright transition-colors duration-200">
+                <Server className="w-4 h-4 text-text-muted group-hover:text-poke-yellow transition-colors mb-1.5" />
+                <div className="mono text-2xl font-bold text-text-primary">{stats.totalServers}</div>
+                <div className="mono text-[8px] uppercase font-bold text-text-muted tracking-widest mt-1">Guilds Linked</div>
               </div>
-              <div className="space-y-1">
-                <div className="text-3xl select-none">⚔️</div>
-                <div className="font-mono text-3xl font-extrabold text-accent">{stats.totalBattles}</div>
-                <div className="text-[10px] uppercase font-bold text-text-muted tracking-widest">Battles</div>
+              <div className="flex flex-col items-center justify-center py-4 bg-bg-raised border border-border-subtle rounded-lg group hover:border-border-bright transition-colors duration-200">
+                <Activity className="w-4 h-4 text-text-muted group-hover:text-poke-red transition-colors mb-1.5" />
+                <div className="mono text-2xl font-bold text-text-primary">{stats.totalBattles}</div>
+                <div className="mono text-[8px] uppercase font-bold text-text-muted tracking-widest mt-1">Simulated Battles</div>
               </div>
             </>
           ) : null}
@@ -234,48 +250,52 @@ export function LandingPage() {
       </section>
 
       {/* Features Grid */}
-      <section className="w-full py-20 flex justify-center z-10">
-        <div className="max-w-6xl w-full px-6 space-y-12">
-          <div className="text-center space-y-3">
-            <div className="text-[10px] uppercase font-bold text-accent tracking-widest">Core Infrastructure</div>
-            <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-wide text-text-primary">Master Competitive Duels</h2>
+      <section className="w-full py-16 flex justify-center z-10">
+        <div className="max-w-6xl w-full px-8 space-y-10">
+          <div className="text-left space-y-2 border-l-2 border-poke-red pl-4">
+            <div className="mono text-[9px] uppercase font-bold text-poke-yellow tracking-widest">
+              Standard Operating Systems
+            </div>
+            <h2 className="font-display text-2xl md:text-3xl font-black tracking-wide text-text-primary uppercase">
+              Master Competitive Duels
+            </h2>
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <FeatureCard
-              icon="⚔️"
+              icon={Swords}
               title="Strategic Battles"
-              description="Engage in turn-based, fully verified Pokémon showdown rules featuring custom move pools, natures, and items."
+              description="Engage in turn-based, fully verified Pokémon Showdown rules featuring custom movesets, EV/IV distribution, and held items."
               delay={0}
             />
             <FeatureCard
-              icon="🛡️"
+              icon={ShieldAlert}
               title="Team Builder"
-              description="Tweak stats, optimize EV/IV spreads, choose held items, and draft custom synergy sets for your party."
+              description="Fine-tune stats, distribute EV spreads, configure IV thresholds, and hold specific utility items inside a single page."
               delay={0.1}
             />
             <FeatureCard
-              icon="🏆"
-              title="Ranked Ladder"
-              description="Gain ELO for every victory. Push up the trainer ranks and see your name featured on the global hall of fame."
+              icon={Trophy}
+              title="Ranked Hall of Fame"
+              description="Gain rating ELO points for every successful duel. Climb up the ranks and see your name on the hall of fame list."
               delay={0.2}
             />
             <FeatureCard
-              icon="📖"
+              icon={BookOpen}
               title="Pokédex Tracker"
-              description="Scan individual Pokémon details, base stat distributions, learnsets, and build options in one single interface."
+              description="Inspect individual Pokémon details, base stats distributions, signature abilities, and learnsets in real-time."
               delay={0.3}
             />
             <FeatureCard
-              icon="🔄"
+              icon={RefreshCw}
               title="Real-Time Sync"
-              description="All modifications made on the web portal are synced instantly to the Discord bot instances."
+              description="All modifications made on the web portal sync instantly to the Discord bot processes without command reboots."
               delay={0.4}
             />
             <FeatureCard
-              icon="🤖"
+              icon={Cpu}
               title="AI Challenges"
-              description="Test out new custom team sets against alpha neural trainers to simulate competitive PvP play styles."
+              description="Validate your synergy strategies by challenging neural battle trainers to mock PvP showdown encounters."
               delay={0.5}
             />
           </div>
@@ -283,13 +303,21 @@ export function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="w-full py-8 border-t border-border/40 flex justify-center z-10">
-        <div className="max-w-6xl w-full px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-text-muted">
+      <footer className="w-full py-8 border-t border-border-subtle flex justify-center z-10 bg-bg-base/30">
+        <div className="max-w-6xl w-full px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-text-muted">
           <div className="flex items-center gap-2">
-            <span className="text-lg select-none">🔴</span>
-            <span className="font-display font-bold text-text-secondary tracking-widest uppercase">Flame Dueler</span>
+            <svg width="14" height="14" viewBox="0 0 32 32" className="text-text-muted">
+              <circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" strokeWidth="2" />
+              <line x1="2" y1="16" x2="30" y2="16" stroke="currentColor" strokeWidth="2" />
+              <circle cx="16" cy="16" r="4.5" fill="none" stroke="currentColor" strokeWidth="2" />
+            </svg>
+            <span className="font-display font-bold text-text-secondary tracking-widest uppercase">
+              Flame Dueler OS
+            </span>
           </div>
-          <div>All battle details synced via secure Mongo DB clusters.</div>
+          <div className="mono text-[9px] uppercase tracking-wider text-center sm:text-right">
+            Silph Co. Registry | MongoDB Sync Active
+          </div>
         </div>
       </footer>
     </div>
