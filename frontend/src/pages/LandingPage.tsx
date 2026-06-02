@@ -3,18 +3,17 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuthStore } from "../stores/authStore";
 import { 
-  Swords, 
-  ShieldAlert, 
-  Trophy, 
-  BookOpen, 
-  RefreshCw, 
-  Cpu, 
-  ChevronRight,
-  Users,
-  Server,
-  Activity,
-  ArrowRight
+  ArrowRight,
+  ShieldAlert,
+  ChevronRight
 } from "lucide-react";
+import { PixelTrail } from "../components/ui/pixel-trail";
+import { GooeyFilter } from "../components/ui/gooey-filter";
+import { CyberneticBentoGrid } from "../components/ui/cybernetic-bento-grid";
+import { ContainerScroll } from "../components/ui/container-scroll-animation";
+import { CardStack, CardStackItem } from "../components/ui/card-stack";
+import { useScreenSize } from "../hooks/use-screen-size";
+import { NeonButton } from "../components/ui/neon-button";
 
 interface LandingStats {
   totalUsers: number;
@@ -22,49 +21,39 @@ interface LandingStats {
   totalBattles: number;
 }
 
-function FeatureCard({ 
-  icon: Icon, 
-  title, 
-  description, 
-  delay = 0 
-}: { 
-  icon: React.ComponentType<{ className?: string }>; 
-  title: string; 
-  description: string; 
-  delay?: number;
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.4, delay }}
-      className="card p-6 flex flex-col justify-between group h-full"
-    >
-      <div>
-        <div className="w-10 h-10 rounded bg-[var(--bg-overlay)] border border-[var(--border-default)] flex items-center justify-center text-text-secondary group-hover:text-[var(--poke-red)] group-hover:border-[var(--border-bright)] transition-colors mb-4">
-          <Icon className="w-5 h-5" />
-        </div>
-        <h3 className="font-rajdhani text-base font-bold text-text-primary mb-2 tracking-wide uppercase">
-          {title}
-        </h3>
-        <p className="text-xs text-text-secondary leading-relaxed font-sans">
-          {description}
-        </p>
-      </div>
-      <div className="mt-6 flex items-center gap-1.5 text-[9px] font-mono font-bold uppercase tracking-widest text-text-muted group-hover:text-[var(--poke-yellow)] transition-colors">
-        <span>Node Link Online</span>
-        <ChevronRight className="w-3 h-3" />
-      </div>
-    </motion.div>
-  );
-}
+const cardItems: CardStackItem[] = [
+  {
+    id: 1,
+    title: "Charizard Blitz-Core",
+    description: "EVs: Atk 252 / Spe 252 / HP 4. Adamant. Life Orb. Moves: Flare Blitz, Dragon Claw, Roost, Earthquake.",
+    imageSrc: "https://images.unsplash.com/photo-1613771404724-11d204e4de2b?w=600&auto=format&fit=crop&q=80",
+  },
+  {
+    id: 2,
+    title: "Blastoise Torrent-Shell",
+    description: "EVs: HP 252 / Def 252 / SpD 4. Bold. Leftovers. Moves: Hydro Pump, Rapid Spin, Scald, Ice Beam.",
+    imageSrc: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=600&auto=format&fit=crop&q=80",
+  },
+  {
+    id: 3,
+    title: "Pikachu Spark-Drive",
+    description: "EVs: SpA 252 / Spe 252 / HP 4. Timid. Light Ball. Moves: Thunderbolt, Volt Switch, Grass Knot, Surf.",
+    imageSrc: "https://images.unsplash.com/photo-1605973029521-815475d98f3f?w=600&auto=format&fit=crop&q=80",
+  },
+  {
+    id: 4,
+    title: "Mewtwo Psychic-Nova",
+    description: "EVs: SpA 252 / Spe 252 / SpD 4. Timid. Choice Specs. Moves: Psystrike, Aura Sphere, Shadow Ball, Ice Beam.",
+    imageSrc: "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=600&auto=format&fit=crop&q=80",
+  }
+];
 
 export function LandingPage() {
   const { isAuthenticated, isLoading } = useAuthStore();
   const navigate = useNavigate();
   const [stats, setStats] = useState<LandingStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
+  const screenSize = useScreenSize();
 
   // Fetch global stats
   useEffect(() => {
@@ -102,8 +91,20 @@ export function LandingPage() {
 
   return (
     <div className="min-h-screen w-full bg-[var(--bg-void)] text-text-primary flex flex-col items-center relative overflow-x-hidden font-sans">
-      {/* Background Subtle Gradient */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(0,176,255,0.03)_0%,transparent_60%)] pointer-events-none" />
+      
+      {/* 1. Interactive Mouse-Move Pixel Trail Background with SVG Gooey filter */}
+      <GooeyFilter id="gooey-filter-pixel-trail" strength={6} />
+      <div
+        className="absolute inset-0 z-0 pointer-events-none opacity-20"
+        style={{ filter: "url(#gooey-filter-pixel-trail)" }}
+      >
+        <PixelTrail
+          pixelSize={screenSize.lessThan("md") ? 24 : 32}
+          fadeDuration={750}
+          delay={100}
+          pixelClassName="bg-[var(--poke-blue)]"
+        />
+      </div>
 
       {/* Header Bar */}
       <header className="w-full h-16 border-b border-[var(--border-default)] flex items-center justify-between px-8 z-30 bg-[var(--bg-void)]/80 backdrop-blur-md">
@@ -130,8 +131,8 @@ export function LandingPage() {
         </div>
       </header>
 
-      {/* Hero Banner Zone */}
-      <div className="max-w-6xl w-full mx-auto px-8 py-20 z-10 relative">
+      {/* Hero Content Section */}
+      <div className="max-w-6xl w-full mx-auto px-8 pt-20 pb-10 z-10 relative">
         <div className="grid lg:grid-cols-12 gap-12 items-center w-full relative">
           
           {/* Left Text Zone */}
@@ -160,158 +161,102 @@ export function LandingPage() {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 pt-2">
-              <button
+              <NeonButton
                 onClick={() => (isAuthenticated ? navigate("/dashboard") : handleDiscordLogin())}
-                className="btn-primary"
+                variant="solid"
+                size="lg"
+                className="w-fit"
               >
                 <span>{isAuthenticated ? "Enter Arena Dashboard" : "Initiate Connect Hook"}</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => (isAuthenticated ? navigate("/dashboard/battles") : handleDiscordLogin())}
-                className="btn-secondary"
-              >
-                View Live Battles
-              </button>
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </NeonButton>
             </div>
           </motion.div>
 
-          {/* Right Mock Simulator Terminal */}
+          {/* Right Card Stack Showcase */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="lg:col-span-5 flex justify-center lg:justify-end"
+            className="lg:col-span-5 flex justify-center lg:justify-end overflow-hidden py-10"
           >
-            <div className="relative w-full max-w-sm rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-raised)] p-5 shadow-2xl font-mono text-[11px] overflow-hidden">
-              {/* Terminal Titlebar */}
-              <div className="flex items-center justify-between pb-3 border-b border-[var(--border-subtle)] mb-3 text-[9px] text-text-muted">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-[var(--poke-red)]" />
-                  <span className="w-2 h-2 rounded-full bg-[var(--poke-yellow)]" />
-                  <span className="w-2 h-2 rounded-full bg-[var(--poke-blue)]" />
-                </div>
-                <span>silph_battle_sim.sh</span>
-              </div>
-              {/* Terminal Content */}
-              <div className="space-y-2 text-left">
-                <div className="text-text-muted"># Initializing turn resolution...</div>
-                <div className="text-text-primary">
-                  <span className="text-[var(--poke-yellow)]">[Turn 4]</span> CHARIZARD vs BLASTOISE
-                </div>
-                <div className="text-text-secondary">
-                  ★ Active Weather: <span className="text-[var(--poke-blue)]">Rain Dance</span>
-                </div>
-                <div className="text-emerald-400">
-                  ➜ Charizard used <span className="underline">Solar Beam</span>!
-                </div>
-                <div className="text-text-muted">
-                  Calculated Base Damage: 120 (Super Effective)
-                </div>
-                <div className="text-[var(--poke-red)]">
-                  ⚡ Critical Hit! Blanco lost 84% HP.
-                </div>
-                <div className="text-text-primary">
-                  ➜ Blanco used <span className="underline">Hydro Pump</span>!
-                </div>
-                <div className="text-text-muted">
-                  Weather bonus applied (1.5x damage).
-                </div>
-                <div className="text-[var(--poke-red)]">
-                  Charizard fainted!
-                </div>
-                <div className="text-text-secondary pt-2 border-t border-[var(--border-subtle)] flex items-center gap-2">
-                  <span className="animate-pulse">_</span>
-                  <span className="text-[9px] text-text-muted">Awaiting Trainer Action...</span>
-                </div>
-              </div>
-            </div>
+            <CardStack
+              items={cardItems}
+              cardWidth={280}
+              cardHeight={380}
+              autoAdvance
+              intervalMs={2500}
+              pauseOnHover
+              showDots
+            />
           </motion.div>
         </div>
       </div>
 
-      {/* Stats Widget Row */}
-      <section className="w-full py-8 bg-[var(--bg-base)] border-y border-[var(--border-default)] flex justify-center z-10">
-        <div className="max-w-6xl w-full px-8 grid grid-cols-3 gap-6 md:gap-8">
-          {statsLoading ? (
-            [1, 2, 3].map((i) => (
-              <div key={i} className="flex flex-col items-center justify-center py-4 bg-[var(--bg-raised)] border border-[var(--border-default)] rounded-[var(--radius-md)] animate-pulse space-y-2">
-                <div className="h-3 w-10 bg-[var(--bg-overlay)] rounded" />
-                <div className="h-6 w-20 bg-[var(--bg-overlay)] rounded" />
+      {/* 2. Container Scroll 3D Tilt View around Terminal battle simulator */}
+      <section className="w-full relative z-10 py-10">
+        <ContainerScroll
+          titleComponent={
+            <div className="mb-4">
+              <h2 className="font-display text-2xl sm:text-3xl font-extrabold uppercase text-text-primary tracking-wider mb-2">
+                Simulate Showdown Battles
+              </h2>
+              <p className="text-xs text-text-secondary max-w-md mx-auto leading-relaxed">
+                Experience full turn-based battles directly embedded within our interactive console control system.
+              </p>
+            </div>
+          }
+        >
+          <div className="w-full h-full rounded-2xl border border-[var(--border-default)] bg-[var(--bg-raised)] p-6 font-mono text-[11px] overflow-hidden text-left flex flex-col justify-between">
+            {/* Terminal Titlebar */}
+            <div className="flex items-center justify-between pb-3 border-b border-[var(--border-subtle)] mb-3 text-[9px] text-text-muted">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[var(--poke-red)]" />
+                <span className="w-2 h-2 rounded-full bg-[var(--poke-yellow)]" />
+                <span className="w-2 h-2 rounded-full bg-[var(--poke-blue)]" />
               </div>
-            ))
-          ) : stats ? (
-            <>
-              <div className="flex flex-col items-center justify-center py-4 bg-[var(--bg-raised)] border border-[var(--border-default)] rounded-[var(--radius-md)] group hover:border-[var(--border-bright)] transition-colors duration-200">
-                <Users className="w-4 h-4 text-text-muted group-hover:text-[var(--poke-blue)] transition-colors mb-1.5" />
-                <div className="mono text-xl font-bold text-text-primary">{stats.totalUsers}</div>
-                <div className="mono text-[8px] uppercase font-bold text-text-muted tracking-widest mt-1">Trainers Active</div>
+              <span>silph_battle_sim.sh</span>
+            </div>
+            {/* Terminal Content */}
+            <div className="space-y-2.5 flex-1 overflow-y-auto">
+              <div className="text-text-muted"># Initializing turn resolution...</div>
+              <div className="text-text-primary">
+                <span className="text-[var(--poke-yellow)]">[Turn 4]</span> CHARIZARD vs BLASTOISE
               </div>
-              <div className="flex flex-col items-center justify-center py-4 bg-[var(--bg-raised)] border border-[var(--border-default)] rounded-[var(--radius-md)] group hover:border-[var(--border-bright)] transition-colors duration-200">
-                <Server className="w-4 h-4 text-text-muted group-hover:text-[var(--poke-yellow)] transition-colors mb-1.5" />
-                <div className="mono text-xl font-bold text-text-primary">{stats.totalServers}</div>
-                <div className="mono text-[8px] uppercase font-bold text-text-muted tracking-widest mt-1">Guilds Linked</div>
+              <div className="text-text-secondary">
+                ★ Active Weather: <span className="text-[var(--poke-blue)]">Rain Dance</span>
               </div>
-              <div className="flex flex-col items-center justify-center py-4 bg-[var(--bg-raised)] border border-[var(--border-default)] rounded-[var(--radius-md)] group hover:border-[var(--border-bright)] transition-colors duration-200">
-                <Activity className="w-4 h-4 text-text-muted group-hover:text-[var(--poke-red)] transition-colors mb-1.5" />
-                <div className="mono text-xl font-bold text-text-primary">{stats.totalBattles}</div>
-                <div className="mono text-[8px] uppercase font-bold text-text-muted tracking-widest mt-1">Simulated Battles</div>
+              <div className="text-emerald-400">
+                ➜ Charizard used <span className="underline">Solar Beam</span>!
               </div>
-            </>
-          ) : null}
-        </div>
+              <div className="text-text-muted">
+                Calculated Base Damage: 120 (Super Effective)
+              </div>
+              <div className="text-[var(--poke-red)]">
+                ⚡ Critical Hit! Blanco lost 84% HP.
+              </div>
+              <div className="text-text-primary">
+                ➜ Blanco used <span className="underline">Hydro Pump</span>!
+              </div>
+              <div className="text-text-muted">
+                Weather bonus applied (1.5x damage).
+              </div>
+              <div className="text-[var(--poke-red)]">
+                Charizard fainted!
+              </div>
+            </div>
+            <div className="text-text-secondary pt-3 border-t border-[var(--border-subtle)] flex items-center gap-2 mt-4 shrink-0">
+              <span className="animate-pulse">_</span>
+              <span className="text-[9px] text-text-muted">Awaiting Trainer Action...</span>
+            </div>
+          </div>
+        </ContainerScroll>
       </section>
 
-      {/* Features Grid */}
-      <section className="w-full py-20 flex justify-center z-10">
-        <div className="max-w-6xl w-full px-8 space-y-10">
-          <div className="text-left space-y-2 border-l-2 border-[var(--poke-red)] pl-4">
-            <div className="mono text-[9px] uppercase font-bold text-[var(--poke-yellow)] tracking-widest">
-              Standard Operating Systems
-            </div>
-            <h2 className="font-display text-2xl md:text-3xl font-black tracking-wide text-text-primary uppercase">
-              Master Competitive Duels
-            </h2>
-          </div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <FeatureCard
-              icon={Swords}
-              title="Strategic Battles"
-              description="Engage in turn-based, fully verified Pokémon Showdown rules featuring custom movesets, EV/IV distribution, and held items."
-              delay={0}
-            />
-            <FeatureCard
-              icon={ShieldAlert}
-              title="Team Builder"
-              description="Fine-tune stats, distribute EV spreads, configure IV thresholds, and hold specific utility items inside a single page."
-              delay={0.05}
-            />
-            <FeatureCard
-              icon={Trophy}
-              title="Ranked Hall of Fame"
-              description="Gain rating ELO points for every successful duel. Climb up the ranks and see your name on the hall of fame list."
-              delay={0.1}
-            />
-            <FeatureCard
-              icon={BookOpen}
-              title="Pokédex Tracker"
-              description="Inspect individual Pokémon details, base stats distributions, signature abilities, and learnsets in real-time."
-              delay={0.15}
-            />
-            <FeatureCard
-              icon={RefreshCw}
-              title="Real-Time Sync"
-              description="All modifications made on the web portal sync instantly to the Discord bot processes without command reboots."
-              delay={0.2}
-            />
-            <FeatureCard
-              icon={Cpu}
-              title="AI Challenges"
-              description="Validate your synergy strategies by challenging neural battle trainers to mock PvP showdown encounters."
-              delay={0.25}
-            />
-          </div>
+      {/* 3. Cybernetic Bento Grid Core Features */}
+      <section className="w-full py-16 flex justify-center z-10 border-t border-[var(--border-default)]">
+        <div className="max-w-6xl w-full px-8">
+          <CyberneticBentoGrid />
         </div>
       </section>
 

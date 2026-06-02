@@ -95,7 +95,7 @@ function ProtectedLayout() {
       <Sidebar />
 
       {/* Main Workspace with offset for fixed Navbar and Sidebar */}
-      <div className="flex-1 flex flex-col min-w-0 w-full ml-[240px] md:ml-[240px] max-md:ml-[48px] mt-[64px]">
+      <div className="flex-1 flex flex-col min-w-0 w-full ml-[48px] mt-[64px]">
         <Navbar />
         <main className="flex-grow p-8 md:p-10 max-w-[1280px] w-full mx-auto relative">
           <Outlet />

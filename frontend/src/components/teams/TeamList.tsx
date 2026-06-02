@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { useTeamsList, useCreateTeam } from "../../hooks/useTeams";
 import { TeamCard } from "./TeamCard";
 import { defaultPokemonSlot } from "../../types";
+import { Backpack } from "lucide-react";
+import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "../ui/empty";
 
 export function TeamList() {
   const { data: teams, isLoading } = useTeamsList();
@@ -107,13 +109,15 @@ export function TeamList() {
           ))}
         </div>
       ) : (
-        <div className="text-center py-20 rounded-2xl bg-bg-card/10 border border-dashed border-border/40 text-text-muted">
-          <div className="text-5xl mb-4">🎒</div>
-          <div className="font-display text-lg font-bold text-text-secondary tracking-wide">No Teams Found</div>
-          <div className="text-xs mt-1 text-text-muted">
-            Create your first tactical party to sync with the bot database.
-          </div>
-        </div>
+        <Empty className="py-16 bg-[var(--bg-raised)]/20 border border-dashed border-[var(--border-default)]">
+          <Backpack className="w-10 h-10 text-text-muted mb-2" />
+          <EmptyHeader>
+            <EmptyTitle className="font-display text-lg font-bold text-text-secondary tracking-wide uppercase">No Teams Found</EmptyTitle>
+            <EmptyDescription className="text-xs mt-1 text-text-muted font-sans max-w-xs leading-relaxed">
+              Create your first tactical party to sync with the bot database.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       )}
     </motion.div>
   );

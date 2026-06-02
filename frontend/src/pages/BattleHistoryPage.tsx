@@ -10,6 +10,7 @@ import {
   RotateCcw, 
   Calendar
 } from "lucide-react";
+import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "../components/ui/empty";
 
 function BattleCard({ battle }: { battle: BattleEntry }) {
   const [expanded, setExpanded] = useState(false);
@@ -243,15 +244,17 @@ export function BattleHistoryPage() {
         </AnimatePresence>
 
         {filteredBattles.length === 0 && (
-          <div className="card p-12 text-center flex flex-col items-center justify-center border-dashed">
-            <Swords className="w-10 h-10 text-text-muted mb-3" />
-            <h3 className="font-display text-sm font-bold text-text-secondary uppercase tracking-wide">
-              No History Matches
-            </h3>
-            <div className="mono text-[9px] mt-1 text-text-muted tracking-widest uppercase">
-              Challenge other trainers inside Discord servers to populate log data
-            </div>
-          </div>
+          <Empty className="py-12 bg-[var(--bg-raised)]/20 border border-dashed border-[var(--border-default)]">
+            <Swords className="w-10 h-10 text-text-muted mb-2" />
+            <EmptyHeader>
+              <EmptyTitle className="font-display text-sm font-bold text-text-secondary uppercase tracking-wide">
+                No History Matches
+              </EmptyTitle>
+              <EmptyDescription className="text-xs mt-1 text-text-muted font-sans max-w-xs leading-relaxed">
+                Challenge other trainers inside Discord servers to populate log data
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         )}
       </div>
 
