@@ -494,6 +494,8 @@ def battle_to_pe_state(
     battle: "Battle",
     npc_trainer: "Trainer",
     human_trainer: "Trainer",
+    *,
+    npc_force_switch: bool = False,
 ) -> tuple:
     """
     Convert the full dueler Battle into a (PokeEngineState, bench_map) pair.
@@ -509,7 +511,7 @@ def battle_to_pe_state(
 
     npc_side, bench_map = trainer_to_pe_side(
         npc_trainer,
-        force_switch=(npc_trainer.current_pokemon is None),
+        force_switch=npc_force_switch or (npc_trainer.current_pokemon is None),
     )
     human_side, _ = trainer_to_pe_side(
         human_trainer,

@@ -73,7 +73,7 @@ def _debug_mcts_policy(result) -> None:
         result.total_visits,
         "\n".join(
             f"  {opt.move_choice:20s}  visits={opt.visits:6d}  "
-            f"avg_score={getattr(opt, 'average_reward', 0):.4f}"
+            f"avg_score={getattr(opt, 'average_reward', opt.total_score / opt.visits if opt.visits > 0 else 0.0):.4f}"
             for opt in rows
         ),
     )
@@ -158,9 +158,11 @@ def _parse_move_choice(
     for switches.  Returns (None, None) if the slot is invalid.
     """
     from ..moves import Move as DMove
+    from .state_adapter import _normalize
 
     log.debug("[AI] Parsing move_choice='%s'  bench_map=%s", choice, bench_map)
 
+    # Format 1: "move:N" (e.g. "move:0")
     if choice.startswith("move:"):
         try:
             slot = int(choice[5:])
@@ -181,28 +183,55 @@ def _parse_move_choice(
             log.warning("[AI] move parse error: %s  → heuristic fallback", exc)
         return None, None
 
-    if choice.startswith("switch:"):
+    # Format 2: "switch:N" or "switch N" or "switch <species_name>"
+    if choice.startswith("switch:") or choice.startswith("switch "):
+        sep = ":" if ":" in choice else " "
         try:
-            pe_slot = int(choice[7:])
-            party_idx = bench_map.get(pe_slot)
+            val = choice.split(sep, 1)[1].strip()
+            # If val is a number (e.g. "0", "1", "2")
+            if val.isdigit():
+                pe_slot = int(val)
+                party_idx = bench_map.get(pe_slot)
+            else:
+                # If val is a species name (e.g. "porygon2", "kyurem")
+                norm_val = _normalize(val)
+                party_idx = None
+                for slot_i, pi in bench_map.items():
+                    bench_poke = trainer.party[pi]
+                    if _normalize(bench_poke._name) == norm_val:
+                        party_idx = pi
+                        break
+            
             if party_idx is not None:
                 poke = trainer.party[party_idx]
                 if poke.hp > 0 and poke is not trainer.current_pokemon:
                     log.info(
-                        "[AI] → SWITCH  pe_slot=%d  party_idx=%d  target=%s  HP=%d/%d",
-                        pe_slot, party_idx, poke._name, poke.hp, poke.starting_hp,
+                        "[AI] → SWITCH  party_idx=%d  target=%s  HP=%d/%d",
+                        party_idx, poke._name, poke.hp, poke.starting_hp,
                     )
                     return DMove.struggle(), party_idx
                 else:
                     log.warning(
-                        "[AI] switch pe_slot=%d → party_idx=%d  but poke '%s' hp=%d or is active  → heuristic",
-                        pe_slot, party_idx, poke._name, poke.hp,
+                        "[AI] switch party_idx=%d  but poke '%s' hp=%d or is active  → heuristic",
+                        party_idx, poke._name, poke.hp,
                     )
             else:
-                log.warning("[AI] switch pe_slot=%d not in bench_map → heuristic", pe_slot)
+                log.warning("[AI] switch '%s' not mapped to any valid bench slot → heuristic", val)
         except (ValueError, IndexError) as exc:
             log.warning("[AI] switch parse error: %s → heuristic", exc)
         return None, None
+
+    # Format 3: Raw move name (e.g. "thunderbolt", "alluringvoice")
+    # Match against the active pokemon's moves by normalized name
+    if trainer.current_pokemon:
+        norm_choice = _normalize(choice)
+        for slot, move in enumerate(trainer.current_pokemon.moves[:4]):
+            if _normalize(move.name) == norm_choice and move.pp > 0:
+                log.info(
+                    "[AI] → MOVE  slot=%d  name=%s  pp=%d",
+                    slot, move.name, move.pp,
+                )
+                return move, None
 
     log.warning("[AI] Unrecognised move_choice '%s' → heuristic fallback", choice)
     return None, None
@@ -361,21 +390,33 @@ class NPCTeamAI:
         if self.battle is None:
             return None
 
-        from .state_adapter import battle_to_pe_state
+        from .state_adapter import battle_to_pe_state, _normalize
 
         pe_state, bench_map = battle_to_pe_state(
-            self.battle, self.trainer, self.opponent
+            self.battle, self.trainer, self.opponent,
+            npc_force_switch=True,
         )
-        pe_state.side_one.force_switch = True
         log.debug("[AI] force_switch MCTS query  bench_map=%s", bench_map)
 
         choice = _run_mcts_sync(pe_state, self.search_ms)
         log.debug("[AI] force_switch MCTS choice='%s'", choice)
 
-        if choice.startswith("switch:"):
+        if choice.startswith("switch:") or choice.startswith("switch "):
+            sep = ":" if ":" in choice else " "
             try:
-                pe_slot   = int(choice[7:])
-                party_idx = bench_map.get(pe_slot)
+                val = choice.split(sep, 1)[1].strip()
+                if val.isdigit():
+                    pe_slot = int(val)
+                    party_idx = bench_map.get(pe_slot)
+                else:
+                    norm_val = _normalize(val)
+                    party_idx = None
+                    for slot_i, pi in bench_map.items():
+                        bench_poke = self.trainer.party[pi]
+                        if _normalize(bench_poke._name) == norm_val:
+                            party_idx = pi
+                            break
+
                 if party_idx is not None:
                     poke = self.trainer.party[party_idx]
                     if poke.hp > 0 and poke is not self.trainer.current_pokemon:
