@@ -22,6 +22,9 @@ logging.basicConfig(
     ]
 )
 
+logging.getLogger("dueler.ai").setLevel(logging.DEBUG)
+logging.getLogger("dueler.ai.bridge").setLevel(logging.DEBUG) 
+logging.getLogger("dueler.ai.state_adapter").setLevel(logging.DEBUG)
 
 intents = discord.Intents.default()
 intents.members = True

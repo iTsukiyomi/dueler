@@ -1,5 +1,5 @@
 [project]
-name = "flame"
+name = "dueler"
 version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.13"
@@ -10,11 +10,11 @@ dependencies = [
     "python-dotenv>=1.1.1",
     "requests>=2.32.5",
     "tensorboard>=2.20.0",
-    "torch>=2.12.0",
     "tqdm>=4.67.3",
     "motor>=3.7.0",
     "redis[hiredis]>=5.2.0",
     "numpy>=2.4.5",
+    "poke-engine==0.0.46",
 ]
 
 [tool.pyrefly]
@@ -22,3 +22,6 @@ project-includes = [
     "**/*.py*",
     "**/*.ipynb",
 ]
+
+[tool.uv.config-settings]
+"poke-engine" = "--features poke-engine/terastallization --no-default-features"

@@ -13,8 +13,7 @@ from ..pokemon import DuelPokemon, create
 from ..data_gen import generate_team_preview, find, find_one
 from ..trainers import MemberTrainer
 from ..trainers.npc_trainer import NPCTrainer
-from ..ai.npc_bridge import NPCTeamAI, reload_network
-from ..ai import config as AI_CONFIG
+from ..ai import NPCTeamAI, reload_network
 
 
 class TeambuilderReadException(Exception):
@@ -32,6 +31,9 @@ class PokemonDuel(commands.Cog):
         self.config.register_member(party=[])
         self.config.register_guild(useThreads=False)
 
+    # ──────────────────────────────────────────────────────────────────
+    #  Teambuilder parsing (unchanged)
+    # ──────────────────────────────────────────────────────────────────
     @staticmethod
     async def party_from_teambuilder(ctx, teambuilder):
         teambuilder = teambuilder.strip()
@@ -189,6 +191,9 @@ class PokemonDuel(commands.Cog):
             raise TeambuilderReadException(f"Your party has {len(party)} pokemon. It must have 1 to 6 pokemon.")
         return party
 
+    # ──────────────────────────────────────────────────────────────────
+    #  Battle runner
+    # ──────────────────────────────────────────────────────────────────
     async def wrapped_run(self, battle):
         self.games[int(battle.ctx.message.id)] = battle
         try:
@@ -208,114 +213,11 @@ class PokemonDuel(commands.Cog):
         else:
             if int(battle.ctx.message.id) in self.games:
                 del self.games[int(battle.ctx.message.id)]
-
-            if winner is not None:
-                loser = (
-                    battle.trainer2 if winner is battle.trainer1
-                    else battle.trainer1
-                )
-                is_w_human = winner.is_human() if hasattr(winner, "is_human") else False
-                is_l_human = loser.is_human() if hasattr(loser, "is_human") else False
-
-                if is_w_human and is_l_human:
-                    try:
-                        from ..services.player_service import PlayerService
-                        svc = PlayerService()
-                        w_profile = await svc.get_profile(str(winner.id))
-                        l_profile = await svc.get_profile(str(loser.id))
-                        w_team = w_profile.get("active_party_name", "Unknown") if w_profile else "Unknown"
-                        l_team = l_profile.get("active_party_name", "Unknown") if l_profile else "Unknown"
-
-                        w_elo, l_elo = await svc.record_match_result(
-                            str(winner.id),
-                            str(loser.id),
-                            money_reward=100,
-                            turns=battle.turn,
-                            duration=battle.get_duration(),
-                            winner_team=w_team,
-                            loser_team=l_team,
-                        )
-                        import discord as _dc
-                        embed = _dc.Embed(
-                            title="Match Recorded",
-                            description=(
-                                f"**{winner.name}** Elo: **{w_elo}** (+↑)  |  "
-                                f"**{loser.name}** Elo: **{l_elo}** (−↓)\n"
-                                f"**{winner.name}** earned ¥100."
-                            ),
-                            color=0xFFCB05,
-                        )
-                        await battle.channel.send(embed=embed)
-                    except Exception as exc:
-                        self.log.warning(
-                            "Failed to update Elo/economy after match: %s", exc
-                        )
-                elif is_w_human and not is_l_human:
-                    try:
-                        from ..services.player_service import PlayerService
-                        svc = PlayerService()
-                        w_profile = await svc.get_profile(str(winner.id))
-                        w_team = w_profile.get("active_party_name", "Unknown") if w_profile else "Unknown"
-
-                        new_elo = await svc.record_npc_match_result(
-                            str(winner.id),
-                            winner.name,
-                            won=True,
-                            money_reward=100,
-                            turns=battle.turn,
-                            duration=battle.get_duration(),
-                            player_team=w_team,
-                            npc_team="NPC Challenger",
-                        )
-                        import discord as _dc
-                        embed = _dc.Embed(
-                            title="NPC Match Recorded",
-                            description=(
-                                f"**{winner.name}** won against the NPC!\n"
-                                f"Elo: **{new_elo}** (No Change)\n"
-                                f"**{winner.name}** earned ¥100."
-                            ),
-                            color=0xFFCB05,
-                        )
-                        await battle.channel.send(embed=embed)
-                    except Exception as exc:
-                        self.log.warning(
-                            "Failed to update PvE economy after match: %s", exc
-                        )
-                elif not is_w_human and is_l_human:
-                    try:
-                        from ..services.player_service import PlayerService
-                        svc = PlayerService()
-                        l_profile = await svc.get_profile(str(loser.id))
-                        l_team = l_profile.get("active_party_name", "Unknown") if l_profile else "Unknown"
-
-                        new_elo = await svc.record_npc_match_result(
-                            str(loser.id),
-                            loser.name,
-                            won=False,
-                            money_reward=0,
-                            turns=battle.turn,
-                            duration=battle.get_duration(),
-                            player_team=l_team,
-                            npc_team="NPC Challenger",
-                        )
-                        import discord as _dc
-                        embed = _dc.Embed(
-                            title="NPC Match Recorded",
-                            description=(
-                                f"**{loser.name}** lost against the NPC!\n"
-                                f"Elo: **{new_elo}** (No Change)"
-                            ),
-                            color=_dc.Color.red(),
-                        )
-                        await battle.channel.send(embed=embed)
-                    except Exception as exc:
-                        self.log.warning(
-                            "Failed to update PvE economy after match: %s", exc
-                        )
-
             return winner
 
+    # ──────────────────────────────────────────────────────────────────
+    #  Top-level command groups
+    # ──────────────────────────────────────────────────────────────────
     @commands.group(aliases=["pokeduel", "duel"], invoke_without_command=True)
     @commands.bot_has_permissions(attach_files=True, embed_links=True)
     async def pokemonduel(self, ctx, opponent: discord.Member):
@@ -337,19 +239,22 @@ class PokemonDuel(commands.Cog):
 
     @pokemonduel.command(name="npc")
     async def battle_npc(self, ctx):
-        """Battle against the AlphaZero NPC with your team."""
+        """Battle against the Foul-Play MCTS NPC with your team."""
         await self._start_npc_battle(ctx)
 
     @pokemonduel.command(name="randomnpc", aliases=["randomnpcbattle"])
     async def random_npc_battle(self, ctx):
-        """Random battle against the AlphaZero NPC."""
+        """Random battle against the Foul-Play MCTS NPC."""
         await self._start_random_npc_battle(ctx)
 
     @pokemonduel.command(name="npcvsnpc", aliases=["npcbattle"])
     async def npc_vs_npc_battle(self, ctx):
-        """NPC vs NPC battle — watch the AlphaZero AI play itself."""
+        """NPC vs NPC battle — watch the Foul-Play MCTS engine duel."""
         await self._start_npc_vs_npc_battle(ctx)
 
+    # ──────────────────────────────────────────────────────────────────
+    #  NPC vs NPC
+    # ──────────────────────────────────────────────────────────────────
     async def _start_npc_vs_npc_battle(self, ctx):
         from ..modes.npc.npc_team_gen import generate_npc_team, convert_to_raw_data
         if not ctx.author:
@@ -357,11 +262,9 @@ class PokemonDuel(commands.Cog):
             return
         channel = ctx.channel
         npc1_team_data = await asyncio.to_thread(
-            # pyrefly: ignore [bad-argument-type]
             generate_npc_team, seed=int(ctx.message.id) if ctx.message else None)
         npc1_raw = convert_to_raw_data(npc1_team_data, "NPC Alpha")
         npc2_team_data = await asyncio.to_thread(
-            # pyrefly: ignore [bad-argument-type]
             generate_npc_team, seed=int(ctx.message.id) + 1000 if ctx.message else None)
         npc2_raw = convert_to_raw_data(npc2_team_data, "NPC Beta")
 
@@ -377,7 +280,7 @@ class PokemonDuel(commands.Cog):
 
         t1 = NPCTrainer("NPC Alpha", npc1_party)
         t2 = NPCTrainer("NPC Beta",  npc2_party)
-        await ctx.send("🎮 Starting NPC vs NPC Battle!\n   Alpha vs Beta — watch the AlphaZero brain play itself.")
+        await ctx.send("🎮 Starting NPC vs NPC Battle!\n   Alpha vs Beta — Foul-Play MCTS engine duel.")
         battle = Battle(ctx, channel, t1, t2)
         ai1 = NPCTeamAI(t1, t2); ai2 = NPCTeamAI(t2, t1)
         ai1.set_battle(battle); ai2.set_battle(battle)
@@ -394,18 +297,18 @@ class PokemonDuel(commands.Cog):
             if hasattr(t1, 'ai') and t1.ai: t1.ai.on_battle_end(winner == t1)
             if hasattr(t2, 'ai') and t2.ai: t2.ai.on_battle_end(winner == t2)
 
+    # ──────────────────────────────────────────────────────────────────
+    #  User vs NPC
+    # ──────────────────────────────────────────────────────────────────
     async def _start_npc_battle(self, ctx):
         from ..modes.npc.npc_team_gen import generate_npc_team, convert_to_raw_data
         if not ctx.author:
             await ctx.send("This command must be used in a server!")
             return
         channel = ctx.channel
-        from ..services.team_service import TeamService
-        party_data = await TeamService().load_active_party(str(ctx.author.id))
+        party_data = await self.config.member(ctx.author).party()
         if not party_data:
-            party_data = await self.config.member(ctx.author).party()
-        if not party_data:
-            await ctx.send(f"You haven't setup your party yet!\nSet one with `{ctx.prefix}party load <name>` or `{ctx.prefix}party add`.")
+            await ctx.send(f"You haven't setup your party yet!\nSet one with `{ctx.prefix}pokemonduel party set`.")
             return
         user_party = []
         try:
@@ -415,7 +318,6 @@ class PokemonDuel(commands.Cog):
             await channel.send(f"Error creating your pokemon: {e}")
             return
         npc_team_data = await asyncio.to_thread(
-            # pyrefly: ignore [bad-argument-type]
             generate_npc_team, seed=int(ctx.message.id) if ctx.message else None)
         npc_raw = convert_to_raw_data(npc_team_data, "NPC Team")
         npc_party = []
@@ -428,7 +330,7 @@ class PokemonDuel(commands.Cog):
 
         user_trainer = MemberTrainer(ctx.author, user_party)
         npc_trainer = NPCTrainer("NPC Challenger", npc_party)
-        await ctx.send("Starting a battle against the AlphaZero NPC Challenger!")
+        await ctx.send("Starting a battle against the Foul-Play MCTS NPC!")
         battle = Battle(ctx, channel, user_trainer, npc_trainer)
         ai = NPCTeamAI(npc_trainer, user_trainer)
         ai.set_battle(battle); npc_trainer.set_ai(ai)
@@ -442,6 +344,9 @@ class PokemonDuel(commands.Cog):
         if winner and hasattr(npc_trainer, 'ai') and npc_trainer.ai:
             npc_trainer.ai.on_battle_end(winner == npc_trainer)
 
+    # ──────────────────────────────────────────────────────────────────
+    #  Random NPC
+    # ──────────────────────────────────────────────────────────────────
     async def _start_random_npc_battle(self, ctx):
         from ..modes.randoms.random_team_gen import generate_two_teams, convert_team_to_raw_data
         from ..modes.npc.npc_team_gen import generate_npc_team, convert_to_raw_data
@@ -450,7 +355,6 @@ class PokemonDuel(commands.Cog):
             return
         channel = ctx.channel
         team1_data, _ = await asyncio.to_thread(
-            # pyrefly: ignore [bad-argument-type]
             generate_two_teams, seed=int(ctx.message.id) if ctx.message else None)
         raw_party1 = convert_team_to_raw_data(team1_data, "Your Random Team")
         user_party = []
@@ -460,7 +364,6 @@ class PokemonDuel(commands.Cog):
         except Exception as e:
             await channel.send(f"Error creating your Pokemon: {e}")
             return
-        # pyrefly: ignore [bad-argument-type]
         npc_team_data = generate_npc_team(seed=None)
         npc_raw = convert_to_raw_data(npc_team_data, "NPC Team")
         npc_party = []
@@ -472,7 +375,7 @@ class PokemonDuel(commands.Cog):
             return
         user_trainer = MemberTrainer(ctx.author, user_party)
         npc_trainer  = NPCTrainer("NPC Challenger", npc_party)
-        await ctx.send("Starting a Random Battle against the AlphaZero NPC Challenger!")
+        await ctx.send("Starting a Random Battle against the Foul-Play MCTS NPC!")
         battle = Battle(ctx, channel, user_trainer, npc_trainer)
         ai = NPCTeamAI(npc_trainer, user_trainer)
         ai.set_battle(battle); npc_trainer.set_ai(ai)
@@ -486,6 +389,9 @@ class PokemonDuel(commands.Cog):
         if winner and hasattr(npc_trainer, 'ai') and npc_trainer.ai:
             npc_trainer.ai.on_battle_end(winner == npc_trainer)
 
+    # ──────────────────────────────────────────────────────────────────
+    #  Random duel between two members (unchanged)
+    # ──────────────────────────────────────────────────────────────────
     async def _start_random_duel(self, ctx, opponent: discord.Member, *, inverse_battle=False):
         from ..modes.randoms.random_team_gen import generate_two_teams, convert_team_to_raw_data
         if opponent.id == ctx.author.id:
@@ -495,7 +401,6 @@ class PokemonDuel(commands.Cog):
             await ctx.send("You cannot duel a bot!")
             return
         channel = ctx.channel
-        # pyrefly: ignore [bad-argument-type]
         team1_data, team2_data = generate_two_teams(seed=int(ctx.message.id) if ctx.message else None)
         raw_party1 = convert_team_to_raw_data(team1_data, "Player Team")
         raw_party2 = convert_team_to_raw_data(team2_data, "Random Team")
@@ -516,7 +421,6 @@ class PokemonDuel(commands.Cog):
         initial_message = await ctx.send(
             f"{opponent.mention} You have been challenged to a Random Battle by {ctx.author.name}!\n",
             view=view)
-        # pyrefly: ignore [missing-attribute]
         view.message = initial_message
         if (await self.config.guild(ctx.guild).useThreads()
                 and ctx.channel.permissions_for(ctx.guild.me).create_public_threads
@@ -540,6 +444,9 @@ class PokemonDuel(commands.Cog):
         preview_view.stop()
         await self.wrapped_run(battle)
 
+    # ──────────────────────────────────────────────────────────────────
+    #  Two-member duel (unchanged)
+    # ──────────────────────────────────────────────────────────────────
     async def _start_duel(self, ctx, opponent: discord.Member, *, inverse_battle=False):
         if opponent.id == ctx.author.id:
             await ctx.send("You cannot duel yourself!")
@@ -552,7 +459,6 @@ class PokemonDuel(commands.Cog):
         initial_message = await ctx.send(
             f"{opponent.mention} You have been challenged to {battle_type} by {ctx.author.name}!\n",
             view=view)
-        # pyrefly: ignore [missing-attribute]
         view.message = initial_message
         channel = ctx.channel
         if (await self.config.guild(ctx.guild).useThreads()
@@ -567,17 +473,13 @@ class PokemonDuel(commands.Cog):
         await view.wait()
         if not view.confirm:
             return
-        from ..services.team_service import TeamService
-        team_svc = TeamService()
         trainers = []
         for player in (ctx.author, opponent):
-            party_data = await team_svc.load_active_party(str(player.id))
-            if not party_data:
-                party_data = await self.config.member(player).party()
-            if not party_data:
-                await channel.send(f"{player} has not setup their party yet!\nSet one with `{ctx.prefix}party load <name>` or `{ctx.prefix}party add`.")
+            party = await self.config.member(player).party()
+            if not party:
+                await channel.send(f"{player} has not setup their party yet!\nSet one with `{ctx.prefix}pokemonduel party set`.")
                 return
-            party = [await create(ctx, p) for p in party_data]
+            party = [await create(ctx, p) for p in party]
             trainers.append(MemberTrainer(player, party))
         battle = Battle(ctx, channel, *trainers, inverse_battle=inverse_battle)
         preview_view = await generate_team_preview(battle)
@@ -586,7 +488,10 @@ class PokemonDuel(commands.Cog):
         preview_view.stop()
         await self.wrapped_run(battle)
 
-    @commands.group("old_party")
+    # ──────────────────────────────────────────────────────────────────
+    #  Party management
+    # ──────────────────────────────────────────────────────────────────
+    @commands.group("party")
     async def party(self, ctx):
         """Manage your party of pokemon."""
         pass
@@ -614,16 +519,12 @@ class PokemonDuel(commands.Cog):
         """Create a party of pokemon imported from Pokecord."""
         pass
 
-    @party.command(name="list")
-    # pyrefly: ignore [bad-function-definition]
+    @party.command(name="list", aliases=["view"])
     async def party_list(self, ctx, user: discord.Member = None):
         member = user or ctx.author
-        from ..services.team_service import TeamService
-        party = await TeamService().load_active_party(str(member.id))
-        if not party:
-            party = await self.config.member(member).party()
+        party = await self.config.member(member).party()
         if len(party) == 0:
-            await ctx.send(f"You haven't setup your party yet!\nSet one with `{ctx.prefix}party load <name>` or `{ctx.prefix}party add`.")
+            await ctx.send(f"You haven't setup your party yet!\nSet one with `{ctx.prefix}pokemonduel party set`.")
             return
         embed = discord.Embed(title=f"{member.display_name}'s Party")
         embed.set_thumbnail(url=member.display_avatar.url)
@@ -643,14 +544,12 @@ class PokemonDuel(commands.Cog):
             ability_index = pokemon["ability_index"]
             form_info = await find_one(ctx, "forms", {"identifier": pokname.lower()})
             ab_ids = [record["ability_id"] for record in
-                      # pyrefly: ignore [unsupported-operation]
                       await find(ctx, "poke_abilities", {"pokemon_id": form_info["pokemon_id"]})]
             try:
                 ab_id = ab_ids[ability_index]
             except IndexError:
                 ab_id = ab_ids[0]
             ability = await find_one(ctx, "abilities", {"id": ab_id})
-            # pyrefly: ignore [unsupported-operation]
             ability = ability["identifier"]
             hitem = pokemon["hitem"]; nature = pokemon["nature"].lower()
             happiness = pokemon["happiness"]
@@ -668,6 +567,9 @@ class PokemonDuel(commands.Cog):
                      f"`{pokemon['spatkev']:3d}`|`{pokemon['spdefev']:3d}`|`{pokemon['speedev']:3d}`\n")
             embed.add_field(name=title, value=desc, inline=bool(idx % 2))
 
+    # ──────────────────────────────────────────────────────────────────
+    #  Server config
+    # ──────────────────────────────────────────────────────────────────
     @commands.guild_only()
     @commands.is_owner()
     @commands.group(invoke_without_command=True)
@@ -678,7 +580,6 @@ class PokemonDuel(commands.Cog):
         await ctx.send(f"```py\n{msg}```")
 
     @pokemonduelset.command()
-    # pyrefly: ignore [bad-function-definition]
     async def thread(self, ctx, value: bool = None):
         if value is None:
             v = await self.config.guild(ctx.guild).useThreads()
@@ -689,6 +590,9 @@ class PokemonDuel(commands.Cog):
             await ctx.send("The game will now be run in a per-game thread." if value
                            else "The game will not be run in a thread.")
 
+    # ──────────────────────────────────────────────────────────────────
+    #  Sprite info
+    # ──────────────────────────────────────────────────────────────────
     @commands.command(name="info", aliases=["sprite", "img"])
     async def info(self, ctx, name: str):
         poke = await find_one(ctx, "forms", {"identifier": name.lower()})
@@ -699,7 +603,6 @@ class PokemonDuel(commands.Cog):
         if not sprite.exists():
             return await ctx.send(f"no sprite for ``{name}`` add it yourself bruv id is ``{poke_id}``")
         poke = await find_one(ctx, "pokemon_stats", {"pokemon_id": poke_id})
-        # pyrefly: ignore [unsupported-operation]
         stats = poke["stats"]
         e = discord.Embed(description=f"hp: `{stats[0]}` | atk: `{stats[1]}` | def: `{stats[2]}`\n"
                                        f"spatk: `{stats[3]}` | spdef: `{stats[4]}` | speed: `{stats[5]}`")
@@ -707,86 +610,28 @@ class PokemonDuel(commands.Cog):
         e.set_footer(text=f"id: {poke_id}")
         await ctx.send(embed=e, file=discord.File(sprite))
 
-    @pokemonduel.command(name="trainnpc", aliases=["trainai", "pretrain"])
-    @commands.is_owner()
-    async def train_npc_ai(self, ctx, battles: int = 200):
-        """
-        Run headless NPC vs NPC games to grow the live replay buffer
-        and refresh the AI’s knowledge.
 
-        For real long-running training, launch:
-            python -m pokemonduel.ai.distributed --workers 8
-        """
-        if battles < 10:
-            await ctx.send("Minimum 10 battles required.")
-            return
-        if battles > 5000:
-            await ctx.send("Maximum 5000 battles to keep things responsive.")
-            return
-        await ctx.send(f"🎮 Starting headless training — {battles} battles. "
-                       f"This runs in a background thread.")
-        try:
-            def _run():
-                import importlib, sys
-                here = Path(__file__).resolve().parent.parent.parent
-                if str(here) not in sys.path:
-                    sys.path.insert(0, str(here))
-                from simulated_battle import run_battle  # type: ignore
-                wins = [0, 0, 0]
-                for _ in range(battles):
-                    ws, _t, _a, _b = run_battle()
-                    wins[ws] += 1
-                return wins
-            wins = await asyncio.to_thread(_run)
-            await ctx.send(
-                f"✅ Headless training complete!\n"
-                f"• side1 wins: {wins[1]} ({wins[1]/max(1,sum(wins)):.1%})\n"
-                f"• side2 wins: {wins[2]} ({wins[2]/max(1,sum(wins)):.1%})\n"
-                f"• ties:       {wins[0]}\n"
-                f"Run `python -m pokemonduel.ai.distributed` to start a real "
-                f"multi-process AlphaZero training session."
-            )
-        except Exception as e:
-            await ctx.send(f"❌ Training failed: {e}")
-            self.log.exception("NPC training error")
-
+    # ──────────────────────────────────────────────────────────────────
+    #  Foul-Play MCTS NPC inspection
+    # ──────────────────────────────────────────────────────────────────
     @pokemonduel.command(name="npcaireload", aliases=["reloadai"])
     @commands.is_owner()
     async def reload_ai(self, ctx):
-        """Hot-reload the AlphaZero network from disk."""
-        try:
-            reload_network()
-            await ctx.send("🔁 AlphaZero network reloaded from disk.")
-        except Exception as e:
-            await ctx.send(f"❌ Reload failed: {e}")
-            self.log.exception("AI reload error")
+        """No-op for the foul-play MCTS NPC (no weights to reload)."""
+        reload_network()
+        await ctx.send("ℹ️  Foul-Play MCTS NPC has no weights to reload — it uses poke-engine at runtime.")
 
     @pokemonduel.command(name="npcaistats", aliases=["aistats", "npstats"])
     async def show_npc_stats(self, ctx):
-        """Show AlphaZero training progress (steps, ELO, buffer size)."""
-        try:
-            meta = {}
-            if AI_CONFIG.META_PATH.exists():
-                with open(AI_CONFIG.META_PATH, "r") as f:
-                    meta = json.load(f)
-            elo  = {}
-            if AI_CONFIG.ELO_PATH.exists():
-                with open(AI_CONFIG.ELO_PATH, "r") as f:
-                    elo = json.load(f).get("ratings", {})
-            params = meta.get("params", {})
-            step   = meta.get("step", 0)
-            txt = (
-                "**AlphaZero AI**\n"
-                f"```\n"
-                f"steps   : {step:,}\n"
-                f"params  : total={params.get('total',0):,}  trainable={params.get('trainable',0):,}\n"
-                f"ELO     : latest={elo.get('latest',1200):.0f}  best={elo.get('best',1200):.0f}\n"
-                f"checkpoint dir : {AI_CONFIG.CKPT_DIR}\n"
-                f"best model     : {AI_CONFIG.BEST_MODEL.name} "
-                f"({'present' if AI_CONFIG.BEST_MODEL.exists() else 'absent'})\n"
-                f"```"
-            )
-            await ctx.send(txt)
-        except Exception as e:
-            await ctx.send(f"Could not load stats: {e}")
-            self.log.exception("show stats error")
+        """Show info about the Foul-Play MCTS NPC engine."""
+        from ..ai.npc_bridge import MCTS_SEARCH_MS
+        txt = (
+            "**Foul-Play MCTS NPC**\n"
+            f"```\n"
+            f"engine    : poke-engine (Rust MCTS)\n"
+            f"search_ms : {MCTS_SEARCH_MS} ms per turn\n"
+            f"team gen  : random (random_team_gen)\n"
+            f"no weights, no training loop\n"
+            f"```"
+        )
+        await ctx.send(txt)
