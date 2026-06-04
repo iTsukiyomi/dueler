@@ -308,7 +308,7 @@ class PokemonDuel(commands.Cog):
         channel = ctx.channel
         party_data = await self.config.member(ctx.author).party()
         if not party_data:
-            await ctx.send(f"You haven't setup your party yet!\nSet one with `{ctx.prefix}pokemonduel party set`.")
+            await ctx.send(f"You haven't setup your party yet!\nSet one with `{ctx.prefix}party create <name> <showdown_paste>`.")
             return
         user_party = []
         try:
@@ -477,7 +477,7 @@ class PokemonDuel(commands.Cog):
         for player in (ctx.author, opponent):
             party = await self.config.member(player).party()
             if not party:
-                await channel.send(f"{player} has not setup their party yet!\nSet one with `{ctx.prefix}pokemonduel party set`.")
+                await channel.send(f"{player} has not setup their party yet!\nSet one with `{ctx.prefix}party create <name> <showdown_paste>`.")
                 return
             party = [await create(ctx, p) for p in party]
             trainers.append(MemberTrainer(player, party))
@@ -488,84 +488,7 @@ class PokemonDuel(commands.Cog):
         preview_view.stop()
         await self.wrapped_run(battle)
 
-    # ──────────────────────────────────────────────────────────────────
-    #  Party management
-    # ──────────────────────────────────────────────────────────────────
-    @commands.group("party")
-    async def party(self, ctx):
-        """Manage your party of pokemon."""
-        pass
 
-    @party.command(name="set")
-    async def party_set(self, ctx, *, pokemon_data):
-        """Set your party of pokemon (Pokémon Showdown teambuilder format)."""
-        try:
-            party = await self.party_from_teambuilder(ctx, pokemon_data)
-        except TeambuilderReadException as e:
-            await ctx.send(f"Couldn't validate your team.\n{e}")
-            return
-        except Exception:
-            await ctx.send("Couldn't properly parse your team. Make sure you follow the Showdown format.")
-            self.log.exception("Failed to read a teambuilder team string.")
-            return
-        await self.config.member(ctx.author).party.set(party)
-        embed = discord.Embed(title="Your new party")
-        embed.set_thumbnail(url=ctx.author.display_avatar.url)
-        await self.gen_party_embed(ctx, party, embed)
-        await ctx.send(embed=embed)
-
-    @party.command(name="pokecord", hidden=True)
-    async def party_pokecord(self, ctx, *ids: int):
-        """Create a party of pokemon imported from Pokecord."""
-        pass
-
-    @party.command(name="list", aliases=["view"])
-    async def party_list(self, ctx, user: discord.Member = None):
-        member = user or ctx.author
-        party = await self.config.member(member).party()
-        if len(party) == 0:
-            await ctx.send(f"You haven't setup your party yet!\nSet one with `{ctx.prefix}pokemonduel party set`.")
-            return
-        embed = discord.Embed(title=f"{member.display_name}'s Party")
-        embed.set_thumbnail(url=member.display_avatar.url)
-        await self.gen_party_embed(ctx, party, embed)
-        await ctx.send(embed=embed)
-
-    @staticmethod
-    async def gen_party_embed(ctx, party, embed):
-        for idx, pokemon in enumerate(party):
-            pokname = pokemon["pokname"]; poknick = pokemon["poknick"]
-            gender = pokemon["gender"]
-            if gender == "-m": gender = "Male"
-            elif gender == "-f": gender = "Female"
-            elif gender == "-x": gender = "Genderless"
-            moves = pokemon["moves"]
-            moves = "|".join([f"`{x}`" for x in moves])
-            ability_index = pokemon["ability_index"]
-            form_info = await find_one(ctx, "forms", {"identifier": pokname.lower()})
-            ab_ids = [record["ability_id"] for record in
-                      await find(ctx, "poke_abilities", {"pokemon_id": form_info["pokemon_id"]})]
-            try:
-                ab_id = ab_ids[ability_index]
-            except IndexError:
-                ab_id = ab_ids[0]
-            ability = await find_one(ctx, "abilities", {"id": ab_id})
-            ability = ability["identifier"]
-            hitem = pokemon["hitem"]; nature = pokemon["nature"].lower()
-            happiness = pokemon["happiness"]
-            title = f"{gender} {pokname} "
-            if poknick != "None":
-                title += f"({poknick}) "
-            desc = f"{moves}\nAbility `{ability}`"
-            if hitem != "None":
-                desc += f" | Holding `{hitem}`"
-            desc += f"\nNature `{nature}` | Happiness `{happiness}`\n"
-            desc += "`    `|` hp`|`atk`|`def`|`spa`|`spd`|`spe`\n"
-            desc += (f"`IVs:`|`{pokemon['hpiv']:3d}`|`{pokemon['atkiv']:3d}`|`{pokemon['defiv']:3d}`|"
-                     f"`{pokemon['spatkiv']:3d}`|`{pokemon['spdefiv']:3d}`|`{pokemon['speediv']:3d}`\n")
-            desc += (f"`EVs:`|`{pokemon['hpev']:3d}`|`{pokemon['atkev']:3d}`|`{pokemon['defev']:3d}`|"
-                     f"`{pokemon['spatkev']:3d}`|`{pokemon['spdefev']:3d}`|`{pokemon['speedev']:3d}`\n")
-            embed.add_field(name=title, value=desc, inline=bool(idx % 2))
 
     # ──────────────────────────────────────────────────────────────────
     #  Server config
