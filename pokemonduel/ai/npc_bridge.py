@@ -41,7 +41,7 @@ if TYPE_CHECKING:
 log = logging.getLogger("dueler.ai.bridge")
 
 # ── Configuration ────────────────────────────────────────────────────────────
-MCTS_SEARCH_MS: int = 500   # time budget per MCTS call (milliseconds)
+MCTS_SEARCH_MS: int = 1020   # time budget per MCTS call (milliseconds)
 
 # Weighted-random threshold: consider moves with ≥ 75 % of top visit count
 _POLICY_THRESHOLD: float = 1
