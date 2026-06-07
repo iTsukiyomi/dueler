@@ -1,12 +1,10 @@
-"use client"
-
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
 
-const liquidGlassButtonVariants = cva(
+const buttonVariants = cva(
   "inline-flex items-center cursor-pointer justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
@@ -14,7 +12,7 @@ const liquidGlassButtonVariants = cva(
         default: "bg-primary text-primary-foreground hover:bg-primary/90",
         destructive:
           "bg-destructive text-primary-foreground hover:bg-destructive/90",
-        cool: "dark:inset-shadow-2xs dark:inset-shadow-white/10 bg-linear-to-t border border-b-2 border-zinc-950/40 from-primary to-primary/85 shadow-md shadow-primary/20 ring-1 ring-inset ring-white/25 transition-[filter] duration-200 hover:brightness-110 active:brightness-90 dark:border-x-0 text-primary-foreground dark:text-primary-foreground dark:border-t-0 dark:border-primary/50 dark:ring-white/5",
+        cool: "shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] bg-gradient-to-t border border-b-2 border-zinc-950/40 from-primary to-primary/85 shadow-md shadow-primary/20 ring-1 ring-inset ring-white/25 transition-[filter] duration-200 hover:brightness-110 active:brightness-90 dark:border-x-0 text-primary-foreground dark:text-primary-foreground dark:border-t-0 dark:border-primary/50 dark:ring-white/5",
         outline:
           "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
         secondary:
@@ -36,25 +34,25 @@ const liquidGlassButtonVariants = cva(
   }
 )
 
-export interface LiquidGlassButtonProps
+export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof liquidGlassButtonVariants> {
+    VariantProps<typeof buttonVariants> {
   asChild?: boolean
 }
 
-const LiquidGlassButton = React.forwardRef<HTMLButtonElement, LiquidGlassButtonProps>(
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : "button"
     return (
       <Comp
-        className={cn(liquidGlassButtonVariants({ variant, size, className }))}
+        className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
         {...props}
       />
     )
   }
 )
-LiquidGlassButton.displayName = "LiquidGlassButton"
+Button.displayName = "Button"
 
 const liquidbuttonVariants = cva(
   "inline-flex items-center transition-colors justify-center cursor-pointer gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-[color,box-shadow] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
@@ -101,7 +99,7 @@ function LiquidButton({
   const Comp = asChild ? Slot : "button"
 
   return (
-    <>
+    <React.Fragment>
       <Comp
         data-slot="button"
         className={cn(
@@ -124,7 +122,7 @@ function LiquidButton({
         </div>
         <GlassFilter />
       </Comp>
-    </>
+    </React.Fragment>
   )
 }
 
@@ -140,6 +138,7 @@ function GlassFilter() {
           height="100%"
           colorInterpolationFilters="sRGB"
         >
+          {/* Generate turbulent noise for distortion */}
           <feTurbulence
             type="fractalNoise"
             baseFrequency="0.05 0.05"
@@ -147,7 +146,11 @@ function GlassFilter() {
             seed="1"
             result="turbulence"
           />
+
+          {/* Blur the turbulence pattern slightly */}
           <feGaussianBlur in="turbulence" stdDeviation="2" result="blurredNoise" />
+
+          {/* Displace the source graphic with the noise */}
           <feDisplacementMap
             in="SourceGraphic"
             in2="blurredNoise"
@@ -156,7 +159,11 @@ function GlassFilter() {
             yChannelSelector="B"
             result="displaced"
           />
+
+          {/* Apply overall blur on the final result */}
           <feGaussianBlur in="displaced" stdDeviation="4" result="finalBlur" />
+
+          {/* Output the result */}
           <feComposite in="finalBlur" in2="finalBlur" operator="over" />
         </filter>
       </defs>
@@ -268,7 +275,7 @@ const metalButtonVariants = (
         isHovered && !isPressed && !isTouchDevice ? "brightness(1.05)" : "none",
     },
     button: cn(
-      "relative z-10 m-[1px] rounded-md inline-flex h-11 transform-gpu cursor-pointer items-center justify-center overflow-hidden rounded-md px-6 py-2 text-sm leading-none font-semibold will-change-transform outline-none",
+      "relative z-10 m-[1px] rounded-md inline-flex h-11 transform-gpu cursor-pointer items-center justify-center overflow-hidden text-sm leading-none font-semibold will-change-transform outline-none",
       colors.button,
       colors.textColor,
       colors.textShadow,
@@ -296,7 +303,7 @@ const ShineEffect = ({ isPressed }: { isPressed: boolean }) => {
   );
 };
  
-export const MetalButton = React.forwardRef<
+const MetalButton = React.forwardRef<
   HTMLButtonElement,
   MetalButtonProps
 >(({ children, className, variant = "default", ...props }, ref) => {
@@ -369,5 +376,4 @@ export const MetalButton = React.forwardRef<
  
 MetalButton.displayName = "MetalButton";
 
-export { LiquidGlassButton, LiquidButton };
-export default LiquidGlassButton;
+export { Button, buttonVariants, liquidbuttonVariants, LiquidButton, MetalButton, GlassFilter }

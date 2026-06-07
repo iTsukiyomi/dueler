@@ -38,6 +38,10 @@ export function validatePokemonSlot(
 ): string[] {
   const errors: string[] = [];
 
+  if (!slot.pokname || slot.pokname.trim() === "") {
+    return errors;
+  }
+
   const form = data.formsByIdentifier.get(slot.pokname.toLowerCase());
   if (!form) {
     errors.push(`Unknown Pokémon: ${slot.pokname}`);
@@ -47,25 +51,8 @@ export function validatePokemonSlot(
     errors.push("Exactly 4 moves required");
   } else {
     for (const move of slot.moves) {
-      if (!data.movesByIdentifier.has(move.toLowerCase())) {
+      if (move.trim() !== "" && !data.movesByIdentifier.has(move.toLowerCase())) {
         errors.push(`Unknown move: ${move}`);
-      }
-    }
-
-    if (form) {
-      const identifier = form.identifier;
-      const normId = normalize(identifier);
-      const baseId = normalize(identifier.split("-")[0]);
-      const learnset =
-        data.learnsets.get(normId) ?? data.learnsets.get(baseId);
-
-      if (learnset) {
-        for (const move of slot.moves) {
-          const normMove = normalize(move);
-          if (!learnset.includes(normMove)) {
-            errors.push(`${slot.pokname} cannot learn ${move}`);
-          }
-        }
       }
     }
   }

@@ -1,346 +1,222 @@
-import React from "react";
-import { motion } from "framer-motion";
-import { usePlayerProfile } from "../hooks/usePokemonData";
-import { useAuthStore } from "../stores/authStore";
-import { useBattleHistory } from "../api/stats";
-import { useNavigate } from "react-router-dom";
-import { 
-  Trophy, 
-  Swords, 
-  TrendingUp, 
-  Coins, 
-  User, 
-  Sparkles, 
-  Layers, 
-  AlertTriangle,
-  ArrowUpRight,
-  Edit
-} from "lucide-react";
+import React, { useEffect } from 'react';
+import { useAuthStore } from '@/stores/authStore';
+import { useTeamStore } from '@/stores/teamStore';
+import { BentoItem } from '@/components/ui/cybernetic-bento-grid';
+import { Swords, Trophy, Coins, Settings2, Sparkles, User, Link2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
-function StatWidget({ 
-  value, 
-  label, 
-  icon: Icon, 
-  colorClass = "text-[var(--text-brand)]" 
-}: { 
-  value: string | number; 
-  label: string; 
-  icon: React.ComponentType<{ className?: string }>; 
-  colorClass?: string;
-}) {
-  return (
-    <div className="card p-6 text-center flex flex-col items-center justify-center relative group">
-      <div className="w-10 h-10 rounded-[var(--radius-md)] bg-[var(--bg-overlay)] border border-[var(--border-default)] flex items-center justify-center text-text-secondary group-hover:text-[var(--poke-yellow)] group-hover:border-[var(--border-bright)] transition-colors mb-4">
-        <Icon className="w-5 h-5" />
-      </div>
-      <div className={`font-mono text-2xl font-bold ${colorClass}`}>
-        {value}
-      </div>
-      <div className="font-rajdhani text-[9px] uppercase tracking-widest text-text-muted mt-2 font-bold">
-        {label}
-      </div>
-    </div>
-  );
-}
+export default function ProfilePage() {
+  const { user, profile, fetchProfile, isProfileLoading } = useAuthStore();
+  const { teams, fetchTeams } = useTeamStore();
 
-function ProfileSkeleton() {
-  return (
-    <div className="space-y-8 animate-pulse w-full">
-      <div className="border-b border-[var(--border-default)] pb-5 flex items-center justify-between">
-        <div className="space-y-2">
-          <div className="h-4 w-28 bg-[var(--bg-raised)] rounded" />
-          <div className="h-8 w-44 bg-[var(--bg-raised)] rounded" />
-        </div>
-        <div className="w-12 h-12 rounded bg-[var(--bg-raised)]" />
-      </div>
+  useEffect(() => {
+    fetchProfile();
+    fetchTeams();
+  }, [fetchProfile, fetchTeams]);
 
-      <div className="grid lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-8 space-y-6">
-          <div className="card p-6 md:p-8 space-y-6">
-            <div className="flex items-center gap-6">
-              <div className="w-20 h-20 rounded bg-[var(--bg-overlay)]" />
-              <div className="space-y-2 flex-1">
-                <div className="h-6 w-36 bg-[var(--bg-overlay)] rounded" />
-                <div className="h-4 w-24 bg-[var(--bg-overlay)] rounded" />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="h-24 bg-[var(--bg-overlay)] rounded border border-[var(--border-default)]" />
-              ))}
-            </div>
-          </div>
-        </div>
-        <div className="lg:col-span-4 space-y-6">
-          <div className="h-48 bg-[var(--bg-raised)] rounded border border-[var(--border-default)]" />
-          <div className="h-64 bg-[var(--bg-raised)] rounded border border-[var(--border-default)]" />
-        </div>
-      </div>
-    </div>
-  );
-}
+  // Calculations
+  const wins = profile?.wins ?? 0;
+  const losses = profile?.losses ?? 0;
+  const totalGames = wins + losses;
+  const winRate = totalGames > 0 ? ((wins / totalGames) * 100).toFixed(1) : '0.0';
 
-export function ProfilePage() {
-  const { user } = useAuthStore();
-  const { data: profile, isLoading, error, refetch } = usePlayerProfile();
-  const { data: historyData, isLoading: historyLoading } = useBattleHistory();
-  const navigate = useNavigate();
-
-  if (isLoading || historyLoading) {
-    return <ProfileSkeleton />;
-  }
-
-  if (error || !profile) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4 text-center">
-        <AlertTriangle className="w-12 h-12 text-[var(--poke-red)] animate-bounce" />
-        <h2 className="font-rajdhani text-lg font-bold text-text-primary uppercase tracking-wide">
-          Sync Status Offline
-        </h2>
-        <p className="text-xs text-text-secondary max-w-xs leading-relaxed font-sans">
-          Could not establish frequency synchronization link with central databases.
-        </p>
-        <button
-          onClick={() => refetch()}
-          className="btn-primary mt-2"
-        >
-          Force Retry link
-        </button>
-      </div>
-    );
-  }
-
-  const wins = profile.wins ?? 0;
-  const losses = profile.losses ?? 0;
-  const total = wins + losses;
-  const winRate = total > 0 ? ((wins / total) * 100).toFixed(1) : "0.0";
-  const elo = profile.elo ?? 1000;
-  const wallet = profile.wallet ?? 0;
-
-  const battles = historyData?.battles || [];
-  const recentBattles = battles.slice(0, 4);
-
-  const ratingTier = parseFloat(winRate) >= 65 ? "S" : parseFloat(winRate) >= 50 ? "A" : parseFloat(winRate) >= 40 ? "B" : "C";
-  const ratingTitle = parseFloat(winRate) >= 65 ? "Elite Master" : parseFloat(winRate) >= 50 ? "Expert Dueler" : parseFloat(winRate) >= 40 ? "Challenger" : "Apprentice";
+  // Find active team details
+  const activeTeamSummary = teams.find((t) => t.is_active);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25 }}
-      className="space-y-8 w-full"
-    >
-      {/* Page Header */}
-      <div className="border-b border-[var(--border-default)] pb-4 flex items-center justify-between">
-        <div>
-          <div className="mono text-[10px] text-text-muted uppercase tracking-widest mb-1">
-            Terminal / Trainer Card
+    <div className="w-full text-slate-100 min-h-screen pb-12">
+      <div className="max-w-6xl mx-auto space-y-8">
+        
+        {/* Profile Welcome Header */}
+        <div className="flex flex-col sm:flex-row items-center gap-6 bg-slate-900/40 border border-slate-800/80 p-6 rounded-2xl backdrop-blur-md">
+          <div className="relative size-24 rounded-full overflow-hidden border-2 border-orange-500 shadow-lg shadow-orange-500/20 shrink-0">
+            <img 
+              src={user?.avatarUrl} 
+              alt={user?.username} 
+              className="size-full object-cover"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username || 'Trainer'}`;
+              }}
+            />
           </div>
-          <h1 className="font-display text-2xl font-bold text-text-primary uppercase tracking-tight">
-            Trainer ID Profile
-          </h1>
-        </div>
-        {profile.rank && (
-          <div className="w-12 h-12 rounded-[var(--radius-md)] border border-[var(--poke-yellow)]/30 bg-[var(--poke-yellow-glow)] flex flex-col items-center justify-center">
-            <span className="font-rajdhani text-[8px] font-bold text-text-muted uppercase">Rank</span>
-            <span className="mono text-sm font-bold text-[var(--poke-yellow)]">#{profile.rank}</span>
+          <div className="text-center sm:text-left grow space-y-2">
+            <div className="flex items-center justify-center sm:justify-start gap-2">
+              <h1 className="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-slate-100 to-slate-300">
+                Welcome back, {user?.username || 'Trainer'}!
+              </h1>
+              <Sparkles className="size-5 text-orange-400 animate-pulse hidden sm:block" />
+            </div>
+            <p className="text-slate-400 text-sm max-w-xl">
+              Ready to climb the ladder? Adjust your squad, test new strategies in the chat, or check the leaderboard to see who's dominating.
+            </p>
           </div>
-        )}
-      </div>
-
-      <div className="grid lg:grid-cols-12 gap-8 items-start">
-        {/* Main Info Card */}
-        <div className="lg:col-span-8 space-y-6">
-          <div className="card p-6 md:p-8">
-            {/* Profile Hero Block */}
-            <div className="flex flex-col sm:flex-row items-center gap-6 mb-8 text-center sm:text-left">
-              <div className="relative">
-                {user?.avatarUrl ? (
-                  <img
-                    src={user.avatarUrl}
-                    alt={user.username}
-                    className="w-20 h-20 rounded-[var(--radius-lg)] object-cover ring-2 ring-[var(--border-default)] border border-[var(--bg-void)]"
-                  />
-                ) : (
-                  <div className="w-20 h-20 rounded-[var(--radius-lg)] bg-[var(--bg-overlay)] border border-[var(--border-default)] flex items-center justify-center text-3xl select-none">
-                    <User className="w-10 h-10 text-text-muted" />
-                  </div>
-                )}
-                <div className="absolute -bottom-2 -right-2 px-1.5 py-0.5 rounded bg-[var(--poke-red)] border border-[var(--poke-red)] text-white font-mono text-[9px] uppercase tracking-wider font-bold">
-                  LV100
-                </div>
-              </div>
-
-              <div className="space-y-2 flex-1">
-                <div>
-                  <h2 className="font-display text-xl font-bold text-text-primary uppercase tracking-wide">
-                    {profile.username}
-                  </h2>
-                  <div className="font-rajdhani text-[10px] text-text-muted uppercase tracking-wider font-bold">
-                    League Competitor Registered
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-1">
-                  <span className="px-3 py-1 rounded bg-[var(--poke-red-glow)] border border-[var(--poke-red)]/20 text-[var(--poke-red)] font-mono text-xs font-bold">
-                    {elo} ELO Rating
-                  </span>
-                  <span className="px-3 py-1 rounded bg-[var(--bg-overlay)] border border-[var(--border-default)] text-text-secondary font-mono text-xs font-bold">
-                    ₽{wallet.toLocaleString()} Credits
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Performance Stats Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <StatWidget value={wins} label="Victories" icon={Trophy} colorClass="text-emerald-400" />
-              <StatWidget value={losses} label="Defeats" icon={Swords} colorClass="text-[var(--poke-red)]" />
-              <StatWidget value={`${winRate}%`} label="Win Ratio" icon={TrendingUp} colorClass="text-[var(--poke-yellow)]" />
-              <StatWidget value={`₽${wallet}`} label="Wallet Bal" icon={Coins} colorClass="text-[var(--poke-blue)]" />
-            </div>
-
-            {/* Win Rate Progress Meter */}
-            <div className="mt-8 bg-[var(--bg-base)] border border-[var(--border-default)] p-5 rounded-[var(--radius-lg)]">
-              <div className="flex justify-between text-[9px] font-bold uppercase tracking-widest text-text-muted mb-3 font-rajdhani">
-                <span>Battle Victory Ratio Vector</span>
-                <span className="text-[var(--poke-yellow)] font-mono font-bold">{winRate}%</span>
-              </div>
-              <div className="w-full h-2.5 bg-[var(--bg-overlay)] border border-[var(--border-default)] rounded-[var(--radius-sm)] overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${winRate}%` }}
-                  transition={{ duration: 0.8, ease: "easeOut" }}
-                  className="h-full bg-gradient-to-r from-[var(--poke-red)] to-[var(--poke-yellow)]"
-                />
-              </div>
-              <div className="flex justify-between mt-2.5 mono text-[9px] text-text-muted tracking-wide">
-                <span>{wins} VICTORIES</span>
-                <span>{losses} DEFEATS</span>
-              </div>
-            </div>
+          <div className="flex flex-col gap-2 shrink-0 w-full sm:w-auto">
+            <Link 
+              to="/dashboard/teams" 
+              className="flex items-center justify-center gap-2 bg-gradient-to-r from-orange-600 to-red-500 hover:from-orange-500 hover:to-red-400 text-white font-bold text-sm px-5 py-2.5 rounded-xl transition shadow-lg shadow-orange-600/15"
+            >
+              <Swords className="size-4" />
+              Manage Squads
+            </Link>
           </div>
         </div>
 
-        {/* Sidebar Overview Panel */}
-        <div className="lg:col-span-4 space-y-6">
-          {/* Active Battle Team */}
-          <div className="card p-6">
-            <div className="space-y-4">
+        {/* Cybernetic Bento Grid for Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* ELO Card */}
+          <BentoItem className="flex flex-col justify-between p-6">
+            <div className="flex justify-between items-start">
               <div>
-                <div className="mono text-[9px] font-bold uppercase tracking-widest text-text-muted mb-1">
-                  Active Battle Squad
-                </div>
-                <h3 className="text-base font-display font-extrabold capitalize text-text-primary tracking-wide">
-                  {profile.active_party_name ?? "No Squad Active"}
+                <span className="text-xs font-bold uppercase tracking-widest text-orange-400">Trainer Rating</span>
+                <h3 className="text-5xl font-extrabold mt-2 tracking-tight text-white">{profile?.elo ?? 1000}</h3>
+              </div>
+              <div className="size-10 rounded-lg bg-orange-500/10 border border-orange-500/25 flex items-center justify-center text-orange-400">
+                <Trophy className="size-5" />
+              </div>
+            </div>
+            <div className="mt-8 pt-4 border-t border-slate-900/60 flex justify-between items-center text-sm text-slate-400">
+              <span>Ladder Rank</span>
+              <span className="font-semibold text-slate-200">
+                {profile?.rank ? `#${profile.rank}` : 'Unranked'}
+              </span>
+            </div>
+          </BentoItem>
+
+          {/* Win/Loss Card */}
+          <BentoItem className="flex flex-col justify-between p-6">
+            <div className="flex justify-between items-start">
+              <div>
+                <span className="text-xs font-bold uppercase tracking-widest text-red-400">Battle Stats</span>
+                <h3 className="text-4xl font-extrabold mt-2 tracking-tight text-white">
+                  {wins}W <span className="text-slate-500">/</span> {losses}L
                 </h3>
               </div>
-
-              <div className="grid grid-cols-2 gap-3 text-center">
-                <div className="bg-[var(--bg-overlay)] rounded-[var(--radius-md)] p-3 border border-[var(--border-default)] flex flex-col items-center">
-                  <span className="mono text-[8px] uppercase tracking-wider text-text-muted mb-1">Theme</span>
-                  <div className="text-xs font-bold capitalize text-text-secondary flex items-center gap-1">
-                    <Sparkles className="w-3 h-3 text-[var(--poke-yellow)]" />
-                    <span>{profile.theme}</span>
-                  </div>
-                </div>
-                <div className="bg-[var(--bg-overlay)] rounded-[var(--radius-md)] p-3 border border-[var(--border-default)] flex flex-col items-center">
-                  <span className="mono text-[8px] uppercase tracking-wider text-text-muted mb-1">Limit</span>
-                  <div className="text-xs font-bold font-mono text-text-secondary flex items-center gap-1">
-                    <Layers className="w-3 h-3 text-[var(--poke-blue)]" />
-                    <span>Gen {profile.gen}</span>
-                  </div>
-                </div>
+              <div className="size-10 rounded-lg bg-red-500/10 border border-red-500/25 flex items-center justify-center text-red-400">
+                <Swords className="size-5" />
               </div>
+            </div>
+            <div className="mt-8 pt-4 border-t border-slate-900/60 flex justify-between items-center text-sm text-slate-400">
+              <span>Win Ratio</span>
+              <span className="font-semibold text-slate-200">{winRate}%</span>
+            </div>
+          </BentoItem>
 
-              {profile.active_party_name ? (
-                <button
-                  onClick={() => navigate(`/dashboard/teams/${encodeURIComponent(profile.active_party_name!)}`)}
-                  className="btn-primary w-full py-2.5"
-                >
-                  <Edit className="w-3.5 h-3.5" />
-                  <span>Configure Squad Attributes</span>
-                </button>
+          {/* Wallet/Inventory */}
+          <BentoItem className="flex flex-col justify-between p-6">
+            <div className="flex justify-between items-start">
+              <div>
+                <span className="text-xs font-bold uppercase tracking-widest text-yellow-400">Trainer Wallet</span>
+                <h3 className="text-5xl font-extrabold mt-2 tracking-tight text-white">{profile?.wallet ?? 0}</h3>
+              </div>
+              <div className="size-10 rounded-lg bg-yellow-500/10 border border-yellow-500/25 flex items-center justify-center text-yellow-400">
+                <Coins className="size-5" />
+              </div>
+            </div>
+            <div className="mt-8 pt-4 border-t border-slate-900/60 flex justify-between items-center text-sm text-slate-400">
+              <span>Active Currency</span>
+              <span className="font-semibold text-slate-200">Pokécoins</span>
+            </div>
+          </BentoItem>
+        </div>
+
+        {/* Main Details and Active Squad Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Active Squad Display */}
+          <div className="lg:col-span-2 bg-slate-900/25 border border-slate-800/80 rounded-2xl p-6 backdrop-blur-md space-y-6">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-4">
+              <div>
+                <h2 className="text-xl font-bold text-slate-200">Active Squad</h2>
+                <p className="text-slate-400 text-xs mt-1">This squad will represent you in Discord PvP battles</p>
+              </div>
+              {activeTeamSummary ? (
+                <span className="text-xs font-bold uppercase tracking-wider text-orange-400 bg-orange-500/10 border border-orange-500/20 px-2.5 py-1 rounded-md">
+                  {activeTeamSummary.name}
+                </span>
               ) : (
-                <button
-                  onClick={() => navigate("/dashboard/teams")}
-                  className="btn-secondary w-full py-2.5"
-                >
-                  <span>Build Battle Squad</span>
-                </button>
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-500 bg-slate-800/40 px-2.5 py-1 rounded-md">
+                  None Active
+                </span>
               )}
             </div>
-          </div>
 
-          {/* Performance Tier Rating */}
-          <div className="card p-5 flex items-center gap-4 border-l-2 border-[var(--poke-yellow)]">
-            <div className="w-12 h-12 rounded-[var(--radius-md)] bg-[var(--bg-overlay)] border border-[var(--poke-yellow)]/30 flex items-center justify-center text-xl font-display font-black text-[var(--poke-yellow)] select-none">
-              {ratingTier}
-            </div>
-            <div>
-              <div className="font-rajdhani text-[9px] font-bold uppercase tracking-widest text-[var(--poke-yellow)]">
-                Performance Rating Index
-              </div>
-              <div className="text-xs font-bold text-text-primary mt-0.5 uppercase tracking-wide font-rajdhani">
-                {ratingTitle}
-              </div>
-              <div className="mono text-[9px] text-text-muted mt-0.5">
-                Computed over {total} active logs
-              </div>
-            </div>
-          </div>
-
-          {/* Recent Activity Mini-Feed */}
-          <div className="card p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-[var(--border-default)] pb-3">
-              <span className="mono text-[9px] font-bold uppercase tracking-widest text-text-muted">
-                Frequency Feed
-              </span>
-              <button
-                onClick={() => navigate("/dashboard/battles")}
-                className="font-rajdhani text-[9px] uppercase font-bold text-text-link hover:text-[var(--poke-blue)] transition-colors cursor-pointer flex items-center gap-0.5"
-              >
-                <span>Logs</span>
-                <ArrowUpRight className="w-3 h-3" />
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              {recentBattles.length > 0 ? (
-                recentBattles.map((battle) => {
-                  const isWin = battle.result === "win";
-                  return (
-                    <div key={battle.id} className="flex items-center justify-between text-xs py-1">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        {isWin ? (
-                          <Trophy className="w-4 h-4 text-emerald-400 shrink-0" />
-                        ) : (
-                          <Swords className="w-4 h-4 text-[var(--poke-red)] shrink-0" />
-                        )}
-                        <div className="min-w-0">
-                          <div className="font-semibold text-text-primary truncate uppercase font-rajdhani tracking-wide text-xs">
-                            {isWin ? "Vict" : "Defe"} vs {battle.opponent}
-                          </div>
-                          <div className="mono text-[8px] text-text-muted mt-0.5">{battle.timestamp}</div>
-                        </div>
+            {activeTeamSummary && activeTeamSummary.pokemon && activeTeamSummary.pokemon.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                {activeTeamSummary.pokemon.map((p, idx) => (
+                  <div 
+                    key={idx} 
+                    className="relative flex flex-col items-center bg-slate-950/60 border border-slate-850 p-4 rounded-xl group transition hover:border-orange-500/30 overflow-hidden"
+                  >
+                    {p.shiny && (
+                      <div className="absolute top-2 right-2 text-xs font-bold text-yellow-500 flex items-center gap-0.5 select-none bg-yellow-500/10 border border-yellow-500/25 rounded px-1.5 py-0.2 scale-90">
+                        ✨ SHINY
                       </div>
-                      <span className={`font-mono text-xs font-bold shrink-0 ${isWin ? "text-emerald-400" : "text-[var(--poke-red)]"}`}>
-                        {isWin ? "+" : ""}{battle.eloChange} ELO
-                      </span>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="mono text-[9px] text-text-muted py-2 text-center uppercase">
-                  No battle records found
+                    )}
+                    <img 
+                      src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${p.shiny ? 'shiny/' : ''}${p.pokemon_id}.png`} 
+                      alt={p.pokname} 
+                      className="size-20 object-contain drop-shadow-[0_2px_8px_rgba(0,0,0,0.4)] group-hover:scale-110 transition duration-300"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png';
+                      }}
+                    />
+                    <span className="text-sm font-bold text-slate-200 capitalize mt-2 truncate w-full text-center">
+                      {p.pokname.replace(/-/g, ' ')}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-center text-slate-500 border border-dashed border-slate-800 rounded-xl space-y-4">
+                <div className="size-12 rounded-full bg-slate-900 flex items-center justify-center border border-slate-800">
+                  <Swords className="size-5 text-slate-400" />
                 </div>
-              )}
+                <div>
+                  <h4 className="text-sm font-bold text-slate-400">No active squad selected</h4>
+                  <p className="text-xs text-slate-500 mt-1 max-w-sm">Go to My Squads, choose a squad, and click 'Activate' to use it in Discord battles.</p>
+                </div>
+                <Link 
+                  to="/dashboard/teams" 
+                  className="text-xs font-bold text-orange-400 hover:text-orange-300 underline"
+                >
+                  Go select a squad
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* Quick Config / Info */}
+          <div className="bg-slate-900/25 border border-slate-800/80 rounded-2xl p-6 backdrop-blur-md flex flex-col justify-between space-y-6">
+            <div>
+              <h2 className="text-xl font-bold text-slate-200 mb-4 flex items-center gap-2">
+                <Settings2 className="size-5 text-slate-400" />
+                Battle Parameters
+              </h2>
+              <div className="space-y-4 text-sm">
+                <div className="flex justify-between items-center py-2.5 border-b border-slate-900/60">
+                  <span className="text-slate-400">Battle Generation</span>
+                  <span className="font-bold text-orange-400">Gen {profile?.gen ?? 5}</span>
+                </div>
+                <div className="flex justify-between items-center py-2.5 border-b border-slate-900/60">
+                  <span className="text-slate-400">Theme</span>
+                  <span className="font-bold text-slate-200 capitalize">{profile?.theme ?? 'firered'}</span>
+                </div>
+                <div className="flex justify-between items-center py-2.5 border-b border-slate-900/60">
+                  <span className="text-slate-400">Shiny Lock</span>
+                  <span className="font-bold text-green-500">Unlocked</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-slate-950/40 rounded-xl p-4 border border-slate-900 space-y-2">
+              <span className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">Discord Integration</span>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Connect the bot to your Discord servers. Type <code className="text-orange-400 font-mono bg-slate-900 px-1 py-0.5 rounded">/battle</code> to fight or <code className="text-orange-400 font-mono bg-slate-900 px-1 py-0.5 rounded">/party</code> to show your active team!
+              </p>
             </div>
           </div>
         </div>
+
       </div>
-    </motion.div>
+    </div>
   );
 }
-
-export default ProfilePage;

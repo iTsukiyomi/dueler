@@ -3,23 +3,15 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge"
 import {
-  Blocks,
   ChevronsUpDown,
-  FileClock,
-  GraduationCap,
-  Layout,
   LayoutDashboard,
   LogOut,
-  MessageSquareText,
   MessagesSquare,
-  Plus,
-  Settings,
+  Swords,
   Trophy,
-  UserCircle,
-  UserCog,
-  UserSearch,
+  Users,
 } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Link, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -31,13 +23,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
+import { useAuthStore } from "@/stores/authStore";
 
 const sidebarVariants = {
   open: {
-    width: "15rem",
+    width: "16rem",
   },
   closed: {
-    width: "3.05rem",
+    width: "3.75rem",
   },
 };
 
@@ -64,7 +57,7 @@ const variants = {
 };
 
 const transitionProps = {
-  type: "tween",
+  type: "tween" as const,
   ease: "easeOut",
   duration: 0.2,
   staggerChildren: 0.1,
@@ -76,256 +69,183 @@ const staggerVariants = {
   },
 };
 
-export function SessionNavBar({ 
-  wins = 0, 
-  losses = 0, 
-  winRate = "0.0", 
-  username = "Trainer", 
-  avatarUrl = "", 
-  userId = "",
-  onSignOut 
-}: { 
-  wins?: number; 
-  losses?: number; 
-  winRate?: string; 
-  username?: string; 
-  avatarUrl?: string; 
-  userId?: string;
-  onSignOut?: () => void;
-}) {
+export function SessionNavBar() {
   const [isCollapsed, setIsCollapsed] = useState(true);
-  const location = useLocation();
-  const pathname = location.pathname;
+  const { pathname } = useLocation();
+  const { user, profile, logout } = useAuthStore();
+
+  const handleLogout = async () => {
+    await logout();
+  };
+
+  const navItems = [
+    {
+      to: "/dashboard",
+      label: "Dashboard",
+      icon: LayoutDashboard,
+      active: pathname === "/dashboard",
+    },
+    {
+      to: "/dashboard/teams",
+      label: "My Squads",
+      icon: Users,
+      active: pathname.startsWith("/dashboard/teams"),
+    },
+    {
+      to: "/dashboard/chat",
+      label: "Gemini Chat",
+      icon: MessagesSquare,
+      active: pathname === "/dashboard/chat",
+      badge: "AI",
+    },
+    {
+      to: "/dashboard/leaderboard",
+      label: "Leaderboard",
+      icon: Trophy,
+      active: pathname === "/dashboard/leaderboard",
+    },
+    {
+      to: "/dashboard/battles",
+      label: "Battle History",
+      icon: Swords,
+      active: pathname === "/dashboard/battles",
+    },
+  ];
 
   return (
     <motion.div
       className={cn(
-        "sidebar fixed left-0 z-40 h-full shrink-0 border-r border-[var(--border-default)]",
+        "sidebar fixed left-0 top-0 z-40 h-full shrink-0 border-r border-slate-800 bg-slate-950/80 backdrop-blur-md text-white select-none"
       )}
       initial={isCollapsed ? "closed" : "open"}
       animate={isCollapsed ? "closed" : "open"}
       variants={sidebarVariants}
-      transition={transitionProps}
+      transition={transitionProps as any}
       onMouseEnter={() => setIsCollapsed(false)}
       onMouseLeave={() => setIsCollapsed(true)}
     >
       <motion.div
-        className={`relative z-40 flex text-muted-foreground h-full shrink-0 flex-col bg-[var(--bg-base)] transition-all`}
+        className="relative z-40 flex flex-col h-full shrink-0 bg-slate-950/40"
         variants={contentVariants}
       >
-        <motion.ul variants={staggerVariants} className="flex h-full flex-col list-none p-0 m-0">
-          <div className="flex grow flex-col items-center">
-            {/* Top Brand / Org selector */}
-            <div className="flex h-[54px] w-full shrink-0 border-b border-[var(--border-default)] p-2">
-              <div className="mt-[1.5px] flex w-full">
-                <DropdownMenu modal={false}>
-                  <DropdownMenuTrigger className="w-full" asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="flex w-fit items-center gap-2 px-2 text-text-primary hover:bg-[var(--bg-raised)] cursor-pointer" 
-                    >
-                      <Avatar className="rounded size-4 bg-[var(--bg-raised)] border border-[var(--border-default)]">
-                        <AvatarFallback className="text-[8px]">FD</AvatarFallback>
-                      </Avatar>
-                      <motion.li
-                        variants={variants}
-                        className="flex w-fit items-center gap-2 list-none"
-                      >
-                        {!isCollapsed && (
-                          <>
-                            <p className="text-xs font-bold uppercase tracking-wider font-display text-text-primary">
-                              Flame Dueler
-                            </p>
-                            <ChevronsUpDown className="h-3 w-3 text-text-muted" />
-                          </>
-                        )}
-                      </motion.li>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="bg-[var(--bg-float)] border-[var(--border-bright)] text-text-primary">
-                    <DropdownMenuItem asChild className="hover:bg-[var(--bg-raised)] cursor-pointer">
-                      <Link to="/dashboard/settings" className="flex items-center gap-2 text-xs font-semibold">
-                        <UserCog className="h-4 w-4" /> Manage Profile
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild className="hover:bg-[var(--bg-raised)] cursor-pointer">
-                      <Link to="/dashboard/teams" className="flex items-center gap-2 text-xs font-semibold">
-                        <Blocks className="h-4 w-4" /> Squad Builder
-                      </Link>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+        <motion.ul variants={staggerVariants} className="flex h-full flex-col p-0 m-0 list-none">
+          {/* Logo Section */}
+          <div className="flex h-[60px] w-full shrink-0 border-b border-slate-800 p-3 items-center justify-between">
+            <div className="flex items-center gap-2 overflow-hidden">
+              <div className="size-8 rounded-lg bg-gradient-to-br from-red-500 via-orange-500 to-yellow-500 flex items-center justify-center font-bold text-white shadow-lg shadow-orange-500/20">
+                P
               </div>
-            </div>
-
-            {/* Navigation links */}
-            <div className="flex h-full w-full flex-col">
-              <div className="flex grow flex-col gap-4">
-                <ScrollArea className="h-16 grow p-2">
-                  <div className={cn("flex w-full flex-col gap-1")}>
-                    <Link
-                      to="/dashboard"
-                      className={cn(
-                        "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition text-text-secondary hover:bg-[var(--bg-raised)] hover:text-text-primary",
-                        pathname === "/dashboard" && "bg-[var(--bg-raised)] text-[var(--poke-blue)]",
-                      )}
-                    >
-                      <LayoutDashboard className="h-4 w-4 shrink-0" />
-                      <motion.li variants={variants} className="list-none">
-                        {!isCollapsed && (
-                          <p className="ml-2 text-xs font-bold uppercase tracking-wider font-rajdhani">Trainer Card</p>
-                        )}
-                      </motion.li>
-                    </Link>
-
-                    <Link
-                      to="/dashboard/teams"
-                      className={cn(
-                        "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition text-text-secondary hover:bg-[var(--bg-raised)] hover:text-text-primary",
-                        pathname?.includes("teams") && "bg-[var(--bg-raised)] text-[var(--poke-blue)]",
-                      )}
-                    >
-                      <Blocks className="h-4 w-4 shrink-0" />
-                      <motion.li variants={variants} className="list-none">
-                        {!isCollapsed && (
-                          <p className="ml-2 text-xs font-bold uppercase tracking-wider font-rajdhani">Squad Editor</p>
-                        )}
-                      </motion.li>
-                    </Link>
-
-                    <Link
-                      to="/dashboard/leaderboard"
-                      className={cn(
-                        "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition text-text-secondary hover:bg-[var(--bg-raised)] hover:text-text-primary",
-                        pathname?.includes("leaderboard") && "bg-[var(--bg-raised)] text-[var(--poke-blue)]",
-                      )}
-                    >
-                      <Trophy className="h-4 w-4 shrink-0" />
-                      <motion.li variants={variants} className="list-none">
-                        {!isCollapsed && (
-                          <p className="ml-2 text-xs font-bold uppercase tracking-wider font-rajdhani">Hall of Fame</p>
-                        )}
-                      </motion.li>
-                    </Link>
-
-                    <Link
-                      to="/dashboard/battles"
-                      className={cn(
-                        "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition text-text-secondary hover:bg-[var(--bg-raised)] hover:text-text-primary",
-                        pathname?.includes("battles") && "bg-[var(--bg-raised)] text-[var(--poke-blue)]",
-                      )}
-                    >
-                      <FileClock className="h-4 w-4 shrink-0" />
-                      <motion.li variants={variants} className="list-none">
-                        {!isCollapsed && (
-                          <div className="ml-2 flex items-center gap-2">
-                            <p className="text-xs font-bold uppercase tracking-wider font-rajdhani">Battle Logs</p>
-                          </div>
-                        )}
-                      </motion.li>
-                    </Link>
-
-                    <Separator className="w-full bg-[var(--border-default)] my-1" />
-
-                    <Link
-                      to="/dashboard/settings"
-                      className={cn(
-                        "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition text-text-secondary hover:bg-[var(--bg-raised)] hover:text-text-primary",
-                        pathname?.includes("settings") && "bg-[var(--bg-raised)] text-[var(--poke-blue)]",
-                      )}
-                    >
-                      <Settings className="h-4 w-4 shrink-0" />
-                      <motion.li variants={variants} className="list-none">
-                        {!isCollapsed && (
-                          <p className="ml-2 text-xs font-bold uppercase tracking-wider font-rajdhani">OS Settings</p>
-                        )}
-                      </motion.li>
-                    </Link>
-                  </div>
-                </ScrollArea>
-              </div>
-
-              {/* Record Summary when Expanded */}
               {!isCollapsed && (
-                <div className="px-4 py-2 border-t border-[var(--border-default)] bg-[var(--bg-raised)] mx-2 rounded-lg mb-2">
-                  <div className="text-[8px] font-mono text-text-muted uppercase tracking-widest mb-1.5">League Record</div>
-                  <div className="grid grid-cols-3 gap-1 text-[10px] font-mono font-bold text-center">
-                    <div>
-                      <div className="text-text-secondary">W</div>
-                      <div className="text-emerald-400 mt-0.5">{wins}</div>
-                    </div>
-                    <div>
-                      <div className="text-text-secondary">L</div>
-                      <div className="text-[var(--poke-red)] mt-0.5">{losses}</div>
-                    </div>
-                    <div>
-                      <div className="text-text-secondary">%</div>
-                      <div className="text-[var(--poke-yellow)] mt-0.5">{winRate}</div>
-                    </div>
-                  </div>
-                </div>
+                <motion.span
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-orange-400 text-sm tracking-wider uppercase font-sans whitespace-nowrap"
+                >
+                  Poke Dueler
+                </motion.span>
               )}
+            </div>
+          </div>
 
-              {/* Footer Account Actions */}
-              <div className="flex flex-col p-2 border-t border-[var(--border-default)]">
-                <div>
-                  <DropdownMenu modal={false}>
-                    <DropdownMenuTrigger className="w-full outline-none">
-                      <div className="flex h-8 w-full flex-row items-center gap-2 rounded-md px-2 py-1.5 transition hover:bg-[var(--bg-raised)] hover:text-text-primary cursor-pointer text-text-secondary">
-                        <Avatar className="size-4 bg-[var(--bg-raised)] border border-[var(--border-default)]">
-                          {avatarUrl ? (
-                            <img src={avatarUrl} alt={username} className="object-cover size-full rounded-full" />
-                          ) : (
-                            <AvatarFallback className="text-[8px]">{username.slice(0,2).toUpperCase()}</AvatarFallback>
-                          )}
-                        </Avatar>
-                        <motion.li
-                          variants={variants}
-                          className="flex w-full items-center gap-2 list-none"
-                        >
-                          {!isCollapsed && (
-                            <>
-                              <p className="text-xs font-semibold uppercase font-rajdhani tracking-wider truncate text-left max-w-[80px]">{username}</p>
-                              <ChevronsUpDown className="ml-auto h-3 w-3 text-text-muted" />
-                            </>
+          {/* Navigation Links */}
+          <div className="flex h-full w-full flex-col grow justify-between py-4">
+            <ScrollArea className="grow px-2">
+              <div className="flex w-full flex-col gap-1">
+                {navItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      className={cn(
+                        "flex h-10 w-full flex-row items-center rounded-lg px-3 py-2 transition duration-200 group relative",
+                        item.active
+                          ? "bg-gradient-to-r from-orange-500/20 to-red-500/10 border-l-2 border-orange-500 text-orange-400"
+                          : "text-slate-400 hover:bg-slate-900 hover:text-slate-100"
+                      )}
+                    >
+                      <Icon className={cn("size-4 shrink-0", item.active ? "text-orange-400" : "text-slate-400 group-hover:text-slate-100")} />
+                      
+                      {!isCollapsed && (
+                        <motion.li variants={variants} className="list-none flex items-center justify-between w-full ml-3">
+                          <span className="text-sm font-medium">{item.label}</span>
+                          {item.badge && (
+                            <Badge className="bg-red-500/20 text-red-400 border-none text-[10px] px-1.5 py-0.5 rounded uppercase font-semibold tracking-wider font-sans">
+                              {item.badge}
+                            </Badge>
                           )}
                         </motion.li>
-                      </div>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent sideOffset={5} className="bg-[var(--bg-float)] border-[var(--border-bright)] text-text-primary">
-                      <div className="flex flex-row items-center gap-2 p-2 min-w-[150px]">
-                        <Avatar className="size-6 bg-[var(--bg-raised)] border border-[var(--border-default)]">
-                          {avatarUrl ? (
-                            <img src={avatarUrl} alt={username} className="object-cover size-full rounded-full" />
-                          ) : (
-                            <AvatarFallback className="text-xs">{username.slice(0,2).toUpperCase()}</AvatarFallback>
-                          )}
-                        </Avatar>
-                        <div className="flex flex-col text-left">
-                          <span className="text-xs font-bold uppercase font-rajdhani tracking-wider text-text-primary">
-                            {username}
-                          </span>
-                          {userId && (
-                            <span className="text-[8px] font-mono text-text-muted">
-                              ID: {userId}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <DropdownMenuSeparator className="bg-[var(--border-default)]" />
-                      <DropdownMenuItem asChild className="hover:bg-[var(--bg-raised)] cursor-pointer">
-                        <Link to="/dashboard/settings" className="flex items-center gap-2 text-xs font-semibold">
-                          <UserCircle className="h-4 w-4" /> Profile
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={onSignOut} className="flex items-center gap-2 text-xs font-semibold hover:bg-[var(--bg-raised)] text-[var(--poke-red)] cursor-pointer">
-                        <LogOut className="h-4 w-4" /> Sign out
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
+                      )}
+                    </Link>
+                  );
+                })}
               </div>
+            </ScrollArea>
+
+            {/* Bottom Profile / Account section */}
+            <div className="flex flex-col p-2 gap-1 border-t border-slate-900">
+              <DropdownMenu modal={false}>
+                <DropdownMenuTrigger className="w-full focus:outline-none" asChild>
+                  <div className="flex h-12 w-full flex-row items-center gap-2 rounded-lg px-2 py-1.5 transition hover:bg-slate-900 hover:text-slate-100 cursor-pointer text-left">
+                    <Avatar className="size-7 border border-slate-700">
+                      <AvatarImage src={user?.avatarUrl} alt={user?.username} />
+                      <AvatarFallback className="bg-slate-800 text-slate-300 uppercase text-xs font-semibold">
+                        {user?.username?.substring(0, 2) || "TR"}
+                      </AvatarFallback>
+                    </Avatar>
+                    
+                    {!isCollapsed && (
+                      <motion.li
+                        variants={variants}
+                        className="flex w-full items-center justify-between list-none"
+                      >
+                        <div className="flex flex-col truncate">
+                          <p className="text-sm font-semibold m-0 text-slate-200 truncate">
+                            {user?.username || "Trainer"}
+                          </p>
+                          <p className="text-xs text-orange-500/90 font-medium m-0">
+                            {profile?.elo !== undefined ? `${profile.elo} ELO` : "Trainer Hub"}
+                          </p>
+                        </div>
+                        <ChevronsUpDown className="size-3 text-slate-500" />
+                      </motion.li>
+                    )}
+                  </div>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" side="right" className="bg-slate-950 border-slate-800 text-slate-200 w-52 p-1">
+                  <div className="flex flex-row items-center gap-2 p-2">
+                    <Avatar className="size-8 border border-slate-800">
+                      <AvatarImage src={user?.avatarUrl} alt={user?.username} />
+                      <AvatarFallback className="bg-slate-800 text-slate-300 uppercase">
+                        {user?.username?.substring(0, 2) || "TR"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col text-left truncate">
+                      <span className="text-sm font-semibold text-slate-200 truncate">
+                        {user?.username || "Trainer"}
+                      </span>
+                      <span className="text-xs text-slate-500 truncate">
+                        ID: {user?.id}
+                      </span>
+                    </div>
+                  </div>
+                  <DropdownMenuSeparator className="bg-slate-800" />
+                  <DropdownMenuItem
+                    asChild
+                    className="flex items-center gap-2 cursor-pointer focus:bg-slate-900 focus:text-slate-100 p-2 rounded-md"
+                  >
+                    <Link to="/dashboard">
+                      <LayoutDashboard className="size-4 text-slate-400" /> Trainer Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={handleLogout}
+                    className="flex items-center gap-2 cursor-pointer focus:bg-red-950/30 focus:text-red-400 p-2 rounded-md text-red-500 font-medium"
+                  >
+                    <LogOut className="size-4" /> Sign out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </motion.ul>

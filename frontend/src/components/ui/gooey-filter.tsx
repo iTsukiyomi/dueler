@@ -1,3 +1,5 @@
+import * as React from "react"
+
 const GooeyFilter = ({
   id = "goo-filter",
   strength = 10,
@@ -28,4 +30,3 @@ const GooeyFilter = ({
 }
 
 export { GooeyFilter }
-export default GooeyFilter;

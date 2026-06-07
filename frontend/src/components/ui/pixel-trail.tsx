@@ -3,7 +3,7 @@ import { motion, useAnimationControls } from "framer-motion"
 import { v4 as uuidv4 } from "uuid"
 
 import { cn } from "@/lib/utils"
-import { useDimensions } from "@/components/hooks/use-debounced-dimensions"
+import { useDimensions } from "@/hooks/use-debounced-dimensions"
 
 interface PixelTrailProps {
   pixelSize: number // px
@@ -21,7 +21,7 @@ const PixelTrail: React.FC<PixelTrailProps> = ({
   pixelClassName,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null)
-  const dimensions = useDimensions(containerRef)
+  const dimensions = useDimensions(containerRef as any)
   const trailId = useRef(uuidv4())
 
   const handleMouseMove = useCallback(
@@ -33,7 +33,7 @@ const PixelTrail: React.FC<PixelTrailProps> = ({
       const y = Math.floor((e.clientY - rect.top) / pixelSize)
 
       const pixelElement = document.getElementById(
-        `${trailId.current}-pixel-${x}-${y}`
+          `${trailId.current}-pixel-${x}-${y}`
       )
       if (pixelElement) {
         const animatePixel = (pixelElement as any).__animatePixel
@@ -98,6 +98,7 @@ const PixelDot: React.FC<PixelDotProps> = React.memo(
       })
     }, [controls, fadeDuration, delay])
 
+    // Attach the animatePixel function to the DOM element
     const ref = useCallback(
       (node: HTMLDivElement | null) => {
         if (node) {
@@ -126,4 +127,3 @@ const PixelDot: React.FC<PixelDotProps> = React.memo(
 
 PixelDot.displayName = "PixelDot"
 export { PixelTrail }
-export default PixelTrail;

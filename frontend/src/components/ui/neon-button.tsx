@@ -2,19 +2,19 @@ import React from 'react'
 import { cn } from '@/lib/utils'
 import { VariantProps, cva } from "class-variance-authority";
 
-const neonButtonVariants = cva(
-    "relative group border text-foreground mx-auto text-center rounded-full inline-flex items-center justify-center transition-all duration-200 cursor-pointer",
+const buttonVariants = cva(
+    "relative group border text-foreground mx-auto text-center rounded-full",
     {
         variants: {
             variant: {
-                default: "bg-blue-500/5 hover:bg-blue-500/0 border-blue-500/20 text-text-primary",
-                solid: "bg-blue-500 hover:bg-blue-600 text-white border-transparent hover:border-foreground/50",
-                ghost: "border-transparent bg-transparent hover:border-zinc-600 hover:bg-white/10 text-text-secondary",
+                default: "bg-blue-500/5 hover:bg-blue-500/0 border-blue-500/20",
+                solid: "bg-blue-500 hover:bg-blue-600 text-white border-transparent hover:border-foreground/50 transition-all duration-200",
+                ghost: "border-transparent bg-transparent hover:border-zinc-600 hover:bg-white/10",
             },
             size: {
-                default: "px-7 py-1.5 text-sm",
-                sm: "px-4 py-0.5 text-xs",
-                lg: "px-10 py-2.5 text-base",
+                default: "px-7 py-1.5 ",
+                sm: "px-4 py-0.5 ",
+                lg: "px-10 py-2.5 ",
             },
         },
         defaultVariants: {
@@ -26,13 +26,13 @@ const neonButtonVariants = cva(
 
 export interface NeonButtonProps
     extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof neonButtonVariants> { neon?: boolean }
+    VariantProps<typeof buttonVariants> { neon?: boolean }
 
 const NeonButton = React.forwardRef<HTMLButtonElement, NeonButtonProps>(
     ({ className, neon = true, size, variant, children, ...props }, ref) => {
         return (
             <button
-                className={cn(neonButtonVariants({ variant, size }), className)}
+                className={cn(buttonVariants({ variant, size }), className)}
                 ref={ref}
                 {...props}
             >
@@ -46,5 +46,4 @@ const NeonButton = React.forwardRef<HTMLButtonElement, NeonButtonProps>(
 
 NeonButton.displayName = 'NeonButton';
 
-export { NeonButton, neonButtonVariants };
-export default NeonButton;
+export { NeonButton, NeonButton as Button, buttonVariants };

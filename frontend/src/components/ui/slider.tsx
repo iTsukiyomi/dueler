@@ -1,5 +1,3 @@
-"use client";
-
 import * as SliderPrimitive from "@radix-ui/react-slider";
 import * as React from "react";
 
@@ -17,7 +15,7 @@ const Slider = React.forwardRef<
     showTooltip?: boolean;
     tooltipContent?: (value: number) => React.ReactNode;
   }
->(({ className, showTooltip = false, tooltipContent, ...props }, ref) => {
+>((({ className, showTooltip = false, tooltipContent, ...props }, ref) => {
   const [showTooltipState, setShowTooltipState] = React.useState(false);
   const [internalValue, setInternalValue] = React.useState<number[]>(
     (props.defaultValue as number[]) ?? (props.value as number[]) ?? [0],
@@ -58,7 +56,7 @@ const Slider = React.forwardRef<
   const renderThumb = (value: number) => {
     const thumb = (
       <SliderPrimitive.Thumb
-        className="block h-5 w-5 rounded-full border-2 border-primary bg-background transition-colors focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-ring/40 data-[disabled]:cursor-not-allowed cursor-pointer"
+        className="block h-5 w-5 rounded-full border-2 border-primary bg-background transition-colors focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-ring/40 data-[disabled]:cursor-not-allowed"
         onPointerDown={handlePointerDown}
       />
     );
@@ -70,7 +68,7 @@ const Slider = React.forwardRef<
         <Tooltip open={showTooltipState}>
           <TooltipTrigger asChild>{thumb}</TooltipTrigger>
           <TooltipContent
-            className="px-2 py-1 text-xs"
+            className="px-2 py-1 text-xs animate-none"
             sideOffset={8}
             side={props.orientation === "vertical" ? "right" : "top"}
           >
@@ -99,8 +97,7 @@ const Slider = React.forwardRef<
       ))}
     </SliderPrimitive.Root>
   );
-});
+}));
 Slider.displayName = SliderPrimitive.Root.displayName;
 
 export { Slider };
-export default Slider;

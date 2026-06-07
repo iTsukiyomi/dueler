@@ -5,11 +5,11 @@ interface Dimensions {
   height: number;
 }
 
-export function useDimensions(ref: RefObject<HTMLElement | SVGElement | null>): Dimensions {
+export function useDimensions(ref: RefObject<HTMLElement | SVGElement>): Dimensions {
   const [dimensions, setDimensions] = useState<Dimensions>({ width: 0, height: 0 });
 
   useEffect(() => {
-    let timeoutId: any;
+    let timeoutId: number;
 
     const updateDimensions = () => {
       if (ref.current) {
@@ -19,8 +19,8 @@ export function useDimensions(ref: RefObject<HTMLElement | SVGElement | null>): 
     };
 
     const debouncedUpdateDimensions = () => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(updateDimensions, 250); // Wait 250ms after resize ends
+      window.clearTimeout(timeoutId);
+      timeoutId = window.setTimeout(updateDimensions, 250); // Wait 250ms after resize ends
     };
 
     // Initial measurement
@@ -30,9 +30,8 @@ export function useDimensions(ref: RefObject<HTMLElement | SVGElement | null>): 
 
     return () => {
       window.removeEventListener('resize', debouncedUpdateDimensions);
-      clearTimeout(timeoutId);
+      window.clearTimeout(timeoutId);
     };
-
   }, [ref]);
 
   return dimensions;

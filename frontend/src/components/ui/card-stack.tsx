@@ -1,13 +1,9 @@
-"use client";
-
 import * as React from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { SquareArrowOutUpRight } from "lucide-react";
 import { Link } from "react-router-dom";
 
-function cn(...classes: Array<string | undefined | null | false>) {
-  return classes.filter(Boolean).join(" ");
-}
+import { cn } from "@/lib/utils";
 
 export type CardStackItem = {
   id: string | number;
@@ -79,6 +75,7 @@ function signedOffset(i: number, active: number, len: number, loop: boolean) {
   const raw = i - active;
   if (!loop || len <= 1) return raw;
 
+  // consider wrapped alternative
   const alt = raw > 0 ? raw - len : raw + len;
   return Math.abs(alt) < Math.abs(raw) ? alt : raw;
 }
@@ -124,6 +121,7 @@ export function CardStack<T extends CardStackItem>({
   );
   const [hovering, setHovering] = React.useState(false);
 
+  // keep active in bounds if items change
   React.useEffect(() => {
     setActive((a) => wrapIndex(a, len));
   }, [len]);
@@ -131,7 +129,8 @@ export function CardStack<T extends CardStackItem>({
   React.useEffect(() => {
     if (!len) return;
     onChangeIndex?.(active, items[active]!);
-  }, [active, len, items, onChangeIndex]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active]);
 
   const maxOffset = Math.max(0, Math.floor(maxVisible / 2));
 
@@ -153,11 +152,13 @@ export function CardStack<T extends CardStackItem>({
     setActive((a) => wrapIndex(a + 1, len));
   }, [canGoNext, len]);
 
+  // keyboard navigation (when container focused)
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "ArrowLeft") prev();
     if (e.key === "ArrowRight") next();
   };
 
+  // autoplay
   React.useEffect(() => {
     if (!autoAdvance) return;
     if (reduceMotion) return;
@@ -201,6 +202,7 @@ export function CardStack<T extends CardStackItem>({
         tabIndex={0}
         onKeyDown={onKeyDown}
       >
+        {/* background wash / spotlight (unique feel) */}
         <div
           className="pointer-events-none absolute inset-x-0 top-6 mx-auto h-48 w-[70%] rounded-full bg-black/5 blur-3xl dark:bg-white/5"
           aria-hidden="true"
@@ -222,11 +224,13 @@ export function CardStack<T extends CardStackItem>({
               const abs = Math.abs(off);
               const visible = abs <= maxOffset;
 
+              // hide far-away cards cleanly
               if (!visible) return null;
 
+              // fan geometry
               const rotateZ = off * stepDeg;
               const x = off * cardSpacing;
-              const y = abs * 10;
+              const y = abs * 10; // subtle arc-down feel
               const z = -abs * depthPx;
 
               const isActive = off === 0;
@@ -238,6 +242,7 @@ export function CardStack<T extends CardStackItem>({
 
               const zIndex = 100 - abs;
 
+              // drag only on the active card
               const dragProps = isActive
                 ? {
                     drag: "x" as const,
@@ -252,6 +257,7 @@ export function CardStack<T extends CardStackItem>({
                       const v = info.velocity.x;
                       const threshold = Math.min(160, cardWidth * 0.22);
 
+                      // swipe logic
                       if (travel > threshold || v > 650) prev();
                       else if (travel < -threshold || v < -650) next();
                     },
@@ -322,6 +328,7 @@ export function CardStack<T extends CardStackItem>({
         </div>
       </div>
 
+      {/* Dots navigation centered at bottom */}
       {showDots ? (
         <div className="mt-6 flex items-center justify-center gap-3">
           <div className="flex items-center gap-2">
@@ -343,15 +350,25 @@ export function CardStack<T extends CardStackItem>({
             })}
           </div>
           {activeItem.href ? (
-            <a
-              href={activeItem.href}
-              target="_blank"
-              rel="noreferrer"
-              className="text-muted-foreground hover:text-foreground transition"
-              aria-label="Open link"
-            >
-              <SquareArrowOutUpRight className="h-4 w-4" />
-            </a>
+            activeItem.href.startsWith("http") ? (
+              <a
+                href={activeItem.href}
+                target="_blank"
+                rel="noreferrer"
+                className="text-muted-foreground hover:text-foreground transition"
+                aria-label="Open link"
+              >
+                <SquareArrowOutUpRight className="h-4 w-4" />
+              </a>
+            ) : (
+              <Link
+                to={activeItem.href}
+                className="text-muted-foreground hover:text-foreground transition"
+                aria-label="Open link"
+              >
+                <SquareArrowOutUpRight className="h-4 w-4" />
+              </Link>
+            )
           ) : null}
         </div>
       ) : null}
@@ -362,7 +379,8 @@ export function CardStack<T extends CardStackItem>({
 function DefaultFanCard({ item }: { item: CardStackItem; active: boolean }) {
   return (
     <div className="relative h-full w-full">
-      <div className="absolute inset-0 bg-[var(--bg-raised)]">
+      {/* image */}
+      <div className="absolute inset-0">
         {item.imageSrc ? (
           <img
             src={item.imageSrc}
@@ -378,14 +396,16 @@ function DefaultFanCard({ item }: { item: CardStackItem; active: boolean }) {
         )}
       </div>
 
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
+      {/* subtle gradient overlay at bottom for text readability */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
 
-      <div className="relative z-10 flex h-full flex-col justify-end p-6 text-left">
-        <div className="truncate text-lg font-bold text-white font-display uppercase tracking-wider">
+      {/* content */}
+      <div className="relative z-10 flex h-full flex-col justify-end p-5 text-left">
+        <div className="truncate text-lg font-semibold text-white">
           {item.title}
         </div>
         {item.description ? (
-          <div className="mt-1 line-clamp-2 text-xs text-white/80 font-sans">
+          <div className="mt-1 line-clamp-2 text-sm text-white/80">
             {item.description}
           </div>
         ) : null}

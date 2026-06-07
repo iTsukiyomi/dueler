@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Moon, Sun, Check } from 'lucide-react';
 
-interface Option {
+interface DropdownOption {
   id: number;
   label: string;
   description: string;
@@ -13,24 +13,24 @@ const DropdownComponent = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [selected, setSelected] = useState('Select an option');
 
-  const options: Option[] = [
+  const options: DropdownOption[] = [
     { id: 1, label: 'Premium Plan', description: 'Advanced features' },
     { id: 2, label: 'Professional Plan', description: 'For power users' },
     { id: 3, label: 'Enterprise Plan', description: 'Unlimited access' },
     { id: 4, label: 'Starter Plan', description: 'Get started free' },
   ];
 
-  const handleSelect = (option: Option) => {
+  const handleSelect = (option: DropdownOption) => {
     setSelected(option.label);
     setIsOpen(false);
   };
 
   return (
     <div className={`min-h-screen w-full transition-colors duration-500 ${
-      isDark ? 'bg-black' : 'bg-white'
+      isDark ? 'bg-black text-white' : 'bg-white text-black'
     } relative overflow-hidden`}>
       {/* Orthogonal Grid Background */}
-      <div className="absolute inset-0 opacity-20">
+      <div className="absolute inset-0 opacity-20 pointer-events-none">
         <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
@@ -117,7 +117,7 @@ const DropdownComponent = () => {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
                   transition={{ duration: 0.2 }}
-                  className={`absolute w-full mt-2 rounded-xl border-2 overflow-hidden shadow-2xl ${
+                  className={`absolute w-full mt-2 rounded-xl border-2 overflow-hidden shadow-2xl z-20 ${
                     isDark
                       ? 'bg-black border-white'
                       : 'bg-white border-black'

@@ -28,4 +28,5 @@ export const config = {
     frontendUrl: process.env.FRONTEND_URL ?? "http://localhost:5173",
   },
   dataDir: resolve(__dirname, "../../pokemonduel/data"),
+  geminiApiKey: process.env.GEMINI_API_KEY ?? "",
 } as const;

@@ -1,7 +1,12 @@
 import React, { useEffect, useRef } from 'react';
 
+interface BentoItemProps {
+  className?: string;
+  children: React.ReactNode;
+}
+
 // Reusable BentoItem component
-const BentoItem = ({ className = "", children }: { className?: string; children: React.ReactNode }) => {
+export const BentoItem: React.FC<BentoItemProps> = ({ className, children }) => {
     const itemRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -24,12 +29,7 @@ const BentoItem = ({ className = "", children }: { className?: string; children:
     }, []);
 
     return (
-        <div ref={itemRef} className={`bento-item border border-[var(--border-default)] bg-[var(--bg-raised)] rounded-xl p-6 relative overflow-hidden transition-all duration-300 hover:border-[var(--border-bright)] ${className}`}>
-            <div className="absolute inset-0 opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-                 style={{
-                   background: "radial-gradient(400px circle at var(--mouse-x, 0px) var(--mouse-y, 0px), rgba(0, 176, 255, 0.06), transparent 80%)"
-                 }}
-            />
+        <div ref={itemRef} className={`bento-item ${className || ''}`}>
             {children}
         </div>
     );
@@ -38,65 +38,41 @@ const BentoItem = ({ className = "", children }: { className?: string; children:
 // Main Component
 export const CyberneticBentoGrid = () => {
     return (
-        <div className="w-full z-10">
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-text-primary text-center mb-8 font-display uppercase tracking-wider">
-              Core Battle Systems
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <BentoItem className="md:col-span-2 md:row-span-2 flex flex-col justify-between min-h-[300px]">
-                    <div>
-                        <h3 className="text-xl font-bold text-text-primary uppercase font-rajdhani tracking-wider">
-                          Real-time Stats Analytics
-                        </h3>
-                        <p className="mt-2 text-text-secondary text-xs font-sans leading-relaxed">
-                          Monitor your trainer rank, wins, losses, and battle ratio performance with live data relays directly synced to Silph Co. databases.
-                        </p>
-                    </div>
-                    <div className="mt-4 h-40 bg-[var(--bg-input)] border border-[var(--border-subtle)] rounded-lg flex flex-col items-center justify-center text-text-muted font-mono text-[10px] uppercase gap-2">
-                        <div className="w-6 h-6 border border-dashed border-text-muted rounded-full animate-spin-pokeball" />
-                        <span>Aggregating Battle logs...</span>
-                    </div>
-                </BentoItem>
-                <BentoItem>
-                    <h3 className="text-lg font-bold text-text-primary uppercase font-rajdhani tracking-wider">
-                      Global Matchmaking
-                    </h3>
-                    <p className="mt-2 text-text-secondary text-xs leading-relaxed font-sans">
-                      Instantly connect and challenge trainers worldwide inside the Discord Arena or live web portal.
-                    </p>
-                </BentoItem>
-                <BentoItem>
-                    <h3 className="text-lg font-bold text-text-primary uppercase font-rajdhani tracking-wider">
-                      Secure Auth Link
-                    </h3>
-                    <p className="mt-2 text-text-secondary text-xs leading-relaxed font-sans">
-                      Discord OAuth linkage ensures your squad state, settings, and stats history remain verified.
-                    </p>
-                </BentoItem>
-                <BentoItem className="md:row-span-2 flex flex-col justify-between">
-                    <div>
-                        <h3 className="text-lg font-bold text-text-primary uppercase font-rajdhani tracking-wider">
-                          Automated Sync
-                        </h3>
-                        <p className="mt-2 text-text-secondary text-xs leading-relaxed font-sans">
-                          Your teams, item bindings, and move allocations are backed up automatically to our cloud servers.
-                        </p>
-                    </div>
-                    <div className="mt-4 h-24 bg-[var(--bg-input)] border border-[var(--border-subtle)] rounded-lg flex items-center justify-center text-text-muted font-mono text-[9px] uppercase">
-                      Sync Status: OK
-                    </div>
-                </BentoItem>
-                <BentoItem className="md:col-span-2">
-                    <h3 className="text-lg font-bold text-text-primary uppercase font-rajdhani tracking-wider">
-                      Serverless Battle Engine
-                    </h3>
-                    <p className="mt-2 text-text-secondary text-xs leading-relaxed font-sans">
-                      Powered by the Smogon Showdown simulator core for fast turn resolution and precise battle logic execution.
-                    </p>
-                </BentoItem>
+        <div className="min-h-screen w-full flex items-center justify-center bg-black p-6">
+            <div className="w-full max-w-6xl z-10">
+                <h1 className="text-4xl sm:text-5xl font-bold text-white text-center mb-8 font-rajdhani">Core Features</h1>
+                <div className="bento-grid">
+                    <BentoItem className="col-span-2 row-span-2 flex flex-col justify-between">
+                        <div>
+                            <h2 className="text-2xl font-bold text-white">Real-time Analytics</h2>
+                            <p className="mt-2 text-gray-400">Monitor your application's performance with up-to-the-second data streams and visualizations.</p>
+                        </div>
+                        <div className="mt-4 h-48 bg-neutral-800 rounded-lg flex items-center justify-center text-gray-500">
+                            Chart Placeholder
+                        </div>
+                    </BentoItem>
+                    <BentoItem>
+                        <h2 className="text-xl font-bold text-white">Global CDN</h2>
+                        <p className="mt-2 text-gray-400 text-sm">Deliver content at lightning speed, no matter where your users are.</p>
+                    </BentoItem>
+                    <BentoItem>
+                        <h2 className="text-xl font-bold text-white">Secure Auth</h2>
+                        <p className="mt-2 text-gray-400 text-sm">Enterprise-grade authentication and user management built-in.</p>
+                    </BentoItem>
+                    <BentoItem className="row-span-2">
+                        <h2 className="text-xl font-bold text-white">Automated Backups</h2>
+                        <p className="mt-2 text-gray-400 text-sm">Your data is always safe with automated, redundant backups.</p>
+                    </BentoItem>
+                    <BentoItem className="col-span-2">
+                        <h2 className="text-xl font-bold text-white">Serverless Functions</h2>
+                        <p className="mt-2 text-gray-400 text-sm">Run your backend code without managing servers. Scale infinitely with ease.</p>
+                    </BentoItem>
+                    <BentoItem>
+                        <h2 className="text-xl font-bold text-white">CLI Tool</h2>
+                        <p className="mt-2 text-gray-400 text-sm">Manage your entire infrastructure from the command line.</p>
+                    </BentoItem>
+                </div>
             </div>
         </div>
     );
 };
-
-export default CyberneticBentoGrid;
