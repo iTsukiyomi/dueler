@@ -26,3 +26,5 @@ pokemonduel/scratch_images/
 node_modules/
 frontend/dist/
 server/dist/
+
+.agents/
