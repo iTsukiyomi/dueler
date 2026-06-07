@@ -14,6 +14,7 @@ export const config = {
     url: process.env.REDIS_URL ?? "",
   },
   discord: {
+    token: process.env.DISCORD_TOKEN ?? "",
     clientId: process.env.DISCORD_CLIENT_ID ?? "",
     clientSecret: process.env.DISCORD_CLIENT_SECRET ?? "",
     redirectUri:
@@ -28,5 +29,6 @@ export const config = {
     frontendUrl: process.env.FRONTEND_URL ?? "http://localhost:5173",
   },
   dataDir: resolve(__dirname, "../../pokemonduel/data"),
+  userConfigDir: resolve(__dirname, "../../data/PokemonDuel"),
   geminiApiKey: process.env.GEMINI_API_KEY ?? "",
 } as const;

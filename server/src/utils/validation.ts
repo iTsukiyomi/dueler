@@ -38,21 +38,23 @@ export function validatePokemonSlot(
 ): string[] {
   const errors: string[] = [];
 
-  if (!slot.pokname || slot.pokname.trim() === "") {
+  const poknameStr = typeof slot.pokname === "string" ? slot.pokname.trim() : "";
+  if (poknameStr === "") {
     return errors;
   }
 
-  const form = data.formsByIdentifier.get(slot.pokname.toLowerCase());
+  const form = data.formsByIdentifier.get(poknameStr.toLowerCase());
   if (!form) {
-    errors.push(`Unknown Pokémon: ${slot.pokname}`);
+    errors.push(`Unknown Pokémon: ${slot.pokname || "missing"}`);
   }
 
-  if (!slot.moves || slot.moves.length !== 4) {
+  if (!slot.moves || !Array.isArray(slot.moves) || slot.moves.length !== 4) {
     errors.push("Exactly 4 moves required");
   } else {
     for (const move of slot.moves) {
-      if (move.trim() !== "" && !data.movesByIdentifier.has(move.toLowerCase())) {
-        errors.push(`Unknown move: ${move}`);
+      const mStr = typeof move === "string" ? move.trim() : "";
+      if (mStr !== "" && !data.movesByIdentifier.has(mStr.toLowerCase())) {
+        errors.push(`Unknown move: ${move || "missing"}`);
       }
     }
   }
@@ -93,12 +95,14 @@ export function validatePokemonSlot(
     errors.push(`EV total ${evTotal} exceeds maximum of 510`);
   }
 
-  if (!data.naturesByIdentifier.has(slot.nature.toLowerCase())) {
-    errors.push(`Unknown nature: ${slot.nature}`);
+  const natureStr = typeof slot.nature === "string" ? slot.nature.trim() : "";
+  if (!natureStr || !data.naturesByIdentifier.has(natureStr.toLowerCase())) {
+    errors.push(`Unknown nature: ${slot.nature || "missing"}`);
   }
 
-  if (slot.hitem && !data.itemsByIdentifier.has(slot.hitem.toLowerCase())) {
-    errors.push(`Unknown item: ${slot.hitem}`);
+  const itemStr = typeof slot.hitem === "string" ? slot.hitem.trim() : "";
+  if (itemStr && !data.itemsByIdentifier.has(itemStr.toLowerCase())) {
+    errors.push(`Unknown item: ${slot.hitem || "missing"}`);
   }
 
   if (

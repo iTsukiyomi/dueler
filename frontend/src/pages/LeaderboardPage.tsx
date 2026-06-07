@@ -4,6 +4,7 @@ import { Trophy, Medal, Star, Swords, RefreshCw } from 'lucide-react';
 
 interface LeaderboardUser {
   rank: number;
+  id: string;
   username: string;
   avatarUrl: string;
   elo: number;
@@ -106,7 +107,7 @@ export default function LeaderboardPage() {
                 <div className="absolute top-0 inset-x-0 h-1 bg-slate-400" />
                 <div className="relative size-16 mx-auto rounded-full overflow-hidden border-2 border-slate-400 shadow-lg shadow-slate-400/10">
                   <img 
-                    src={topThree[1].avatarUrl} 
+                    src={topThree[1].avatarUrl || `https://cdn.discordapp.com/embed/avatars/${(parseInt(topThree[1].id) || 0) % 5}.png`} 
                     alt={topThree[1].username}
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${topThree[1].username}`;
@@ -133,7 +134,7 @@ export default function LeaderboardPage() {
                 </div>
                 <div className="relative size-20 mx-auto rounded-full overflow-hidden border-2 border-yellow-500 shadow-xl shadow-yellow-500/20">
                   <img 
-                    src={topThree[0].avatarUrl} 
+                    src={topThree[0].avatarUrl || `https://cdn.discordapp.com/embed/avatars/${(parseInt(topThree[0].id) || 0) % 5}.png`} 
                     alt={topThree[0].username}
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${topThree[0].username}`;
@@ -160,7 +161,7 @@ export default function LeaderboardPage() {
                 <div className="absolute top-0 inset-x-0 h-1 bg-amber-700" />
                 <div className="relative size-14 mx-auto rounded-full overflow-hidden border-2 border-amber-700 shadow-lg shadow-amber-700/10">
                   <img 
-                    src={topThree[2].avatarUrl} 
+                    src={topThree[2].avatarUrl || `https://cdn.discordapp.com/embed/avatars/${(parseInt(topThree[2].id) || 0) % 5}.png`} 
                     alt={topThree[2].username}
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${topThree[2].username}`;
@@ -203,7 +204,7 @@ export default function LeaderboardPage() {
                     <div className="flex items-center gap-3">
                       <div className="size-8 rounded-full overflow-hidden border border-slate-800 shrink-0">
                         <img 
-                          src={user.avatarUrl} 
+                          src={user.avatarUrl || `https://cdn.discordapp.com/embed/avatars/${(parseInt(user.id) || 0) % 5}.png`} 
                           alt="" 
                           onError={(e) => {
                             (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`;
