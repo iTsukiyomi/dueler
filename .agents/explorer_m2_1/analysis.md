@@ -1,0 +1,275 @@
+# Milestone 2 Analysis: Wipe and Initialize Vite App
+
+This report outlines the analysis of the current `/home/gojo/UE5/dueler/frontend` directory structure and recommends a detailed, safe strategy to wipe and re-initialize it as a clean React + Vite + TypeScript application with Tailwind CSS, PostCSS, and other specified dependencies.
+
+---
+
+## 1. Current Frontend Directory Structure & Assets
+
+The current `/home/gojo/UE5/dueler/frontend` directory contains the following file and directory structure:
+
+| File / Path | Type | Approx. Size / Count | Purpose / Contents |
+| :--- | :--- | :--- | :--- |
+| `dist/` | Directory | N/A (Build output) | Production build output folder. |
+| `node_modules/` | Directory | N/A (Dependencies) | Installed package binaries and source folders. |
+| `public/` | Directory | 2 top-level items | Holds static assets served directly. |
+| `├── arena_background.png` | File (PNG) | ~500 KB | Custom UI background image for battle scenes. |
+| `└── pokemon-icons/` | Directory | 187 files | Holds downloaded Pokémon sprite sheets/icons (PNGs, SVGs, `manifest.json`). |
+| `src/` | Directory | 96 source files | Core React app codebase (components, pages, stores, hooks, etc.). |
+| `package.json` | File (JSON) | 1.2 KB (45 lines) | Package metadata, dependencies, and dev scripts. |
+| `package-lock.json` | File (JSON) | 161 KB | Locked versions of all npm dependencies. |
+| `tsconfig.json` | File (JSON) | 691 B (27 lines) | TypeScript compiler configuration (e.g., target, lib, aliases). |
+| `vite.config.ts` | File (JSON) | 451 B (23 lines) | Vite build and dev server configurations (includes proxy to API port 3001). |
+| `index.html` | File (HTML) | 890 B (18 lines) | Entrypoint HTML template containing font links and `#root`. |
+
+### Key Findings & Preservation Risks:
+1. **Critical Custom Static Assets**: The `public/pokemon-icons/` folder contains many cached sprites downloaded via `fetch-pokemon-icons.mjs` and type SVG files. Since our target environment is code-only and may have internet restrictions, **deleting these files without backing them up first will break sprite loading in the frontend** because they cannot be easily downloaded again.
+2. **API Proxy Configuration**: The existing `vite.config.ts` contains a proxy setting routing `/api` requests to the Python server at `http://localhost:3001` (matching `API_PORT=3001` in the root `.env`). This must be preserved/re-implemented in the new configuration.
+
+---
+
+## 2. Detailed Safe Wiping Strategy
+
+Wiping a project directory carries risks of deleting root files, losing custom assets, or losing uncommitted git history. To perform this action safely, the following strategy must be used:
+
+### Step 1: Pre-Wipe Checks & Git Verification
+1. Ensure the user's terminal is executing commands relative to `/home/gojo/UE5/dueler/frontend` and **not** `/home/gojo/UE5/dueler` (the root).
+2. Check for any uncommitted changes inside the frontend directory:
+   ```bash
+   git status -- frontend/
+   ```
+   If changes exist, commit them or stash them to prevent loss of local work:
+   ```bash
+   git stash -- frontend/
+   ```
+
+### Step 2: Custom Assets Backup
+Before executing any delete command, backup the critical assets and configuration files into a temporary directory outside the frontend workspace:
+```bash
+# 1. Create a backup folder at the root level
+mkdir -p /home/gojo/UE5/dueler/frontend_backup
+
+# 2. Copy the entire public folder (preserving icons, background image, etc.)
+cp -r /home/gojo/UE5/dueler/frontend/public /home/gojo/UE5/dueler/frontend_backup/
+
+# 3. Copy config files for reference (to ensure proxy and alias configurations are identical)
+cp /home/gojo/UE5/dueler/frontend/vite.config.ts /home/gojo/UE5/dueler/frontend_backup/
+cp /home/gojo/UE5/dueler/frontend/tsconfig.json /home/gojo/UE5/dueler/frontend_backup/
+```
+
+### Step 3: Target-Specific Wiping
+Avoid broad `rm -rf *` commands which might accidentally escape or delete hidden configuration folders. Instead, explicitly target the folders and files in the `frontend` directory:
+```bash
+cd /home/gojo/UE5/dueler/frontend
+
+# Delete directories
+rm -rf src node_modules dist public
+
+# Delete configuration files
+rm -f package.json package-lock.json tsconfig.json vite.config.ts index.html
+```
+Verify the directory is empty:
+```bash
+ls -la /home/gojo/UE5/dueler/frontend
+```
+*(Should display only `.` and `..`)*
+
+---
+
+## 3. Clean React + Vite + TypeScript Initialization
+
+Once wiped, follow these steps to scaffold the new React + TypeScript application using Vite's official template:
+
+### Step 1: Scaffolding the App
+Run the Vite scaffold command. We specify `.` to initialize it directly inside the current `frontend/` folder, and pass the React + TypeScript template:
+```bash
+cd /home/gojo/UE5/dueler/frontend
+npm create vite@latest . -- --template react-ts
+```
+
+### Step 2: Restoring Backed-Up Assets
+Remove the default public/ assets generated by Vite and restore the custom assets from backup:
+```bash
+# Remove Vite's default public folder contents (e.g. vite.svg)
+rm -rf /home/gojo/UE5/dueler/frontend/public
+
+# Copy the original assets back
+cp -r /home/gojo/UE5/dueler/frontend_backup/public /home/gojo/UE5/dueler/frontend/public
+```
+
+---
+
+## 4. Package Installation Strategy
+
+Install the requested production and dev dependencies. Note the separation between runtime libraries and dev/typing tools.
+
+### Production (Runtime) Dependencies
+* `lucide-react`: Lightweight, customizable icon pack.
+* `framer-motion`: Animation library for modern UI transitions.
+* `uuid`: Cryptographically secure unique identifier generator.
+* `react-router-dom`: Standard React routing library.
+* `zustand`: Minimalist state management store.
+
+### Dev Dependencies & Typings
+* `tailwindcss`: CSS utility engine.
+* `postcss` & `autoprefixer`: Build-time CSS processing.
+* `@types/uuid`: Type definitions for `uuid` (required since `uuid` is written in JS).
+* `@types/node`: Type definitions for Node.js modules (required for path resolution in configuration files).
+
+### Installation Commands
+Run these commands in `/home/gojo/UE5/dueler/frontend`:
+
+```bash
+# 1. Install production dependencies
+npm install lucide-react framer-motion uuid react-router-dom zustand
+
+# 2. Install dev dependencies (Tailwind + PostCSS + Autoprefixer & TypeScript types)
+npm install -D tailwindcss postcss autoprefixer @types/uuid @types/node
+```
+
+---
+
+## 5. Configuration Strategy
+
+Depending on whether the project wishes to use **Tailwind v3** (standard PostCSS flow) or **Tailwind v4** (Vite-native compiler), two options are detailed. Given that the current setup uses Tailwind v4, we outline both:
+
+### Option A: Standard Tailwind v3 (using PostCSS + Autoprefixer)
+If you choose Tailwind v3 for wide plugin compatibility and standard PostCSS handling:
+
+1. **Vite Configuration (`frontend/vite.config.ts`)**:
+   Add path alias support (`@` to `/src`) and configured proxy server for API communication:
+   ```typescript
+   import { defineConfig } from "vite";
+   import react from "@vitejs/plugin-react";
+   import path from "path";
+
+   export default defineConfig({
+     plugins: [react()],
+     resolve: {
+       alias: {
+         "@": path.resolve(__dirname, "./src"),
+       },
+     },
+     server: {
+       port: 5173,
+       proxy: {
+         "/api": {
+           target: "http://localhost:3001",
+           changeOrigin: true,
+         },
+       },
+     },
+   });
+   ```
+
+2. **PostCSS Configuration (`frontend/postcss.config.js`)**:
+   Create a new file in the frontend root:
+   ```javascript
+   export default {
+     plugins: {
+       tailwindcss: {},
+       autoprefixer: {},
+     },
+   };
+   ```
+
+3. **Tailwind Configuration (`frontend/tailwind.config.js`)**:
+   Initialize with standard contents:
+   ```javascript
+   /** @type {import('tailwindcss').Config} */
+   export default {
+     content: [
+       "./index.html",
+       "./src/**/*.{js,ts,jsx,tsx}",
+     ],
+     theme: {
+       extend: {},
+     },
+     plugins: [],
+   };
+   ```
+
+4. **CSS Setup (`frontend/src/index.css`)**:
+   Replace contents with Tailwind directives:
+   ```css
+   @tailwind base;
+   @tailwind components;
+   @tailwind utilities;
+   ```
+
+---
+
+### Option B: Tailwind v4 (Vite-Native & Modern)
+Tailwind v4 uses `@tailwindcss/vite` which runs directly inside the Vite bundler, making builds much faster and removing the requirement for `tailwind.config.js` and `postcss.config.js` files. 
+
+*If choosing this modern pathway, install `@tailwindcss/vite` in place of PostCSS plugins:*
+```bash
+npm install -D @tailwindcss/vite tailwindcss
+```
+
+1. **Vite Configuration (`frontend/vite.config.ts`)**:
+   Register both React and Tailwind Vite plugins:
+   ```typescript
+   import { defineConfig } from "vite";
+   import react from "@vitejs/plugin-react";
+   import tailwindcss from "@tailwindcss/vite";
+   import path from "path";
+
+   export default defineConfig({
+     plugins: [react(), tailwindcss()],
+     resolve: {
+       alias: {
+         "@": path.resolve(__dirname, "./src"),
+       },
+     },
+     server: {
+       port: 5173,
+       proxy: {
+         "/api": {
+           target: "http://localhost:3001",
+           changeOrigin: true,
+         },
+       },
+     },
+   });
+   ```
+
+2. **CSS Setup (`frontend/src/index.css`)**:
+   Replace contents with the single modern import:
+   ```css
+   @import "tailwindcss";
+   ```
+
+---
+
+### TypeScript Path Mapping Config
+To ensure that TypeScript understands `@/*` alias imports:
+
+For **Vite v6** templates, add configuration to `frontend/tsconfig.app.json` inside the `compilerOptions` block:
+```json
+"compilerOptions": {
+  "baseUrl": ".",
+  "paths": {
+    "@/*": ["./src/*"]
+  }
+}
+```
+
+If it is a legacy Vite template where everything is in `frontend/tsconfig.json`, append it there.
+
+---
+
+## 6. Verification Steps for Implementer
+
+After completing the wipe, initialization, and configuration:
+
+1. **Run Development Server**: Check if Vite starts and proxies properly:
+   ```bash
+   npm run dev
+   ```
+2. **Build Test**: Run the TS compiler check and production build:
+   ```bash
+   npm run build
+   ```
+3. **Verify Asset Load**: Navigate to `http://localhost:5173/public/pokemon-icons/manifest.json` and `http://localhost:5173/public/arena_background.png` in the browser to ensure static files render correctly.
+4. **Verify Tailwind Classes**: Add a utility class like `<div className="bg-red-500 p-4">Test</div>` in `src/App.tsx` and verify styling gets compiled.

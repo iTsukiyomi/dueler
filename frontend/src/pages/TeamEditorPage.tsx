@@ -107,9 +107,16 @@ export default function TeamEditorPage() {
       .then((team) => {
         if (team) {
           setTeamName(team.name);
-          setSlots(team.pokemon);
-          if (team.pokemon.length > 0) {
-            setActiveSlotId(team.pokemon[0].id);
+          // Re-index slots immediately to guarantee unique 1-indexed IDs in frontend state
+          const loadedSlots = (team.pokemon || []).map((s, idx) => ({
+            ...s,
+            id: idx + 1,
+            // Ensure pokemon_id is present if resolved by backend
+            pokemon_id: (s as any).pokemon_id || 0
+          }));
+          setSlots(loadedSlots);
+          if (loadedSlots.length > 0) {
+            setActiveSlotId(loadedSlots[0].id);
           }
         } else {
           setErrorMsg('Team not found');
@@ -199,6 +206,7 @@ export default function TeamEditorPage() {
   const selectPokemon = (p: GameDataPokemon) => {
     updateSlotField('pokname', p.identifier);
     updateSlotField('poknick', p.display_name);
+    updateSlotField('pokemon_id', p.pokemon_id);
     updateSlotField('moves', ['', '', '', '']);
     updateSlotField('hitem', '');
     updateSlotField('ability_index', 0);
@@ -334,15 +342,13 @@ export default function TeamEditorPage() {
                   <div className="flex items-center gap-2.5 truncate">
                     <span className="text-xs font-semibold font-mono text-slate-500">{index + 1}</span>
                     <span className="truncate capitalize text-sm">
-                      {slot.pokname ? slot.poknick || slot.pokname.replace(/-/g, ' ') : 'Empty Slot'}
+                      {slot.pokname ? slot.pokname.replace(/-/g, ' ') : 'Empty Slot'}
                     </span>
                   </div>
                   {slot.pokname && (
                     <img 
                       src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${slot.shiny ? 'shiny/' : ''}${
-                        activePokemonDetails?.pokemon_id && activeSlotId === slot.id 
-                          ? activePokemonDetails.pokemon_id 
-                          : '0'
+                        (slot as any).pokemon_id || '0'
                       }.png`}
                       alt=""
                       className="size-7 object-contain drop-shadow"

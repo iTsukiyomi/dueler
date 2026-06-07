@@ -4,6 +4,7 @@ import { useAuthStore } from './authStore';
 
 export interface PokemonSlot {
   id: number;
+  pokemon_id?: number;
   pokname: string;
   poknick: string;
   hpiv: number;

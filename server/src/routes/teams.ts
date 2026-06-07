@@ -77,7 +77,12 @@ export function teamRoutes(app: FastifyInstance, data: GameData): void {
 
         return {
           name: team.name,
-          pokemon: team.pokemon ?? [],
+          pokemon: (team.pokemon ?? []).map((p: any) => ({
+            ...p,
+            pokemon_id:
+              data.formsByIdentifier.get(p.pokname?.toLowerCase())
+                ?.pokemon_id ?? 0,
+          })),
           created_at: team.created_at,
           updated_at: team.updated_at,
         };
