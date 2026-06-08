@@ -2,6 +2,9 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import cookie from "@fastify/cookie";
 import rateLimit from "@fastify/rate-limit";
+import path from "path";
+import { fileURLToPath } from "url";
+import fastifyStatic from "@fastify/static";
 
 import { config } from "./config.js";
 import { connectMongo, closeMongo } from "./db/mongo.js";
@@ -13,6 +16,9 @@ import { teamRoutes } from "./routes/teams.js";
 import { gamedataRoutes } from "./routes/gamedata.js";
 import { statsRoutes } from "./routes/stats.js";
 import { chatRoutes } from "./routes/chat.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 let gameData: GameData;
 
@@ -40,6 +46,7 @@ async function main() {
   console.log("[server] Loading game data...");
   gameData = loadGameData(config.dataDir);
 
+  // Register API routes
   await authRoutes(app);
   await playerRoutes(app);
   teamRoutes(app, gameData);
@@ -48,6 +55,18 @@ async function main() {
   await chatRoutes(app);
 
   app.get("/api/health", async () => ({ status: "ok" }));
+
+  // Serve React frontend static files
+  await app.register(fastifyStatic, {
+    root: path.join(__dirname, "../../frontend/dist"),
+    prefix: "/",
+    wildcard: false,
+  });
+
+  // Client-side router fallback (React Router)
+  app.get("/*", async (request, reply) => {
+    return reply.sendFile("index.html");
+  });
 
   const shutdown = async () => {
     console.log("[server] Shutting down...");
@@ -70,3 +89,4 @@ main().catch((err) => {
   console.error("[server] Fatal:", err);
   process.exit(1);
 });
+
