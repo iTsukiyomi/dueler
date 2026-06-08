@@ -1,69 +1,25 @@
-import Fastify from "fastify";
-import cors from "@fastify/cors";
-import cookie from "@fastify/cookie";
-import rateLimit from "@fastify/rate-limit";
+import { initApp } from "./app.js";
+import { config } from "./config.js";
+import { closeMongo } from "./db/mongo.js";
+import { closeRedis } from "./db/redis.js";
 import path from "path";
 import { fileURLToPath } from "url";
 import fastifyStatic from "@fastify/static";
 
-import { config } from "./config.js";
-import { connectMongo, closeMongo } from "./db/mongo.js";
-import { connectRedis, closeRedis } from "./db/redis.js";
-import { loadGameData, GameData } from "./gamedata/loader.js";
-import { authRoutes } from "./routes/auth.js";
-import { playerRoutes } from "./routes/player.js";
-import { teamRoutes } from "./routes/teams.js";
-import { gamedataRoutes } from "./routes/gamedata.js";
-import { statsRoutes } from "./routes/stats.js";
-import { chatRoutes } from "./routes/chat.js";
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-let gameData: GameData;
-
 async function main() {
-  const app = Fastify({ logger: false });
+  const app = await initApp();
 
-  await app.register(cors, {
-    origin: config.server.frontendUrl,
-    credentials: true,
-  });
-
-  await app.register(cookie);
-
-  await app.register(rateLimit, {
-    max: 100,
-    timeWindow: "1 minute",
-  });
-
-  console.log("[server] Connecting to MongoDB...");
-  await connectMongo();
-
-  console.log("[server] Connecting to Redis...");
-  await connectRedis();
-
-  console.log("[server] Loading game data...");
-  gameData = loadGameData(config.dataDir);
-
-  // Register API routes
-  await authRoutes(app);
-  await playerRoutes(app);
-  teamRoutes(app, gameData);
-  gamedataRoutes(app, gameData);
-  await statsRoutes(app);
-  await chatRoutes(app);
-
-  app.get("/api/health", async () => ({ status: "ok" }));
-
-  // Serve React frontend static files
+  // Serve React frontend static files when running standalone
   await app.register(fastifyStatic, {
     root: path.join(__dirname, "../../frontend/dist"),
     prefix: "/",
     wildcard: false,
   });
 
-  // Client-side router fallback (React Router)
+  // Client-side router fallback (React Router) for standalone
   app.get("/*", async (request, reply) => {
     return reply.sendFile("index.html");
   });
@@ -89,4 +45,3 @@ main().catch((err) => {
   console.error("[server] Fatal:", err);
   process.exit(1);
 });
-
