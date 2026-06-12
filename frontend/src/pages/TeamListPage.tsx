@@ -250,7 +250,7 @@ export default function TeamListPage() {
                     </Link>
                     {!team.is_active && (
                       <button
-                        onClick={() => activateTeam(team.name).then(() => fetchTeams())}
+                        onClick={() => activateTeam(team.name).then(() => fetchTeams()).catch(err => alert(err.message))}
                         className="bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs px-3.5 py-2 rounded-lg transition"
                       >
                         Activate

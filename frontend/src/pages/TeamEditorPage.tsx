@@ -687,7 +687,13 @@ export default function TeamEditorPage() {
                                 min={0}
                                 max={252}
                                 value={val}
-                                onChange={(e) => updateSlotField(stat, parseInt(e.target.value) || 0)}
+                                onChange={(e) => {
+                                  const inputVal = parseInt(e.target.value) || 0;
+                                  const otherStatsSum = evTotal - val;
+                                  const maxAllowed = Math.min(252, 510 - otherStatsSum);
+                                  const clampedVal = Math.max(0, Math.min(inputVal, maxAllowed));
+                                  updateSlotField(stat, clampedVal);
+                                }}
                                 className="w-full h-1.5 bg-slate-900 rounded-lg appearance-none cursor-pointer accent-orange-500"
                               />
                             </div>

@@ -1,5 +1,13 @@
 import React, { useState, useRef, useEffect, useCallback, useTransition } from 'react';
-import { sendChatMessage, ChatMessage } from '@/api/chat';
+import { 
+  fetchChatSessions, 
+  createChatSession, 
+  updateChatSession, 
+  sendSessionMessage, 
+  deleteChatSession, 
+  LocalMessage, 
+  ChatSession 
+} from '@/api/chat';
 import { useTeamStore, PokemonSlot } from '@/stores/teamStore';
 import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
@@ -25,22 +33,120 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-interface LocalMessage {
-  id: string;
-  sender: 'user' | 'model';
-  text: string;
-  timestamp: number;
-  suggestedTeam?: {
-    name: string;
-    pokemon: PokemonSlot[];
-  };
-}
+// Custom Markdown Component
+function Markdown({ content }: { content: string }) {
+  if (!content) return null;
 
-interface ChatSession {
-  id: string;
-  title: string;
-  messages: LocalMessage[];
-  timestamp: number;
+  // Split by code blocks: ```lang ... ```
+  const parts = content.split(/(```[\s\S]*?```)/g);
+
+  const renderInline = (text: string): React.ReactNode[] => {
+    const regex = /(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*|_[^_]+_)/g;
+    const parts = text.split(regex);
+
+    return parts.map((part, idx) => {
+      if (part.startsWith('`') && part.endsWith('`')) {
+        return (
+          <code key={idx} className="bg-slate-950 px-1.5 py-0.5 rounded font-mono text-xs text-orange-400 border border-slate-900">
+            {part.slice(1, -1)}
+          </code>
+        );
+      }
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={idx} className="font-bold text-slate-100">{part.slice(2, -2)}</strong>;
+      }
+      if ((part.startsWith('*') && part.endsWith('*')) || (part.startsWith('_') && part.endsWith('_'))) {
+        return <em key={idx} className="italic text-slate-200">{part.slice(1, -1)}</em>;
+      }
+      return part;
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      {parts.map((part, index) => {
+        if (part.startsWith('```') && part.endsWith('```')) {
+          const match = part.match(/```(\w*)\n([\s\S]*?)```/);
+          const lang = match ? match[1] : '';
+          const code = match ? match[2] : part.slice(3, -3);
+
+          return (
+            <pre key={index} className="bg-slate-950/80 border border-slate-800 rounded-xl p-4 overflow-x-auto my-2 font-mono text-xs text-orange-400">
+              {lang && <div className="text-[10px] text-slate-500 font-sans uppercase mb-2 border-b border-slate-900 pb-1">{lang}</div>}
+              <code>{code.trim()}</code>
+            </pre>
+          );
+        }
+
+        return (
+          <div key={index} className="space-y-2">
+            {part.split('\n\n').map((block, bIdx) => {
+              const trimmedBlock = block.trim();
+              if (!trimmedBlock) return null;
+
+              const headingMatch = trimmedBlock.match(/^(#{1,6})\s+(.*)$/);
+              if (headingMatch) {
+                const level = headingMatch[1].length;
+                const text = headingMatch[2];
+                const headingClasses = {
+                  1: "text-lg font-bold text-slate-100 mt-4 mb-2 border-b border-slate-900 pb-1",
+                  2: "text-base font-bold text-slate-200 mt-3 mb-1.5",
+                  3: "text-sm font-bold text-slate-300 mt-2 mb-1",
+                  4: "text-xs font-bold text-slate-300 mt-2",
+                  5: "text-xs font-bold text-slate-400 mt-2",
+                  6: "text-xs font-bold text-slate-500 mt-2",
+                }[level] || "text-sm font-bold text-slate-300";
+
+                const HeadingTag = `h${level}` as any;
+                return (
+                  <HeadingTag key={bIdx} className={headingClasses}>
+                    {renderInline(text)}
+                  </HeadingTag>
+                );
+              }
+
+              const lines = trimmedBlock.split('\n');
+              const isBulletList = lines.every(line => /^\s*[-*+]\s+/.test(line));
+              const isNumberedList = lines.every(line => /^\s*\d+\.\s+/.test(line));
+
+              if (isBulletList) {
+                return (
+                  <ul key={bIdx} className="list-disc pl-5 space-y-1 my-1">
+                    {lines.map((line, lIdx) => {
+                      const itemText = line.replace(/^\s*[-*+]\s+/, '');
+                      return <li key={lIdx} className="text-slate-300 text-sm">{renderInline(itemText)}</li>;
+                    })}
+                  </ul>
+                );
+              }
+
+              if (isNumberedList) {
+                return (
+                  <ol key={bIdx} className="list-decimal pl-5 space-y-1 my-1">
+                    {lines.map((line, lIdx) => {
+                      const itemText = line.replace(/^\s*\d+\.\s+/, '');
+                      return <li key={lIdx} className="text-slate-300 text-sm">{renderInline(itemText)}</li>;
+                    })}
+                  </ol>
+                );
+              }
+
+              return (
+                <p key={bIdx} className="text-slate-300 text-sm leading-relaxed">
+                  {lines.map((line, lIdx) => (
+                    <React.Fragment key={lIdx}>
+                      {lIdx > 0 && <br />}
+                      {renderInline(line)}
+                    </React.Fragment>
+                  ))}
+                </p>
+              );
+            })}
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 interface CommandSuggestion {
@@ -52,10 +158,10 @@ interface CommandSuggestion {
 
 export default function ChatPage() {
   const { createTeam } = useTeamStore();
-  const { profile } = useAuthStore();
+  const { user } = useAuthStore();
   const [isPending, startTransition] = useTransition();
 
-  // Local storage chat sessions
+  // Database-backed chat sessions
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string>('');
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -138,38 +244,20 @@ export default function ChatPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Load chat sessions from localStorage on boot
+  // Fetch chat sessions from database on boot
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('dueler_chat_sessions');
-      if (saved) {
-        const parsed = JSON.parse(saved) as ChatSession[];
-        if (parsed.length > 0) {
-          setSessions(parsed);
-          setActiveSessionId(parsed[0].id);
-          return;
+    fetchChatSessions()
+      .then(async (res) => {
+        if (res && res.length > 0) {
+          setSessions(res);
+          setActiveSessionId(res[0].id);
+        } else {
+          const fresh = await createChatSession();
+          setSessions([fresh]);
+          setActiveSessionId(fresh.id);
         }
-      }
-    } catch (e) {
-      console.error('Failed to load chat history', e);
-    }
-    // Create first session by default if nothing exists
-    const firstId = Date.now().toString();
-    const defaultSession: ChatSession = {
-      id: firstId,
-      title: 'New Strategy Chat',
-      timestamp: Date.now(),
-      messages: [
-        {
-          id: 'welcome',
-          sender: 'model',
-          text: `Hello! I am your AI Poké Dueler Assistant, specialized in Gen 9 (Scarlet & Violet) PvP mechanics. Ask me to build a squad, analyze your active roster, or request counters for any Pokémon. Use slash commands like /suggest-team to start!`,
-          timestamp: Date.now()
-        }
-      ]
-    };
-    setSessions([defaultSession]);
-    setActiveSessionId(firstId);
+      })
+      .catch((err) => console.error('Failed to load chat history', err));
   }, []);
 
   // Scroll to bottom on new messages
@@ -177,15 +265,6 @@ export default function ChatPage() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [sessions, activeSessionId, isTyping]);
 
-  // Save sessions to localStorage whenever they change
-  const saveSessions = (updated: ChatSession[]) => {
-    setSessions(updated);
-    try {
-      localStorage.setItem('dueler_chat_sessions', JSON.stringify(updated));
-    } catch (e) {
-      console.error('Failed to save sessions to storage', e);
-    }
-  };
 
   // Active session helper
   const activeSession = sessions.find(s => s.id === activeSessionId);
@@ -321,53 +400,36 @@ export default function ChatPage() {
   };
 
   // Start a new chat session
-  const handleNewChat = () => {
-    const newId = Date.now().toString();
-    const newSess: ChatSession = {
-      id: newId,
-      title: 'New Strategy Chat',
-      timestamp: Date.now(),
-      messages: [
-        {
-          id: 'welcome',
-          sender: 'model',
-          text: `Hello! I am your AI Poké Dueler Assistant, specialized in Gen 9 (Scarlet & Violet) PvP mechanics. Ask me to build a squad, analyze your active roster, or request counters for any Pokémon. Use slash commands like /suggest-team to start!`,
-          timestamp: Date.now()
-        }
-      ]
-    };
-    saveSessions([newSess, ...sessions]);
-    setActiveSessionId(newId);
-    setValue('');
-    adjustHeight(true);
+  const handleNewChat = async () => {
+    try {
+      const fresh = await createChatSession();
+      setSessions(prev => [fresh, ...prev]);
+      setActiveSessionId(fresh.id);
+      setValue('');
+      adjustHeight(true);
+    } catch (err) {
+      console.error('Failed to create new chat session', err);
+    }
   };
 
   // Delete a chat session
-  const handleDeleteSession = (id: string, e: React.MouseEvent) => {
+  const handleDeleteSession = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    const filtered = sessions.filter(s => s.id !== id);
-    if (filtered.length === 0) {
-      const freshId = Date.now().toString();
-      const fresh: ChatSession = {
-        id: freshId,
-        title: 'New Strategy Chat',
-        timestamp: Date.now(),
-        messages: [
-          {
-            id: 'welcome',
-            sender: 'model',
-            text: `Hello! I am your AI Poké Dueler Assistant, specialized in Gen 9 (Scarlet & Violet) PvP mechanics. Ask me to build a squad, analyze your active roster, or request counters for any Pokémon. Use slash commands like /suggest-team to start!`,
-            timestamp: Date.now()
-          }
-        ]
-      };
-      saveSessions([fresh]);
-      setActiveSessionId(freshId);
-    } else {
-      saveSessions(filtered);
-      if (activeSessionId === id) {
-        setActiveSessionId(filtered[0].id);
+    try {
+      await deleteChatSession(id);
+      const filtered = sessions.filter(s => s.id !== id);
+      if (filtered.length === 0) {
+        const fresh = await createChatSession();
+        setSessions([fresh]);
+        setActiveSessionId(fresh.id);
+      } else {
+        setSessions(filtered);
+        if (activeSessionId === id) {
+          setActiveSessionId(filtered[0].id);
+        }
       }
+    } catch (err) {
+      console.error('Failed to delete chat session', err);
     }
   };
 
@@ -380,61 +442,27 @@ export default function ChatPage() {
     adjustHeight(true);
     setIsTyping(true);
 
-    const userMessage: LocalMessage = {
+    const tempUserMsg: LocalMessage = {
       id: Date.now().toString() + '-user',
       sender: 'user',
       text: userText,
       timestamp: Date.now(),
     };
 
-    // Update active session messages
-    const updatedMessages = [...activeSession.messages, userMessage];
-    
-    // Update session title if it was default
-    const isDefaultTitle = activeSession.title === 'New Strategy Chat';
-    const newTitle = isDefaultTitle 
-      ? (userText.length > 25 ? userText.substring(0, 22) + '...' : userText)
-      : activeSession.title;
-
-    const updatedSession: ChatSession = {
-      ...activeSession,
-      title: newTitle,
-      messages: updatedMessages,
-      timestamp: Date.now()
-    };
-
-    const updatedSessionsList = sessions.map(s => s.id === activeSessionId ? updatedSession : s);
-    saveSessions(updatedSessionsList);
+    const updatedMessages = [...activeSession.messages, tempUserMsg];
+    const updatedSession = { ...activeSession, messages: updatedMessages };
+    setSessions(prev => prev.map(s => s.id === activeSessionId ? updatedSession : s));
 
     try {
-      // Map messages history for API (excluding welcome message)
-      const apiHistory: ChatMessage[] = updatedMessages
-        .filter(m => m.id !== 'welcome')
-        .map(m => ({
-          role: m.sender === 'user' ? 'user' : 'model',
-          parts: [{ text: m.text }]
-        }));
-      
-      // Call endpoint (backend handles fallbacks automatically now)
-      const res = await sendChatMessage(userText, apiHistory.slice(0, -1));
-
-      const suggestedTeam = extractSuggestedTeam(res.text);
-      const cleaned = cleanMessageText(res.text);
-
-      const botMessage: LocalMessage = {
-        id: Date.now().toString() + '-bot',
-        sender: 'model',
-        text: cleaned || res.text,
-        timestamp: Date.now(),
-        suggestedTeam
-      };
+      const res = await sendSessionMessage(activeSessionId, userText);
 
       const finalSession: ChatSession = {
-        ...updatedSession,
-        messages: [...updatedMessages, botMessage],
+        ...activeSession,
+        title: res.sessionTitle,
+        messages: [...activeSession.messages, res.userMessage, res.botMessage],
         timestamp: Date.now()
       };
-      saveSessions(sessions.map(s => s.id === activeSessionId ? finalSession : s));
+      setSessions(prev => prev.map(s => s.id === activeSessionId ? finalSession : s));
     } catch (err: any) {
       const errorMsg: LocalMessage = {
         id: Date.now().toString() + '-err',
@@ -442,7 +470,7 @@ export default function ChatPage() {
         text: `Error: Failed to generate chat response: ${err.message || 'Gemini system error'}`,
         timestamp: Date.now(),
       };
-      saveSessions(sessions.map(s => s.id === activeSessionId ? { ...updatedSession, messages: [...updatedMessages, errorMsg] } : s));
+      setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...updatedSession, messages: [...updatedMessages, errorMsg] } : s));
     } finally {
       setIsTyping(false);
     }
@@ -488,10 +516,11 @@ export default function ChatPage() {
     try {
       await createTeam(team.name, team.pokemon);
       alert(`Roster "${team.name}" imported and saved successfully!`);
-      // Update state to remove import widget from current message
       if (activeSession) {
         const updated = activeSession.messages.map(m => m.id === msgId ? { ...m, suggestedTeam: undefined } : m);
-        saveSessions(sessions.map(s => s.id === activeSessionId ? { ...activeSession, messages: updated } : s));
+        const updatedSession = { ...activeSession, messages: updated };
+        setSessions(prev => prev.map(s => s.id === activeSessionId ? updatedSession : s));
+        await updateChatSession(activeSessionId, { messages: updated });
       }
     } catch (err: any) {
       alert('Failed to import: ' + err.message);
@@ -670,11 +699,15 @@ export default function ChatPage() {
                             : 'bg-slate-900/40 border-slate-850/80 text-slate-300'
                       }`}
                     >
-                      {msg.text.split('\n').map((line, idx) => (
-                        <p key={idx} className={idx > 0 ? 'mt-2' : ''}>
-                          {line}
-                        </p>
-                      ))}
+                      {msg.sender === 'user' ? (
+                        msg.text.split('\n').map((line, idx) => (
+                          <p key={idx} className={idx > 0 ? 'mt-2' : ''}>
+                            {line}
+                          </p>
+                        ))
+                      ) : (
+                        <Markdown content={msg.text} />
+                      )}
                     </div>
 
                     {/* suggestedTeam card preview block */}
@@ -693,7 +726,7 @@ export default function ChatPage() {
                           </button>
                         </div>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                          {msg.suggestedTeam.pokemon.map((p, idx) => (
+                          {msg.suggestedTeam.pokemon.map((p: any, idx: number) => (
                             <div key={idx} className="bg-slate-950/50 border border-slate-850 p-2 rounded-lg text-center flex flex-col items-center">
                               <img 
                                 src={`https://img.pokemondb.net/sprites/home/normal/${p.pokname.toLowerCase()}.png`}
@@ -717,8 +750,16 @@ export default function ChatPage() {
                   </div>
 
                   {msg.sender === 'user' && (
-                    <div className="size-8 rounded-lg bg-orange-600 border border-orange-500 flex items-center justify-center text-white shrink-0 shadow-md shadow-orange-600/10">
-                      <User className="size-4" />
+                    <div className="size-8 rounded-lg bg-orange-600 border border-orange-500 flex items-center justify-center text-white shrink-0 shadow-md shadow-orange-600/10 overflow-hidden">
+                      {user?.avatarUrl ? (
+                        <img 
+                          src={user.avatarUrl} 
+                          alt={user.username || "User"} 
+                          className="size-full object-cover"
+                        />
+                      ) : (
+                        <User className="size-4" />
+                      )}
                     </div>
                   )}
                 </div>

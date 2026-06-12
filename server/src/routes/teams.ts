@@ -367,7 +367,19 @@ export function teamRoutes(app: FastifyInstance, data: GameData): void {
               active_party_name: teamName,
               updated_at: new Date(),
             },
+            $setOnInsert: {
+              wins: 0,
+              losses: 0,
+              elo: 1000,
+              wallet: 0,
+              theme: "firered",
+              gen: 5,
+              moveset_img: true,
+              created_at: new Date(),
+              username: request.user!.username || "Trainer",
+            }
           },
+          { upsert: true },
         );
 
         await db.collection("teams").updateOne(
