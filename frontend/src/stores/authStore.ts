@@ -71,7 +71,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   login: () => {
-    window.location.href = 'http://localhost:3001/api/auth/login';
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    window.location.href = isLocal
+      ? 'http://localhost:3001/api/auth/login'
+      : `${window.location.origin}/api/auth/login`;
   },
 
   logout: async () => {
