@@ -280,7 +280,7 @@ class PokemonDuel(commands.Cog):
 
         t1 = NPCTrainer("NPC Alpha", npc1_party)
         t2 = NPCTrainer("NPC Beta",  npc2_party)
-        await ctx.send("🎮 Starting NPC vs NPC Battle!\n   Alpha vs Beta — Foul-Play MCTS engine duel.")
+        await ctx.send("NPC vs NPC Battle!\n   Alpha vs Beta.")
         battle = Battle(ctx, channel, t1, t2)
         ai1 = NPCTeamAI(t1, t2); ai2 = NPCTeamAI(t2, t1)
         ai1.set_battle(battle); ai2.set_battle(battle)
@@ -330,7 +330,7 @@ class PokemonDuel(commands.Cog):
 
         user_trainer = MemberTrainer(ctx.author, user_party)
         npc_trainer = NPCTrainer("NPC Challenger", npc_party)
-        await ctx.send("Starting a battle against the Foul-Play MCTS NPC!")
+        await ctx.send("can you beat me?")
         battle = Battle(ctx, channel, user_trainer, npc_trainer)
         ai = NPCTeamAI(npc_trainer, user_trainer)
         ai.set_battle(battle); npc_trainer.set_ai(ai)
@@ -375,7 +375,7 @@ class PokemonDuel(commands.Cog):
             return
         user_trainer = MemberTrainer(ctx.author, user_party)
         npc_trainer  = NPCTrainer("NPC Challenger", npc_party)
-        await ctx.send("Starting a Random Battle against the Foul-Play MCTS NPC!")
+        await ctx.send("can you beat me?")
         battle = Battle(ctx, channel, user_trainer, npc_trainer)
         ai = NPCTeamAI(npc_trainer, user_trainer)
         ai.set_battle(battle); npc_trainer.set_ai(ai)
