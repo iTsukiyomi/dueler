@@ -1,3 +1,4 @@
+import random
 from pathlib import Path
 import asyncio
 import aiohttp
@@ -14,6 +15,7 @@ from ..data_gen import generate_team_preview, find, find_one
 from ..trainers import MemberTrainer
 from ..trainers.npc_trainer import NPCTrainer
 from ..ai import NPCTeamAI, reload_network
+from ..services.player_service import PlayerService
 
 
 class TeambuilderReadException(Exception):
@@ -442,7 +444,10 @@ class PokemonDuel(commands.Cog):
         await battle.trainer1.event.wait()
         await battle.trainer2.event.wait()
         preview_view.stop()
-        await self.wrapped_run(battle)
+        winner = await self.wrapped_run(battle)
+        if winner:
+            await self._record_pvp_results(winner, t1=battle.trainer1, t2=battle.trainer2, battle=battle)
+
 
     # ──────────────────────────────────────────────────────────────────
     #  Two-member duel (unchanged)
@@ -486,8 +491,25 @@ class PokemonDuel(commands.Cog):
         await battle.trainer1.event.wait()
         await battle.trainer2.event.wait()
         preview_view.stop()
-        await self.wrapped_run(battle)
+        winner = await self.wrapped_run(battle)
 
+        if winner:
+            await self._record_pvp_results(winner, t1=battle.trainer1, t2=battle.trainer2, battle=battle)
+
+    async def _record_pvp_results(self, winner, t1, t2, battle):
+        loser = t2 if t1 is winner else t1
+        svc = PlayerService()
+
+        new_w_elo, new_l_elo = await svc.record_match_result(
+            winner_id=str(winner.id),
+            loser_id=str(loser.id),
+            money_reward=150,
+            turns=battle.turn,
+            duration=battle.get_duration(),
+            winner_team=winner.name,
+            loser_team=loser.name
+        )
+        await battle.channel.send(f"**Elo**: {winner.name} `{new_w_elo}`, {loser.name} `{new_l_elo}`\n-#+150 credits to {winner.name}")
 
 
     # ──────────────────────────────────────────────────────────────────
