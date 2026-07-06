@@ -30,7 +30,7 @@ intents = discord.Intents.default()
 intents.members = True
 intents.message_content  = True
 
-class Flame(commands.Bot):
+class Darkmew(commands.Bot):
     def __init__(self):
         super().__init__(
             command_prefix=commands.when_mentioned_or(';'),
@@ -99,7 +99,7 @@ async def keep_alive():
 async def main():
     threading.Thread(target=start_dummy_server, daemon=True).start()
 
-    bot = Flame()
+    bot = Darkmew()
     asyncio.create_task(keep_alive())
     token = os.getenv("DISCORD_TOKEN")
     

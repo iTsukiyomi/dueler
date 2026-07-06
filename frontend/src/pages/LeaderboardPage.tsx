@@ -85,7 +85,7 @@ export default function LeaderboardPage() {
               Global Leaderboard
             </h1>
             <p className="text-slate-400 text-xs mt-0.5">
-              The highest rated trainers on Flame Dueler. {updatedAt && `Last updated: ${updatedAt}`}
+              The highest rated trainers on Darkmew. {updatedAt && `Last updated: ${updatedAt}`}
             </p>
           </div>
           <button

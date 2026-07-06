@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import math
 from typing import Optional
+import random
 
 from ..repositories.player_repository import PlayerRepository
 from ..core.database import get_db
@@ -32,6 +33,7 @@ def calculate_elo_delta(
     return delta_w, delta_l
 
 
+
 class PlayerService:
     """
     High-level operations on player profiles.
@@ -54,6 +56,17 @@ class PlayerService:
         """Fetch a profile without auto-creating."""
         return await self._repo.get(str(user_id))
 
+    async def get_money_reward(self, winner_id: str, loser_id: str, low: int, high: int):
+        base = 100
+        winner = await self._repo.get(str(winner_id))
+        loser = await self._repo.get(str(loser_id))
+        winner_elo = winner.get("elo", 1000)
+        loser_elo = loser.get("elo", 1000)
+        diff = loser_elo - winner_elo
+        creds = random.randint(int(base * 0.9), int(base * 1.1))
+        creds += 1 + diff / 1000
+        creds = max(low, min(high, round(creds)))
+        return creds
 
     async def record_match_result(
         self,

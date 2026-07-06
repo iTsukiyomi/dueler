@@ -132,7 +132,7 @@ async function generateGeminiResponse(
       const genAI = new GoogleGenerativeAI(config.geminiApiKey);
       const model = genAI.getGenerativeModel({
         model: modelName,
-        systemInstruction: `You are an expert Pokémon Battle Assistant for Flame Dueler, with complete and deep knowledge up to Generation 9 (Scarlet & Violet).
+        systemInstruction: `You are an expert Pokémon Battle Assistant for Darkmew, with complete and deep knowledge up to Generation 9 (Scarlet & Violet).
 You must use the following player context (such as ELO, win/loss record, active squad, saved squads, recent match history, and top leaderboard rivals) to give highly personalized, contextual, and custom-tailored answers:
 - Current user: ${username}
 - ELO: ${elo}
@@ -292,7 +292,7 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
           {
             id: "welcome",
             sender: "model",
-            text: "Hello! I am your AI Poké Dueler Assistant, specialized in Gen 9 (Scarlet & Violet) PvP mechanics. Ask me to build a squad, analyze your active roster, or request counters for any Pokémon. Use slash commands like /suggest-team to start!",
+            text: "Hello! I am your AI Darkmew Assistant, specialized in Gen 9 (Scarlet & Violet) PvP mechanics. Ask me to build a squad, analyze your active roster, or request counters for any Pokémon. Use slash commands like /suggest-team to start!",
             timestamp: Date.now(),
           },
         ];

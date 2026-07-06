@@ -2,10 +2,10 @@ import random
 from pathlib import Path
 import asyncio
 import aiohttp
-import json
 import logging
 import discord
 from discord.ext import commands
+from discord.utils import escape_markdown
 
 from ..config import EnhancedConfigManager
 from ..battle.battle import Battle
@@ -209,7 +209,7 @@ class PokemonDuel(commands.Cog):
         except Exception as exc:
             msg = 'Error in PokemonDuel.\n'
             self.log.exception(msg)
-            self.bot.dispatch('flamecogs_game_error', battle, exc)
+            self.bot.dispatch('darkmew_game_error', battle, exc)
             await battle.channel.send(f'error lmaoo.\n{exc}')
             return None
         else:
@@ -503,13 +503,13 @@ class PokemonDuel(commands.Cog):
         new_w_elo, new_l_elo = await svc.record_match_result(
             winner_id=str(winner.id),
             loser_id=str(loser.id),
-            money_reward=150,
+            money_reward=await svc.get_money_reward(str(winner.id), str(loser.id), 100, 300),
             turns=battle.turn,
             duration=battle.get_duration(),
             winner_team=winner.name,
             loser_team=loser.name
         )
-        await battle.channel.send(f"**Elo**: {winner.name} `{new_w_elo}`, {loser.name} `{new_l_elo}`\n-#+150 credits to {winner.name}")
+        await battle.channel.send(f"**Elo**: {escape_markdown(winner.name)} `{new_w_elo}`, {loser.name} `{new_l_elo}`\n-# +150 credits to {winner.name}")
 
 
     # ──────────────────────────────────────────────────────────────────

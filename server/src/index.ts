@@ -19,8 +19,11 @@ async function main() {
     wildcard: false,
   });
 
-  // Client-side router fallback (React Router) for standalone
-  app.get("/*", async (request, reply) => {
+  // Client-side router fallback (React Router) for standalone — skip API routes
+  app.setNotFoundHandler(async (request, reply) => {
+    if (request.url.startsWith("/api/")) {
+      return reply.status(404).send({ error: "Route not found" });
+    }
     return reply.sendFile("index.html");
   });
 
@@ -37,7 +40,7 @@ async function main() {
 
   await app.listen({ port: config.server.port, host: "0.0.0.0" });
   console.log(
-    `[server] Pokemon Dueler API running on http://localhost:${config.server.port}`,
+    `[server] Darkmew API running on http://localhost:${config.server.port}`,
   );
 }
 

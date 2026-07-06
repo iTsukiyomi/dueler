@@ -141,7 +141,7 @@ export function SessionNavBar() {
                   animate={{ opacity: 1, x: 0 }}
                   className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-orange-400 text-sm tracking-wider uppercase font-sans whitespace-nowrap"
                 >
-                  Poke Dueler
+                  Darkmew
                 </motion.span>
               )}
             </div>

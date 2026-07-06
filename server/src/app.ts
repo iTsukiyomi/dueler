@@ -33,11 +33,20 @@ export async function initApp(): Promise<FastifyInstance> {
     timeWindow: "1 minute",
   });
 
-  console.log("[server] Connecting to MongoDB...");
-  await connectMongo();
+  // Non-fatal DB connections — server starts even if DB is down so auth routes always register
+  try {
+    console.log("[server] Connecting to MongoDB...");
+    await connectMongo();
+  } catch (err) {
+    console.warn("[server] MongoDB connection failed — running without database:", (err as Error).message);
+  }
 
-  console.log("[server] Connecting to Redis...");
-  await connectRedis();
+  try {
+    console.log("[server] Connecting to Redis...");
+    await connectRedis();
+  } catch (err) {
+    console.warn("[server] Redis connection failed — running without cache:", (err as Error).message);
+  }
 
   console.log("[server] Loading game data...");
   const gameData = loadGameData(config.dataDir);
