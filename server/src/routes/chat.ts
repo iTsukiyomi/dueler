@@ -233,7 +233,7 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
       }
 
       try {
-        const db = getDb();
+        const db = await getDb();
         const text = await generateGeminiResponse(
           userId,
           message,
@@ -256,7 +256,7 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
     async (request, reply) => {
       try {
         const userId = request.user!.userId;
-        const db = getDb();
+        const db = await getDb();
         const sessions = await db
           .collection("chat_sessions")
           .find({ owner_id: userId })
@@ -284,7 +284,7 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
       try {
         const userId = request.user!.userId;
         const body = request.body as { id?: string; title?: string; messages?: any[] } | null;
-        const db = getDb();
+        const db = await getDb();
 
         const id = body?.id || new Date().getTime().toString() + "-" + Math.random().toString(36).substring(2, 9);
         const title = body?.title || "New Strategy Chat";
@@ -328,7 +328,7 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
         const userId = request.user!.userId;
         const { id } = request.params as { id: string };
         const body = request.body as { title?: string; messages?: any[] };
-        const db = getDb();
+        const db = await getDb();
 
         const updateDoc: any = {};
         if (body.title !== undefined) updateDoc.title = body.title;
@@ -362,7 +362,7 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
         const userId = request.user!.userId;
         const { id } = request.params as { id: string };
         const { message } = request.body as { message: string };
-        const db = getDb();
+        const db = await getDb();
 
         if (!message) {
           reply.status(400).send({ error: "Message is required" });
@@ -452,7 +452,7 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
       try {
         const userId = request.user!.userId;
         const { id } = request.params as { id: string };
-        const db = getDb();
+        const db = await getDb();
 
         const result = await db
           .collection("chat_sessions")

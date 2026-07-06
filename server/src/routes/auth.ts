@@ -38,7 +38,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
 
       const discordUser = await oauth.getUser(tokenData.access_token);
 
-      const db = getDb();
+      const db = await getDb();
       const now = new Date();
       await db.collection("players").updateOne(
         { _id: discordUser.id as any },

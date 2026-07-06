@@ -6,7 +6,7 @@ import { config } from "../config.js";
 export async function statsRoutes(app: FastifyInstance): Promise<void> {
   app.get("/api/stats/global", async (request, reply) => {
     try {
-      const db = getDb();
+      const db = await getDb();
 
       // Count total users (players)
       const totalUsers = await db.collection("players").countDocuments();
@@ -51,7 +51,7 @@ export async function statsRoutes(app: FastifyInstance): Promise<void> {
   // Leaderboard endpoint
   app.get("/api/leaderboard", async (request, reply) => {
     try {
-      const db = getDb();
+      const db = await getDb();
 
       const { limit: limitQuery } = request.query as { limit?: string };
       const limit = Math.min(Number(limitQuery) || 50, 100);
@@ -135,7 +135,7 @@ export async function statsRoutes(app: FastifyInstance): Promise<void> {
       try {
         const userId = request.user!.userId;
 
-        const db = getDb();
+        const db = await getDb();
         const matches = await db.collection("matches")
           .find({
             $or: [{ player1_id: userId }, { player2_id: userId }]

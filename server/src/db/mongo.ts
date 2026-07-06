@@ -24,9 +24,19 @@ export async function connectMongo(): Promise<Db> {
   return db;
 }
 
-export function getDb(): Db {
+/** Get a healthy DB handle — reconnects automatically if the connection went stale (common on serverless cold/warm transitions). */
+export async function getDb(): Promise<Db> {
   if (!db) throw new Error("MongoDB not connected — call connectMongo() first");
-  return db;
+
+  try {
+    await db.admin().command({ ping: 1 });
+    return db;
+  } catch {
+    console.warn("[mongo] Connection is stale, reconnecting...");
+    db = null;
+    client = null;
+    return connectMongo();
+  }
 }
 
 export async function closeMongo(): Promise<void> {

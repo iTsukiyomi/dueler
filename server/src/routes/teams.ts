@@ -21,7 +21,7 @@ export function teamRoutes(app: FastifyInstance, data: GameData): void {
     async (request, reply) => {
       try {
         const userId = request.user!.userId;
-        const db = getDb();
+        const db = await getDb();
 
         const player = await db
           .collection("players")
@@ -64,7 +64,7 @@ export function teamRoutes(app: FastifyInstance, data: GameData): void {
       try {
         const userId = request.user!.userId;
         const { name } = request.params as { name: string };
-        const db = getDb();
+        const db = await getDb();
 
         const team = await db
           .collection("teams")
@@ -126,7 +126,7 @@ export function teamRoutes(app: FastifyInstance, data: GameData): void {
           return;
         }
 
-        const db = getDb();
+        const db = await getDb();
         const now = new Date();
         const teamName = body.name.trim().toLowerCase();
 
@@ -193,7 +193,7 @@ export function teamRoutes(app: FastifyInstance, data: GameData): void {
           return;
         }
 
-        const db = getDb();
+        const db = await getDb();
         const result = await db.collection("teams").updateOne(
           { owner_id: userId, name: teamName },
           { $set: { pokemon: body.pokemon, updated_at: new Date() } },
@@ -252,7 +252,7 @@ export function teamRoutes(app: FastifyInstance, data: GameData): void {
         }
 
         const newName = body.new_name.trim().toLowerCase();
-        const db = getDb();
+        const db = await getDb();
 
         const existing = await db
           .collection("teams")
@@ -301,7 +301,7 @@ export function teamRoutes(app: FastifyInstance, data: GameData): void {
         const { name } = request.params as { name: string };
         const teamName = name.trim().toLowerCase();
 
-        const db = getDb();
+        const db = await getDb();
         
         const player = await db
           .collection("players")
@@ -350,7 +350,7 @@ export function teamRoutes(app: FastifyInstance, data: GameData): void {
         const { name } = request.params as { name: string };
         const teamName = name.trim().toLowerCase();
 
-        const db = getDb();
+        const db = await getDb();
         const team = await db
           .collection("teams")
           .findOne({ owner_id: userId, name: teamName });
