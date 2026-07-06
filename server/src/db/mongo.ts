@@ -4,10 +4,8 @@ import { config } from "../config.js";
 let client: MongoClient | null = null;
 let db: Db | null = null;
 
-export async function connectMongo(): Promise<Db> {
-  if (db) return db;
-
-  client = new MongoClient(config.mongo.uri, {
+async function createClient(): Promise<MongoClient> {
+  const c = new MongoClient(config.mongo.uri, {
     serverSelectionTimeoutMS: 5000,
     connectTimeoutMS: 5000,
     socketTimeoutMS: 10000,
@@ -16,27 +14,52 @@ export async function connectMongo(): Promise<Db> {
     retryWrites: true,
     retryReads: true,
   });
+  await c.connect();
+  await c.db("admin").command({ ping: 1 });
+  return c;
+}
 
-  await client.connect();
-  await client.db("admin").command({ ping: 1 });
-  db = client.db(config.mongo.dbName);
-  console.log(`[mongo] Connected — database=${config.mongo.dbName}`);
+export async function connectMongo(): Promise<Db> {
+  if (db) return db;
+
+  try {
+    client = await createClient();
+    db = client.db(config.mongo.dbName);
+    console.log(`[mongo] Connected — database=${config.mongo.dbName}`);
+  } catch (err) {
+    client = null;
+    console.warn("[mongo] Initial connection failed:", (err as Error).message);
+    throw err;
+  }
+
   return db;
 }
 
-/** Get a healthy DB handle — reconnects automatically if the connection went stale (common on serverless cold/warm transitions). */
+/** Return a healthy DB handle. Reconnects automatically on first use if the
+ *  initial connection failed, or if the underlying socket went stale between
+ *  serverless invocations. */
 export async function getDb(): Promise<Db> {
-  if (!db) throw new Error("MongoDB not connected — call connectMongo() first");
-
-  try {
-    await db.admin().command({ ping: 1 });
-    return db;
-  } catch {
-    console.warn("[mongo] Connection is stale, reconnecting...");
-    db = null;
-    client = null;
-    return connectMongo();
+  // Already connected and alive
+  if (db) {
+    try {
+      await db.admin().command({ ping: 1 });
+      return db;
+    } catch {
+      console.warn("[mongo] Connection stale — reconnecting...");
+    }
   }
+
+  // Close any leftover dead client before creating a fresh one
+  if (client) {
+    try { await client.close(); } catch { /* ignore */ }
+    client = null;
+  }
+  db = null;
+
+  client = await createClient();
+  db = client.db(config.mongo.dbName);
+  console.log("[mongo] Reconnected");
+  return db;
 }
 
 export async function closeMongo(): Promise<void> {
