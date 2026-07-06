@@ -21,6 +21,15 @@ export async function connectRedis(): Promise<Redis | null> {
   });
 
   await redis.connect();
+
+  // Aggressive LRU eviction — let Redis manage memory automatically
+  try {
+    await redis.config("SET", "maxmemory-policy", "allkeys-lru");
+    await redis.config("SET", "maxmemory", "25mb");
+  } catch {
+    // non-fatal — some managed Redis providers restrict CONFIG SET
+  }
+
   console.log("[redis] Connected");
   return redis;
 }

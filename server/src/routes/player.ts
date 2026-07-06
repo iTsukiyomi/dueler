@@ -13,8 +13,7 @@ export async function playerRoutes(app: FastifyInstance): Promise<void> {
 
         // Try cache — Redis may be unavailable on serverless warmups
         try {
-          const cacheKey = `web:profile:${userId}`;
-          const cached = await cacheGet(cacheKey);
+          const cached = await cacheGet(`wp:${userId}`);
           if (cached) {
             return JSON.parse(cached);
           }
@@ -75,8 +74,7 @@ export async function playerRoutes(app: FastifyInstance): Promise<void> {
 
         // Best-effort cache write
         try {
-          const cacheKey = `web:profile:${userId}`;
-          await cacheSet(cacheKey, JSON.stringify(profile), 60);
+          await cacheSet(`wp:${userId}`, JSON.stringify(profile), 30);
         } catch {
           // cache write failure is non-fatal
         }
@@ -115,8 +113,7 @@ export async function playerRoutes(app: FastifyInstance): Promise<void> {
         );
 
         try {
-          const cacheKey = `web:profile:${userId}`;
-          await cacheDel(cacheKey);
+          await cacheDel(`wp:${userId}`);
         } catch {
           // best-effort
         }
