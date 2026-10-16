@@ -133,11 +133,11 @@ class BattleRenderer:
             fonts["pixel_label"] = ImageFont.truetype(font_file, 12)
             fonts["pixel_sub"]   = ImageFont.truetype(font_file, 11)
             fonts["pixel_name"]  = ImageFont.truetype(font_file, 10)
-            fonts["battle_turn"] = ImageFont.truetype(font_file, 20)
-            fonts["battle_name"] = ImageFont.truetype(font_file, 14)
-            fonts["battle_hp"]   = ImageFont.truetype(font_file, 14)
-            fonts["battle_field"]= ImageFont.truetype(font_file, 12)
-            fonts["battle_badge"]= ImageFont.truetype(font_file, 11)
+            fonts["battle_turn"] = ImageFont.truetype(font_file, 22)
+            fonts["battle_name"] = ImageFont.truetype(font_file, 18)
+            fonts["battle_hp"]   = ImageFont.truetype(font_file, 18)
+            fonts["battle_field"]= ImageFont.truetype(font_file, 13)
+            fonts["battle_badge"]= ImageFont.truetype(font_file, 13)
         except Exception:
             default = ImageFont.load_default()
             for key in ("title", "body", "body_bold", "small", "small_bold", "badge",
@@ -318,14 +318,14 @@ class BattleRenderer:
         if not poke:
             return
 
-        w, h = 540, 138
+        w, h = 440, 138
 
         # Dark sleek panel background
         draw.rounded_rectangle([x, y, x + w, y + h], radius=8, fill=(14, 16, 22, 245), outline=(85, 96, 118, 255), width=2)
         draw.rounded_rectangle([x + 3, y + 3, x + w - 3, y + h - 3], radius=6, outline=(35, 40, 50, 255), width=1)
 
         # Corner bracket accents (retro arcade look)
-        c_len = 12
+        c_len = 10
         for (cx, cy, dx, dy) in [(x + 3, y + 3, 1, 1), (x + w - 3, y + 3, -1, 1),
                                  (x + 3, y + h - 3, 1, -1), (x + w - 3, y + h - 3, -1, -1)]:
             draw.line([(cx, cy), (cx + dx * c_len, cy)], fill=(220, 230, 245, 255), width=2)
@@ -360,15 +360,15 @@ class BattleRenderer:
             gender_label = "M"
             gender_color = (90, 170, 255, 255)
             gb = draw.textbbox((0, 0), gender_label, font=f_badge)
-            gender_w = (gb[2] - gb[0]) + 8
+            gender_w = (gb[2] - gb[0]) + 10
         elif gender == '-f':
             gender_label = "F"
             gender_color = (255, 120, 160, 255)
             gb = draw.textbbox((0, 0), gender_label, font=f_badge)
-            gender_w = (gb[2] - gb[0]) + 8
+            gender_w = (gb[2] - gb[0]) + 10
 
         right_reserved = lvl_w + (gender_w + 10 if gender_w else 0) + 24
-        max_name_w = w - 20 - right_reserved
+        max_name_w = w - 18 - right_reserved
 
         # Dynamically measure and truncate name with ellipsis if needed
         while len(display_name) > 3:
@@ -380,23 +380,23 @@ class BattleRenderer:
             else:
                 display_name = display_name[:-1] + "…"
 
-        draw.text((x + 20, y + 20), display_name, fill=(255, 255, 255, 255), font=f_name)
+        draw.text((x + 18, y + 16), display_name, fill=(255, 255, 255, 255), font=f_name)
 
-        lvl_x = x + w - 20 - lvl_w
-        draw.text((lvl_x, y + 20), level_str, fill=(200, 215, 235, 255), font=f_name)
+        lvl_x = x + w - 18 - lvl_w
+        draw.text((lvl_x, y + 16), level_str, fill=(200, 215, 235, 255), font=f_name)
 
         if gender_label:
-            gx = lvl_x - gender_w - 10
-            gh = 18
-            draw.rounded_rectangle([gx, y + 18, gx + gender_w, y + 18 + gh], radius=3, fill=(*gender_color[:3], 35), outline=gender_color, width=1)
-            draw.text((gx + 4, y + 21), gender_label, fill=gender_color, font=f_badge)
+            gx = lvl_x - gender_w - 8
+            gh = 20
+            draw.rounded_rectangle([gx, y + 15, gx + gender_w, y + 15 + gh], radius=3, fill=(*gender_color[:3], 35), outline=gender_color, width=1)
+            draw.text((gx + 5, y + 18), gender_label, fill=gender_color, font=f_badge)
 
         # ── HP Bar Row ─────────────────────────────────────────────────────
-        bar_y = y + 58
-        draw.text((x + 20, bar_y - 1), "HP:", fill=(180, 190, 205, 255), font=f_field)
+        bar_y = y + 54
+        draw.text((x + 18, bar_y - 1), "HP:", fill=(180, 190, 205, 255), font=f_badge)
 
-        bar_x = x + 62
-        bar_w = w - 240
+        bar_x = x + 58
+        bar_w = w - 215
         bar_h = 16
 
         draw.rounded_rectangle([bar_x, bar_y, bar_x + bar_w, bar_y + bar_h], radius=4, fill=(35, 38, 46, 255), outline=(60, 68, 80, 255), width=1)
@@ -417,19 +417,26 @@ class BattleRenderer:
 
         hp_num_str = f"{current_hp}/{max_hp}"
         nb = draw.textbbox((0, 0), hp_num_str, font=f_hp)
-        draw.text((x + w - 20 - (nb[2] - nb[0]), bar_y - 1), hp_num_str, fill=(245, 250, 255, 255), font=f_hp)
+        draw.text((x + w - 18 - (nb[2] - nb[0]), bar_y - 1), hp_num_str, fill=(245, 250, 255, 255), font=f_hp)
 
         # ── Badges Row: Colored Status and Stat Multipliers ───────────────
-        badge_y = y + 94
-        bx = x + 20
+        badge_y = y + 88
+        bx = x + 18
 
-        # Status badge (yellow for para, red for burn, purple for psn, cyan for frz, blue for slp)
+        # 1. Non-volatile status badge (supports full name and abbreviations)
         STATUS_MAP = {
+            'burn': ((235, 65, 45), (255, 120, 90), 'BRN'),
             'brn': ((235, 65, 45), (255, 120, 90), 'BRN'),
+            'paralysis': ((240, 195, 25), (255, 230, 100), 'PAR'),
             'par': ((240, 195, 25), (255, 230, 100), 'PAR'),
+            'poison': ((165, 65, 185), (225, 130, 245), 'PSN'),
             'psn': ((165, 65, 185), (225, 130, 245), 'PSN'),
+            'b-poison': ((135, 45, 205), (185, 100, 255), 'TOX'),
+            'toxic': ((135, 45, 205), (185, 100, 255), 'TOX'),
             'tox': ((135, 45, 205), (185, 100, 255), 'TOX'),
+            'sleep': ((65, 125, 235), (135, 185, 255), 'SLP'),
             'slp': ((65, 125, 235), (135, 185, 255), 'SLP'),
+            'freeze': ((65, 205, 225), (145, 245, 255), 'FRZ'),
             'frz': ((65, 205, 225), (145, 245, 255), 'FRZ'),
         }
 
@@ -444,15 +451,54 @@ class BattleRenderer:
             draw.text((bx + 8, badge_y + 6), label, fill=txt_col, font=f_badge)
             bx += sw + 10
 
-        # Stat stage badges (green for positive buffs, red for negative debuffs)
-        stages = getattr(poke, 'stages', {})
-        if stages:
+        # 2. Volatile status badges (confusion, leech seed, taunt, substitute)
+        VOLATILE_EFFECTS = []
+        confusion = getattr(poke, 'confusion', None)
+        if confusion and hasattr(confusion, 'active') and confusion.active():
+            VOLATILE_EFFECTS.append(((210, 80, 210), (255, 160, 255), 'CONF'))
+        if getattr(poke, 'leech_seed', False):
+            VOLATILE_EFFECTS.append(((60, 190, 80), (120, 250, 140), 'SEED'))
+        taunt = getattr(poke, 'taunt', None)
+        if taunt and hasattr(taunt, 'active') and taunt.active():
+            VOLATILE_EFFECTS.append(((230, 90, 40), (255, 140, 100), 'TAUNT'))
+        if getattr(poke, 'substitute', 0):
+            VOLATILE_EFFECTS.append(((60, 170, 220), (140, 225, 255), 'SUB'))
+
+        for bg_col, txt_col, label in VOLATILE_EFFECTS:
+            sb = draw.textbbox((0, 0), label, font=f_badge)
+            sw = (sb[2] - sb[0]) + 14
+            sh = 26
+            if bx + sw <= x + w - 18:
+                draw.rounded_rectangle([bx, badge_y, bx + sw, badge_y + sh], radius=6, fill=(*bg_col, 50), outline=bg_col, width=2)
+                draw.text((bx + 7, badge_y + 6), label, fill=txt_col, font=f_badge)
+                bx += sw + 8
+
+        # 3. Stat stage badges (robust extraction from DuelPokemon attributes + stages dict)
+        stat_attrs = [
+            ('atk', getattr(poke, 'attack_stage', 0)),
+            ('def', getattr(poke, 'defense_stage', 0)),
+            ('spa', getattr(poke, 'spatk_stage', 0)),
+            ('spd', getattr(poke, 'spdef_stage', 0)),
+            ('spe', getattr(poke, 'speed_stage', 0)),
+            ('acc', getattr(poke, 'accuracy_stage', 0)),
+            ('eva', getattr(poke, 'evasion_stage', 0)),
+        ]
+        stat_stages = {}
+        for short_name, val in stat_attrs:
+            if val and val != 0:
+                stat_stages[short_name] = val
+
+        if hasattr(poke, 'stages') and isinstance(poke.stages, dict):
+            for k, v in poke.stages.items():
+                if v != 0 and k not in stat_stages:
+                    stat_stages[k] = v
+
+        if stat_stages:
             STAGE_MULT = {
                 1: '1.5x', 2: '2.0x', 3: '2.5x', 4: '3.0x', 5: '3.5x', 6: '4.0x',
                 -1: '0.67x', -2: '0.5x', -3: '0.4x', -4: '0.33x', -5: '0.29x', -6: '0.25x'
             }
-            stage_items = [(k, v) for k, v in stages.items() if v != 0][:3]
-            for stat, val in stage_items:
+            for stat, val in stat_stages.items():
                 is_pos = val > 0
                 sign = '+' if is_pos else '-'
                 mult = STAGE_MULT.get(val, f"{abs(val)}stg")
@@ -460,6 +506,8 @@ class BattleRenderer:
                 stb = draw.textbbox((0, 0), lbl, font=f_badge)
                 stw = (stb[2] - stb[0]) + 14
                 sth = 26
+                if bx + stw > x + w - 18:
+                    break
                 if is_pos:
                     # Green positive badge
                     draw.rounded_rectangle([bx, badge_y, bx + stw, badge_y + sth], radius=6, fill=(30, 140, 60, 50), outline=(40, 210, 85, 255), width=2)
@@ -479,19 +527,19 @@ class BattleRenderer:
         horizon_y = int(height * 0.48)
 
         if "electric" in terrain_low:
-            for dy in range(horizon_y + 20, height - 20, 45):
-                for dx in range(40, width - 40, 60):
+            for dy in range(horizon_y + 20, height - 20, 36):
+                for dx in range(30, width - 30, 48):
                     draw.ellipse([dx, dy, dx + 3, dy + 3], fill=(248, 210, 50, 85))
         elif "grassy" in terrain_low:
-            for dy in range(horizon_y + 20, height - 20, 45):
-                for dx in range(40, width - 40, 60):
+            for dy in range(horizon_y + 20, height - 20, 36):
+                for dx in range(30, width - 30, 48):
                     draw.ellipse([dx, dy, dx + 3, dy + 3], fill=(70, 210, 70, 85))
         elif "misty" in terrain_low:
-            for y in range(height - 80, height, 10):
-                draw.line([(0, y), (width, y)], fill=(248, 200, 248, 20), width=3)
+            for y in range(height - 70, height, 8):
+                draw.line([(0, y), (width, y)], fill=(248, 200, 248, 20), width=2)
         elif "psychic" in terrain_low:
-            for dy in range(horizon_y + 20, height - 20, 45):
-                for dx in range(40, width - 40, 60):
+            for dy in range(horizon_y + 20, height - 20, 36):
+                for dx in range(30, width - 30, 48):
                     draw.ellipse([dx, dy, dx + 3, dy + 3], fill=(248, 90, 140, 85))
 
     def _apply_weather_overlay(self, canvas: Image.Image, weather: str) -> None:
@@ -512,23 +560,23 @@ class BattleRenderer:
 
         elif "rain" in weather_low:
             draw.rectangle([0, 0, width, height], fill=(40, 80, 160, 18))
-            for _ in range(100):
+            for _ in range(70):
                 rx = rnd.randint(0, width)
                 ry = rnd.randint(0, height)
-                length = rnd.randint(16, 32)
-                draw.line([(rx, ry), (rx - 5, ry + length)], fill=(160, 200, 240, 130), width=2)
+                length = rnd.randint(14, 26)
+                draw.line([(rx, ry), (rx - 4, ry + length)], fill=(160, 200, 240, 130), width=2)
 
         elif "sandstorm" in weather_low:
             draw.rectangle([0, 0, width, height], fill=(200, 176, 120, 30))
-            for _ in range(120):
+            for _ in range(80):
                 rx = rnd.randint(0, width)
                 ry = rnd.randint(0, height)
-                length = rnd.randint(10, 24)
+                length = rnd.randint(8, 20)
                 draw.line([(rx, ry), (rx + length, ry + 2)], fill=(176, 152, 96, 90), width=2)
 
         elif "hail" in weather_low or "snow" in weather_low:
             draw.rectangle([0, 0, width, height], fill=(200, 230, 255, 15))
-            for _ in range(60):
+            for _ in range(45):
                 rx = rnd.randint(0, width)
                 ry = rnd.randint(0, height)
                 r = rnd.randint(2, 4)
@@ -538,8 +586,8 @@ class BattleRenderer:
 
 
     def render_battle_screen(self, battle) -> io.BytesIO:
-        """Generates a high-definition modern-retro Pokémon battle screen (1440x810) with clear, high-legibility UI."""
-        width, height = 1440, 810
+        """Generates a high-definition modern-retro Pokémon battle screen (960x580) with clear, high-legibility UI."""
+        width, height = 960, 580
 
         canvas = Image.new("RGBA", (width, height), (18, 20, 24, 255))
         draw = ImageDraw.Draw(canvas)
@@ -557,12 +605,12 @@ class BattleRenderer:
 
         # Subtle dark pedestals
         # Player pedestal (left foreground)
-        draw.ellipse([80, 580, 650, 750], fill=(26, 30, 38, 255), outline=(65, 75, 92, 255), width=3)
-        draw.ellipse([120, 600, 610, 730], outline=(40, 48, 60, 255), width=2)
+        draw.ellipse([50, 410, 450, 535], fill=(26, 30, 38, 255), outline=(65, 75, 92, 255), width=2)
+        draw.ellipse([80, 425, 420, 520], outline=(40, 48, 60, 255), width=1)
 
         # Opponent pedestal (right background)
-        draw.ellipse([800, 340, 1320, 480], fill=(23, 27, 34, 255), outline=(55, 65, 80, 255), width=3)
-        draw.ellipse([835, 355, 1285, 465], outline=(38, 45, 55, 255), width=2)
+        draw.ellipse([520, 245, 890, 350], fill=(23, 27, 34, 255), outline=(55, 65, 80, 255), width=2)
+        draw.ellipse([550, 257, 860, 338], outline=(38, 45, 55, 255), width=1)
 
         weather = getattr(battle.weather, "_weather_type", "clear") or "clear"
         terrain = getattr(battle.terrain, "item", "normal") or "normal"
@@ -577,31 +625,31 @@ class BattleRenderer:
         t1_name = getattr(t1_poke, '_name', getattr(t1_poke, 'name', None)) if t1_poke else None
         t2_name = getattr(t2_poke, '_name', getattr(t2_poke, 'name', None)) if t2_poke else None
 
-        sprite_w, sprite_h = 280, 280
+        sprite_w, sprite_h = 240, 240
 
         # Player sprite on left platform
         sprite_left = self._load_sprite(t1_id, (sprite_w, sprite_h), name=t1_name, resample=Image.Resampling.NEAREST)
         if sprite_left:
-            canvas.paste(sprite_left, (240, 400), sprite_left)
+            canvas.paste(sprite_left, (135, 275), sprite_left)
         else:
-            draw.rectangle([240, 420, 420, 600], fill=(40, 48, 60, 100), outline=(65, 75, 90, 255), width=2)
-            draw.text((310, 480), "?", fill=(180, 190, 210, 255), font=self.fonts["pixel_title"])
+            draw.rectangle([135, 290, 295, 450], fill=(40, 48, 60, 100), outline=(65, 75, 90, 255), width=2)
+            draw.text((195, 350), "?", fill=(180, 190, 210, 255), font=self.fonts["pixel_title"])
 
         # Opponent sprite on right platform
-        sprite_right = self._load_sprite(t2_id, (sprite_w, sprite_h), name=t2_name, resample=Image.Resampling.NEAREST)
+        sprite_right = self._load_sprite(t2_id, (sprite_w - 10, sprite_h - 10), name=t2_name, resample=Image.Resampling.NEAREST)
         if sprite_right:
             sprite_right = sprite_right.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
-            canvas.paste(sprite_right, (905, 165), sprite_right)
+            canvas.paste(sprite_right, (600, 115), sprite_right)
         else:
-            draw.rectangle([940, 200, 1120, 380], fill=(40, 48, 60, 100), outline=(65, 75, 90, 255), width=2)
-            draw.text((1010, 260), "?", fill=(180, 190, 210, 255), font=self.fonts["pixel_title"])
+            draw.rectangle([600, 130, 760, 290], fill=(40, 48, 60, 100), outline=(65, 75, 90, 255), width=2)
+            draw.text((660, 190), "?", fill=(180, 190, 210, 255), font=self.fonts["pixel_title"])
 
         self._apply_weather_overlay(canvas, weather)
 
         # ── Top Center: Turn and Weather/Terrain Field Box ─────────────────
-        top_box_w, top_box_h = 460, 84
+        top_box_w, top_box_h = 360, 68
         top_box_x = (width - top_box_w) // 2
-        top_box_y = 26
+        top_box_y = 14
 
         draw.rounded_rectangle([top_box_x, top_box_y, top_box_x + top_box_w, top_box_y + top_box_h],
                                radius=8, fill=(14, 16, 22, 240), outline=(80, 90, 108, 255), width=2)
@@ -614,7 +662,7 @@ class BattleRenderer:
         turn = getattr(battle, 'turn', 1)
         turn_text = f"TURN {turn:02d}"
         tb = draw.textbbox((0, 0), turn_text, font=f_hdr)
-        draw.text((top_box_x + (top_box_w - (tb[2] - tb[0])) // 2, top_box_y + 14),
+        draw.text((top_box_x + (top_box_w - (tb[2] - tb[0])) // 2, top_box_y + 10),
                   turn_text, fill=(255, 255, 255, 255), font=f_hdr)
 
         field_parts = []
@@ -628,16 +676,16 @@ class BattleRenderer:
             field_text = " | ".join(field_parts)
 
         fb = draw.textbbox((0, 0), field_text, font=f_sub)
-        draw.text((top_box_x + (top_box_w - (fb[2] - fb[0])) // 2, top_box_y + 50),
+        draw.text((top_box_x + (top_box_w - (fb[2] - fb[0])) // 2, top_box_y + 40),
                   field_text, fill=(160, 180, 215, 255), font=f_sub)
 
         # ── HUD Cards ──────────────────────────────────────────────────────
-        hud_w, hud_h = 540, 138
+        hud_w, hud_h = 440, 138
         # Player HUD at top-left
-        self._draw_hud(draw, 44, 110, t1_poke, is_left=True)
+        self._draw_hud(draw, 24, 84, t1_poke, is_left=True)
 
         # Opponent HUD at bottom-right
-        self._draw_hud(draw, width - hud_w - 44, height - hud_h - 44, t2_poke, is_left=False)
+        self._draw_hud(draw, width - hud_w - 24, height - hud_h - 24, t2_poke, is_left=False)
 
         # Outer border
         draw.rectangle([0, 0, width - 1, height - 1], outline=(55, 62, 75, 255), width=2)
