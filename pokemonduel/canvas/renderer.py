@@ -109,89 +109,7 @@ class BattleRenderer:
             return None
 
     def _load_fonts(self) -> dict[str, ImageFont.ImageFont]:
-        """Load fonts, preferring retro/monospace for pixel settings, clean sans-serif for modern."""
-        is_pixel = getattr(self, "palette", None) and getattr(self.palette, "font_hint", "sans") == "pixel"
-
-        bold_path = None
-        reg_path = None
-
-        if is_pixel:
-            font_paths = [
-                "/usr/share/fonts/TTF/JetBrainsMonoNerdFont-Bold.ttf",
-                "/usr/share/fonts/TTF/JetBrainsMonoNerdFont-Regular.ttf",
-                "/usr/share/fonts/noto/NotoSansMono-Bold.ttf",
-                "/usr/share/fonts/noto/NotoSansMono-Regular.ttf",
-                "/usr/share/fonts/liberation/LiberationMono-Bold.ttf",
-                "/usr/share/fonts/liberation/LiberationMono-Regular.ttf",
-            ]
-            for p in font_paths:
-                if Path(p).exists():
-                    if "Bold" in p and not bold_path:
-                        bold_path = Path(p)
-                    elif not reg_path:
-                        reg_path = Path(p)
-
-            # Fallback to downloading JetBrains Mono.
-            if not bold_path:
-                bold_path = self._ensure_font(
-                    "JetBrainsMono-Bold.ttf",
-                    "https://raw.githubusercontent.com/JetBrains/JetBrainsMono/master/fonts/ttf/JetBrainsMono-Bold.ttf"
-                )
-            if not reg_path:
-                reg_path = self._ensure_font(
-                    "JetBrainsMono-Regular.ttf",
-                    "https://raw.githubusercontent.com/JetBrains/JetBrainsMono/master/fonts/ttf/JetBrainsMono-Regular.ttf"
-                )
-        else:
-            font_paths = [
-                "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf",
-                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-                "/usr/share/fonts/liberation/LiberationSans-Bold.ttf",
-                "/usr/share/fonts/TTF/DejaVuSans.ttf",
-                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-                "/usr/share/fonts/liberation/LiberationSans-Regular.ttf",
-            ]
-            for p in font_paths:
-                if Path(p).exists():
-                    if "Bold" in p and not bold_path:
-                        bold_path = Path(p)
-                    elif not reg_path:
-                        reg_path = Path(p)
-
-            # Fallback to downloading Roboto.
-            if not bold_path:
-                bold_path = self._ensure_font(
-                    "Roboto-Bold.ttf",
-                    "https://raw.githubusercontent.com/googlefonts/roboto/main/src/hinted/Roboto-Bold.ttf"
-                )
-            if not reg_path:
-                reg_path = self._ensure_font(
-                    "Roboto-Regular.ttf",
-                    "https://raw.githubusercontent.com/googlefonts/roboto/main/src/hinted/Roboto-Regular.ttf"
-                )
-
-        if not bold_path:
-            bold_path = reg_path
-
-        bold_font = str(bold_path) if bold_path else "arial.ttf"
-        reg_font = str(reg_path) if reg_path else "arial.ttf"
-
-        fonts = {}
-        try:
-            fonts["title"]      = ImageFont.truetype(bold_font, 20)
-            fonts["body"]       = ImageFont.truetype(reg_font, 14)
-            fonts["body_bold"]  = ImageFont.truetype(bold_font, 14)
-            fonts["small"]      = ImageFont.truetype(reg_font, 11)
-            fonts["small_bold"] = ImageFont.truetype(bold_font, 11)
-            fonts["tiny"]       = ImageFont.truetype(reg_font, 9)
-            fonts["hp_label"]   = ImageFont.truetype(bold_font, 10)
-        except Exception:
-            default = ImageFont.load_default()
-            for key in ("title", "body", "body_bold", "small", "small_bold", "tiny", "hp_label"):
-                # pyrefly: ignore [unsupported-operation]
-                fonts[key] = default
-
-        # Authentic Pokémon 8-bit arcade pixel font (Press Start 2P)
+        """Load authentic Pokémon 8-bit arcade pixel font (Press Start 2P) across the bot."""
         pixel_path = self.data_dir / "fonts" / "PressStart2P-Regular.ttf"
         if not pixel_path.exists():
             pixel_path = self._ensure_font(
@@ -199,18 +117,27 @@ class BattleRenderer:
                 "https://github.com/google/fonts/raw/main/ofl/pressstart2p/PressStart2P-Regular.ttf"
             )
 
-        pixel_font = str(pixel_path) if (pixel_path and Path(pixel_path).exists()) else bold_font
+        font_file = str(pixel_path) if (pixel_path and Path(pixel_path).exists()) else "arial.ttf"
+
+        fonts = {}
         try:
-            fonts["pixel_title"] = ImageFont.truetype(pixel_font, 24)
-            fonts["pixel_label"] = ImageFont.truetype(pixel_font, 12)
-            fonts["pixel_sub"]   = ImageFont.truetype(pixel_font, 11)
-            fonts["pixel_name"]  = ImageFont.truetype(pixel_font, 10)
+            fonts["title"]       = ImageFont.truetype(font_file, 16)
+            fonts["body"]        = ImageFont.truetype(font_file, 10)
+            fonts["body_bold"]   = ImageFont.truetype(font_file, 10)
+            fonts["small"]       = ImageFont.truetype(font_file, 8)
+            fonts["small_bold"]  = ImageFont.truetype(font_file, 8)
+            fonts["badge"]       = ImageFont.truetype(font_file, 7)
+            fonts["tiny"]        = ImageFont.truetype(font_file, 7)
+            fonts["hp_label"]    = ImageFont.truetype(font_file, 8)
+            fonts["pixel_title"] = ImageFont.truetype(font_file, 24)
+            fonts["pixel_label"] = ImageFont.truetype(font_file, 12)
+            fonts["pixel_sub"]   = ImageFont.truetype(font_file, 11)
+            fonts["pixel_name"]  = ImageFont.truetype(font_file, 10)
         except Exception:
-            default = fonts.get("title", ImageFont.load_default())
-            fonts["pixel_title"] = default
-            fonts["pixel_label"] = fonts.get("body_bold", default)
-            fonts["pixel_sub"]   = fonts.get("small_bold", default)
-            fonts["pixel_name"]  = fonts.get("small", default)
+            default = ImageFont.load_default()
+            for key in ("title", "body", "body_bold", "small", "small_bold", "badge",
+                        "tiny", "hp_label", "pixel_title", "pixel_label", "pixel_sub", "pixel_name"):
+                fonts[key] = default
 
         return fonts
 
@@ -306,9 +233,10 @@ class BattleRenderer:
                          x: float, y: float, type_name: str,
                          *, width: int = 60, height: int = 18) -> Tuple[float, float]:
         """Draw a classic Gen 3/5 style type rectangle badge."""
+        font = self.fonts.get("badge", self.fonts["small_bold"])
+        label = type_name.upper()
+
         if self.theme == "firered":
-            font = self.fonts["small_bold"]
-            label = type_name.upper()
             draw.rectangle([x, y, x + width, y + height], fill=self.palette.panel_bg, outline=self.palette.frame_dark, width=1)
             bbox = draw.textbbox((0, 0), label, font=font)
             tx = x + (width - (bbox[2] - bbox[0])) // 2
@@ -317,13 +245,11 @@ class BattleRenderer:
             return width, height
 
         color = TYPE_COLORS.get(type_name.lower(), (128, 128, 128, 255))
-        font = self.fonts["small_bold"]
         radius = 3
 
         draw.rounded_rectangle([x, y, x + width, y + height], radius=radius,
                                fill=color, outline=(max(0, color[0]-40), max(0, color[1]-40), max(0, color[2]-40), 255), width=1)
 
-        label = type_name.upper()
         bbox = draw.textbbox((0, 0), label, font=font)
         tx = x + (width - (bbox[2] - bbox[0])) // 2
         ty = y + (height - (bbox[3] - bbox[1])) // 2 - 1
@@ -340,7 +266,7 @@ class BattleRenderer:
         badge_text = status_clean[:3].upper()
         color = STATUS_COLORS.get(status_clean, (128, 128, 128, 255))
 
-        font = self.fonts["small_bold"]
+        font = self.fonts.get("badge", self.fonts["small_bold"])
         bbox = draw.textbbox((0, 0), badge_text, font=font)
         text_w = bbox[2] - bbox[0]
         w = text_w + 10
