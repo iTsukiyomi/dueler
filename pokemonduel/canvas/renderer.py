@@ -191,10 +191,30 @@ class BattleRenderer:
                 # pyrefly: ignore [unsupported-operation]
                 fonts[key] = default
 
+        # Authentic Pokémon 8-bit arcade pixel font (Press Start 2P)
+        pixel_path = self.data_dir / "fonts" / "PressStart2P-Regular.ttf"
+        if not pixel_path.exists():
+            pixel_path = self._ensure_font(
+                "PressStart2P-Regular.ttf",
+                "https://github.com/google/fonts/raw/main/ofl/pressstart2p/PressStart2P-Regular.ttf"
+            )
+
+        pixel_font = str(pixel_path) if (pixel_path and Path(pixel_path).exists()) else bold_font
+        try:
+            fonts["pixel_title"] = ImageFont.truetype(pixel_font, 24)
+            fonts["pixel_label"] = ImageFont.truetype(pixel_font, 12)
+            fonts["pixel_sub"]   = ImageFont.truetype(pixel_font, 11)
+            fonts["pixel_name"]  = ImageFont.truetype(pixel_font, 10)
+        except Exception:
+            default = fonts.get("title", ImageFont.load_default())
+            fonts["pixel_title"] = default
+            fonts["pixel_label"] = fonts.get("body_bold", default)
+            fonts["pixel_sub"]   = fonts.get("small_bold", default)
+            fonts["pixel_name"]  = fonts.get("small", default)
+
         return fonts
 
-
-    def _load_sprite(self, poke_id: Optional[int], size: Tuple[int, int], name: Optional[str] = None) -> Optional[Image.Image]:
+    def _load_sprite(self, poke_id: Optional[int], size: Tuple[int, int], name: Optional[str] = None, resample: Optional[Image.Resampling] = None) -> Optional[Image.Image]:
         """Safely loads and scales a Pokémon sprite from disk.
 
         Attempts to load in order:
@@ -224,6 +244,8 @@ class BattleRenderer:
         if poke_id and poke_id not in candidates:
             candidates.append(poke_id)
 
+        resample_mode = resample if resample is not None else (Image.Resampling.NEAREST if self.gen <= 5 else Image.Resampling.LANCZOS)
+
         for cid in candidates:
             for ext in ("png", "gif", "jpg"):
                 path = self.sprite_dir / f"{cid}.{ext}"
@@ -233,7 +255,7 @@ class BattleRenderer:
                         if getattr(img, "is_animated", False):
                             img.seek(0)
                             img = img.convert("RGBA")
-                        img = img.resize(size, Image.Resampling.LANCZOS)
+                        img = img.resize(size, resample_mode)
                         return img
                     except Exception:
                         continue
@@ -566,64 +588,83 @@ class BattleRenderer:
         return buf
 
     def render_team_preview(self, battle) -> io.BytesIO:
-        """Generates a cinematic Pokémon-style team preview screen.
+        """Generates a Pokémon-style team preview screen with a completely transparent background.
 
         Matches the reference design:
-        - Dark navy background with subtle diagonal texture
-        - Large 'TEAM PREVIEW' title top-left
-        - Two labelled rows ('YOUR TEAM' / 'OPPONENT'S TEAM') of 6 sprites
-        - Full-colour sprites — no grayscale, no heavy panel boxes
-        - Uppercase monospace Pokémon names below each sprite
-        - Dotted divider separating the two teams
+        - 100% transparent canvas (zero background, no panels, no cell backgrounds)
+        - Authentic Pokémon pixel font (Press Start 2P)
+        - Shows dynamic user vs opponent name at top-right
+        - Sprites float cleanly on transparent canvas
+        - Uppercase pixel-font names below sprites
+        - Dotted divider line separating the two teams
         """
-        # ── Canvas dimensions ──────────────────────────────────────────────
-        W, H = 1020, 460
-        MARGIN = 28
+        W, H = 1024, 560
+        MARGIN = 40
 
-        # ── Background ─────────────────────────────────────────────────────
-        canvas = self._make_preview_bg(W, H)
+        # ── 100% Completely Transparent Canvas ─────────────────────────────
+        canvas = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         draw = ImageDraw.Draw(canvas)
 
+        f_title = self.fonts.get("pixel_title", self.fonts["title"])
+        f_label = self.fonts.get("pixel_label", self.fonts["body_bold"])
+        f_sub   = self.fonts.get("pixel_sub", self.fonts["small_bold"])
+        f_name  = self.fonts.get("pixel_name", self.fonts["small"])
+
+        # Helper for crisp outlined text (guarantees readability on both Discord dark & light mode)
+        def _draw_text_with_outline(pos, text, font, fill=(255, 255, 255, 255), outline=(0, 0, 0, 220)):
+            x, y = pos
+            for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (1, -1), (-1, 1), (1, 1)):
+                draw.text((x + dx, y + dy), text, fill=outline, font=font)
+            draw.text((x, y), text, fill=fill, font=font)
+
         # ── Title ──────────────────────────────────────────────────────────
-        title_font = self.fonts["title"]
-        draw.text((MARGIN, MARGIN - 4), "TEAM PREVIEW", fill=(255, 255, 255, 255), font=title_font)
+        _draw_text_with_outline((MARGIN, 36), "TEAM PREVIEW", f_title, fill=(255, 255, 255, 255))
 
-        # Trainer names sub-title
-        sub_text = f"{battle.trainer1.name}  vs  {battle.trainer2.name}"
-        sub_font = self.fonts["body"]
-        sub_bbox = draw.textbbox((0, 0), sub_text, font=sub_font)
-        sub_x = W - (sub_bbox[2] - sub_bbox[0]) - MARGIN
-        draw.text((sub_x, MARGIN), sub_text, fill=(180, 200, 240, 220), font=sub_font)
+        # ── Trainer Names (Top Right) ──────────────────────────────────────
+        def _get_trainer_name(trainer, default: str) -> str:
+            if not trainer:
+                return default
+            member = getattr(trainer, "member", None)
+            if member:
+                return getattr(member, "display_name", getattr(member, "name", str(getattr(trainer, "name", default))))
+            name = getattr(trainer, "name", None)
+            if name:
+                return str(name)
+            return default
 
-        # ── Layout constants ───────────────────────────────────────────────
-        SPRITE_SIZE = 96          # sprite cell (px)
-        N_COLS = 6
+        t1_name = _get_trainer_name(getattr(battle, "trainer1", None), "Trainer")
+        t2_name = _get_trainer_name(getattr(battle, "trainer2", None), "Opponent")
+        if len(t1_name) > 16:
+            t1_name = t1_name[:15] + "…"
+        if len(t2_name) > 16:
+            t2_name = t2_name[:15] + "…"
+        vs_text = f"{t1_name} VS {t2_name}".upper()
+
+        tb = draw.textbbox((0, 0), vs_text, font=f_sub)
+        vs_w = tb[2] - tb[0]
+        _draw_text_with_outline((W - MARGIN - vs_w, 44), vs_text, f_sub, fill=(210, 225, 245, 255))
+
+        # ── Layout Dimensions ──────────────────────────────────────────────
         AVAILABLE_W = W - 2 * MARGIN
-        COL_W = AVAILABLE_W // N_COLS   # each sprite slot width
-        LABEL_H = 22              # height of the section label row
-        SPRITE_AREA_H = SPRITE_SIZE + 28  # sprite + name text
+        N_COLS = 6
+        COL_W = AVAILABLE_W / N_COLS
+        SPRITE_SIZE = 120
 
-        ROW1_LABEL_Y = 60
-        ROW1_SPRITE_Y = ROW1_LABEL_Y + LABEL_H + 4
-        ROW2_LABEL_Y = ROW1_SPRITE_Y + SPRITE_AREA_H + 24   # gap with divider
-        ROW2_SPRITE_Y = ROW2_LABEL_Y + LABEL_H + 4
+        # Section labels
+        _draw_text_with_outline((MARGIN, 96), "YOUR TEAM", f_label, fill=(200, 210, 225, 255))
+        _draw_text_with_outline((MARGIN, 350), "OPPONENT'S TEAM", f_label, fill=(200, 210, 225, 255))
 
-        label_font = self.fonts["small_bold"]
-        name_font  = self.fonts["body_bold"]
+        # Dotted divider line
+        for dx in range(176, 850, 8):
+            draw.ellipse([dx, 310, dx + 2, 312], fill=(0, 0, 0, 180))
+            draw.ellipse([dx, 311, dx + 2, 313], fill=(200, 215, 235, 255))
 
         # ── Helper: draw one team row ──────────────────────────────────────
-        def _draw_row(trainer, label_y: int, sprite_y: int, label: str) -> None:
-            nonlocal draw  # re-bound after each alpha_composite call
-            # Section label
-            draw.text((MARGIN, label_y), label,
-                      fill=(180, 200, 255, 200), font=label_font)
-
-            party = trainer.party[:N_COLS]
+        def _draw_team_row(trainer, sprite_y: int, name_y: int) -> None:
+            party = getattr(trainer, "party", [])[:N_COLS] if trainer else []
             for col, poke in enumerate(party):
-                cell_x = MARGIN + col * COL_W
-                cell_cx = cell_x + COL_W // 2
+                cell_cx = MARGIN + int((col + 0.5) * COL_W)
 
-                # Resolve ID + name
                 if isinstance(poke, dict):
                     poke_id   = poke.get("pokemon_id") or poke.get("id") or poke.get("pokid")
                     poke_name = poke.get("pokname") or poke.get("name") or ""
@@ -631,92 +672,28 @@ class BattleRenderer:
                     poke_id   = getattr(poke, "pokemon_id", getattr(poke, "id", None))
                     poke_name = getattr(poke, "_name", getattr(poke, "name", "")) or ""
 
-                # Very faint cell backing — just darkens the background very slightly
-                cell_pad = 4
-                cell_l = cell_x + (COL_W - SPRITE_SIZE) // 2 - cell_pad
-                cell_t = sprite_y - cell_pad
-                cell_r = cell_l + SPRITE_SIZE + cell_pad * 2
-                cell_b = cell_t + SPRITE_SIZE + cell_pad * 2
-                cell_overlay = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
-                cell_draw = ImageDraw.Draw(cell_overlay)
-                cell_draw.rounded_rectangle(
-                    [cell_l, cell_t, cell_r, cell_b],
-                    radius=8,
-                    fill=(0, 0, 0, 30),  # nearly invisible — no outline
-                )
-                canvas.alpha_composite(cell_overlay)
-                draw = ImageDraw.Draw(canvas)  # re-bind after composite
-
-                # Sprite
-                sprite = self._load_sprite(poke_id, (SPRITE_SIZE, SPRITE_SIZE), name=poke_name)
+                sprite = self._load_sprite(poke_id, (SPRITE_SIZE, SPRITE_SIZE), name=poke_name, resample=Image.Resampling.NEAREST)
                 if sprite:
-                    paste_x = cell_cx - SPRITE_SIZE // 2
-                    paste_y = sprite_y
+                    paste_x = cell_cx - sprite.width // 2
+                    paste_y = sprite_y + (SPRITE_SIZE - sprite.height)
                     canvas.paste(sprite, (int(paste_x), int(paste_y)), sprite)
                 else:
-                    # Fallback "?" mark
-                    qfont = self.fonts["title"]
-                    qb = draw.textbbox((0, 0), "?", font=qfont)
-                    draw.text(
-                        (cell_cx - (qb[2] - qb[0]) // 2, sprite_y + SPRITE_SIZE // 2 - (qb[3] - qb[1]) // 2),
-                        "?", fill=(160, 168, 200, 160), font=qfont,
-                    )
+                    _draw_text_with_outline((cell_cx - 8, sprite_y + 40), "?", f_title, fill=(160, 175, 200, 200))
 
-                # Pokémon name — uppercase, centred under sprite
                 display = poke_name.replace("-", " ").upper()
-                if len(display) > 11:
-                    display = display[:10] + "."
-                nb = draw.textbbox((0, 0), display, font=name_font)
-                name_x = cell_cx - (nb[2] - nb[0]) // 2
-                name_y = sprite_y + SPRITE_SIZE + 6
-                # Slight shadow for legibility
-                draw.text((name_x + 1, name_y + 1), display,
-                          fill=(0, 0, 0, 120), font=name_font)
-                draw.text((name_x, name_y), display,
-                          fill=(230, 240, 255, 255), font=name_font)
+                if len(display) > 13:
+                    display = display[:12] + "."
+                nb = draw.textbbox((0, 0), display, font=f_name)
+                nx = cell_cx - (nb[2] - nb[0]) // 2
+                _draw_text_with_outline((nx, name_y), display, f_name, fill=(240, 245, 255, 255))
 
-        # ── Draw both rows ─────────────────────────────────────────────────
-        _draw_row(battle.trainer1, ROW1_LABEL_Y, ROW1_SPRITE_Y, "YOUR TEAM")
-        _draw_row(battle.trainer2, ROW2_LABEL_Y, ROW2_SPRITE_Y, "OPPONENT'S TEAM")
-
-        # ── Dotted divider between teams ───────────────────────────────────
-        div_y = (ROW1_SPRITE_Y + SPRITE_AREA_H + ROW2_LABEL_Y) // 2
-        dot_color = (140, 160, 220, 100)
-        for dx in range(MARGIN, W - MARGIN, 8):
-            draw.ellipse([dx, div_y, dx + 2, div_y + 2], fill=dot_color)
-
-        # ── Outer border ───────────────────────────────────────────────────
-        draw.rectangle([0, 0, W - 1, H - 1], outline=(80, 100, 160, 200), width=2)
-        draw.rectangle([2, 2, W - 3, H - 3], outline=(40, 56, 100, 100), width=1)
+        _draw_team_row(getattr(battle, "trainer1", None), 120, 260)
+        _draw_team_row(getattr(battle, "trainer2", None), 376, 516)
 
         buf = io.BytesIO()
         canvas.save(buf, format="PNG")
         buf.seek(0)
         return buf
-
-    def _make_preview_bg(self, W: int, H: int) -> Image.Image:
-        """Create a dark cinematic background for the team preview screen.
-
-        Matches the reference: deep navy-to-dark-charcoal gradient with a
-        very subtle diagonal hatching pattern for texture.
-        """
-        img = Image.new("RGBA", (W, H), (0, 0, 0, 255))
-        draw = ImageDraw.Draw(img)
-
-        # Vertical gradient: dark navy top → slightly lighter bottom
-        for y in range(H):
-            t = y / H
-            r = int(14 + 8 * t)
-            g = int(20 + 12 * t)
-            b = int(40 + 20 * t)
-            draw.line([(0, y), (W, y)], fill=(r, g, b, 255))
-
-        # Subtle diagonal stripe texture (very faint)
-        stripe_col = (255, 255, 255, 6)
-        for offset in range(-H, W + H, 22):
-            draw.line([(offset, 0), (offset + H, H)], fill=stripe_col, width=1)
-
-        return img
 
     def _get_base_stats(self, identifier: str) -> dict[str, int]:
         """Look up base stats from static registries. Fixed to use proper registry API."""
